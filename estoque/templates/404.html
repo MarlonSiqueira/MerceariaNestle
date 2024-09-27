@@ -1,0 +1,9 @@
+{% extends '500.html' %}
+
+{% block 'body' %}
+<h1 class="mt-5 text-center text-danger">Página não encontrada!</h1>
+<h6 class="text-center" style="color: black">Está perdido?</h6>
+<div class="container">
+    <a href="{% url 'home' %}" class="btn btn-info">Voltar ao início</a>
+</div>
+{% endblock %}

@@ -1,0 +1,1 @@
+web: gunicorn merceariacomunitaria.wsgi --log-file - 

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block 'body' %}
+    <div class="container py-5 h-100">
+        <div class="row d-flex justify-content-center align-items-center h-100">
+            <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+                <div class="card bg-light text-white" style="border-radius: 1rem;">
+                    <div class="card-body p-5 text-center">
+                        <div class="mb-md-5 mt-md-4 pb-5">
+                            <div id="formContent">
+                        <form action="{% url 'login' %}" method="POST" enctype="multipart/form-data">{% csrf_token %}
+                            <div class="fadeIn first">
+                                <img src="{% static 'imagem_site/aparecida.png' %}" id="icon" alt="User Icon" style="width:40%; margin-top:10px">
+                            </div>
+                            <br>
+                                <input type="text" class="fadeIn second" name="login" id="nome_usuario" placeholder="Usuário">
+                            <br>
+                            <br>
+                                <input type="password" class="fadeIn third" name="senha" placeholder="Senha">
+                            <br>
+                            <br>
+                                <input type="submit" value="Entrar" class="btn btn-success">
+                            <br>
+                                <a href="{% url 'password_reset_request' %}">Esqueceu a senha?</a>
+                        </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+    $(document).ready(function(){
+        $('#nome_usuario').on('input', function() { // mascara usuario
+            var nome_usuario = $(this).val();
+            
+            // Aplicar a máscara permitindo letras minúsculas
+            nome_usuario = nome_usuario.toLowerCase() // Transformar em minúsculo
+            
+            // Limitar o tamanho do nome_usuario
+            if (nome_usuario.length > 30) {
+                nome_usuario = nome_usuario.substr(0, 30);
+            }
+
+            $(this).val(nome_usuario);
+        });
+    });
+</script>
+{% endblock %}

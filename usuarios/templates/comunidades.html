@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block 'body' %}
+<div class="container">
+    <form action="" method="POST" enctype="multipart/form-data"> {% csrf_token %}
+        {% if user.is_authenticated %}
+            {% if user.cargo == "A" %}
+                <br>
+                <div class="col">
+                    <div class="col-lg-15 col-md-13 col-sm-13 col-xs-15">
+                    <div class="card">
+                        <div class="card-body">
+                            {% for comunidade in comunidades %}
+                                <tr>
+                                    <a href="{% url 'cadastrogeral_comunidade' comunidade.slug %} " class="btn btn-success m-1 mb-2" style="margin-bottom: 10px;">{{comunidade.nome_comunidade}} - {{comunidade.cidade}}</a>
+                                </tr>
+                            {% endfor %}
+                            <br>
+                            <br>
+                        </div>
+                        <a class="btn btn-info" style="color: white;" href="{% url 'home' %}" class="btnbtn-primary">Voltar</a>
+                    </div>
+                    </div>
+                </div>
+            {% else %}
+                <br>
+                <div class="col">
+                    <div class="col-lg-15 col-md-13 col-sm-13 col-xs-15">
+                    <div class="card">
+                        <div class="card-body">
+                            {% for comunidade in comunidade_do_usuario %}
+                                <tr>
+                                    <a href="{% url 'cadastrogeral_comunidade' comunidade.slug %} " class="btn btn-success m-1 mb-2" style="margin-bottom: 10px;">{{comunidade.nome_comunidade}} - {{comunidade.cidade}}</a>
+                                </tr>
+                            {% endfor %}
+                            <br>
+                            <br>
+                        </div>
+                        <a class="btn btn-info" style="color: white;" href="{% url 'home' %}" class="btnbtn-primary">Voltar</a>
+                    </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endif %}
+</div>
+    </form>
+{% endblock %}

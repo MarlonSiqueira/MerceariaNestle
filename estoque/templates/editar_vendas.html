@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% load filters %}
+{% load define_action %}
+
+{% block 'body' %}
+<h1>Alterar Vendas - Apenas para vendas finalizadas</h1>
+<form action="" method="GET" >
+    <div class="col-md">
+        <label for="nome_cliente">Nome do Cliente:</label>
+        <input type="text" name="nome_cliente" id="nome_cliente">
+    </div>
+    <div class="col-md">
+        <label for="dia">Data:</label>
+        <input type="date" name="dia" id="dia">
+    </div>
+    <div class="col-md">
+        <label for="nome_produto">Nome do Produto:</label>
+        <input type="text" name="nome_produto" id="nome_produto" title="apenas o nome, não digite o tamanho">
+    </div>
+    <div class="col-md">
+        <label for="nome_vendedor">Nome do Vendedor:</label>
+        <input type="text" name="nome_vendedor" id="nome_vendedor">
+        <a class="btn btn-info" style="color: white; margin-left: 10px;" href="{% url 'cadastrogeral_festa' slug %}">Voltar</a>
+        <button id="btn-submit" type="submit" class="btn btn-success">Pesquisar</button>
+        <a class="btn btn-primary" style="color: white; margin-left: 10px;" href="{% url 'export_troca_estorno' slug %}">Exportar</a>
+    </div>
+    <!-- <label for="acao">Qual ação deseja realizar ?</label>
+    <select id="acao" name="acao">
+        <option selected disabled value="">Selecione</option>
+        <option value="Trocar">Trocar</option>
+        <option value="Estornar">Estornar</option>
+        <option value="Cancelar">Cancelar</option>
+    </select> -->
+<br>
+{% if request.GET.nome_cliente or request.GET.dia or request.GET.nome_produto or request.GET.nome_vendedor or request.GET.acao %}
+    {% if page.has_other_pages %}
+        <div class="pagination">
+            {% if page.has_previous %}
+                {% if request.GET.nome_cliente or request.GET.dia or request.GET.nome_produto or request.GET.nome_vendedor or request.GET.acao %}
+                    <!-- Verifica se há uma página anterior -->
+                    <!-- Verifica se o usuário está buscando algo nos campos acima -->
+                    <!-- Cria um link para a página anterior com os parâmetros de filtro na URL com base nos campos preenchidos -->
+                    <!-- Se a página atual for igual a 1(primeira página) desabilite o botão "Anterior" -->
+                    <a class="page-link {% if page.number == 1 %}disabled{% endif %}" {% if page.number != 1 %}href="{% url 'editar_vendas' slug %}?page={{ page.previous_page_number }}&nome_cliente={{ request.GET.nome_cliente }}&dia={{ request.GET.dia }}&nome_produto={{ request.GET.nome_produto }}&nome_vendedor={{ request.GET.nome_vendedor }}&acao={{ request.GET.acao }}"{% endif %}>&laquo; Anterior</a>
+                {% else %}
+                    <!-- Verifica se há uma página anterior -->
+                    <!-- Cria um link para a página anterior -->
+                    <a class="page-link {% if page.number == 1 %}disabled{% endif %}" {% if page.number != 1 %}href="{% url 'editar_vendas' slug %}?page={{ page.previous_page_number }}"{% endif %}>&laquo; Anterior</a>
+                {% endif %}
+            {% else %}
+                <!-- Não há uma página anterior -->
+                <!-- Mostra um texto "Anterior" desabilitado -->
+                <span class="page-link disabled">&laquo; Anterior</span>
+            {% endif %}
+
+            {% for page_num in page.paginator.page_range %}
+                {% if request.GET.nome_cliente or request.GET.dia or request.GET.nome_produto or request.GET.nome_vendedor or request.GET.acao %}
+                    {% if page_num == page.number %}
+                        <!-- Verifica se a página atual é igual ao número da iteração -->
+                        <!-- Mostra o número da página atual destacado -->
+                        <span class="page-link active">{{ page_num }} (Atual)</span>
+                    {% elif page_num >= page.number|add:-15 and page_num <= page.number|add:15 %}
+                        <!-- Verifica se o número da iteração está dentro do intervalo de páginas próximas à página atual -->
+                        <!-- Cria um link para o número da página com os parâmetros de filtro na URL -->
+                        <a class="page-link" href="{% url 'editar_vendas' slug %}?page={{ page_num }}&nome_cliente={{ request.GET.nome_cliente }}&dia={{ request.GET.dia }}&nome_produto={{ request.GET.nome_produto }}&nome_vendedor={{ request.GET.nome_vendedor }}&acao={{ request.GET.acao }}">{{ page_num }}</a>
+                    {% endif %}
+                {% else %}
+                    {% if page_num == page.number %}
+                        <!-- Verifica se a página atual é igual ao número da iteração -->
+                        <!-- Mostra o número da página atual destacado -->
+                        <span class="page-link active">{{ page_num }} (Atual)</span>
+                    {% elif page_num >= page.number|add:-15 and page_num <= page.number|add:15 %}
+                        <!-- Verifica se o número da iteração está dentro do intervalo de páginas próximas à página atual -->
+                        <!-- Cria um link para o número da página -->
+                        <a class="page-link" href="{% url 'editar_vendas' slug %}?page={{ page_num }}">{{ page_num }}</a>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            
+            {% if page.has_next %}
+                {% if request.GET.nome_cliente or request.GET.dia or request.GET.nome_produto or request.GET.nome_vendedor or request.GET.acao %}
+                    <!-- Verifica se há uma próxima página -->
+                    <!-- Verifica se o usuário está buscando algo nos campos acima -->
+                    <!-- Cria um link para a página anterior com os parâmetros de filtro na URL com base nos campos preenchidos -->
+                    <!-- Se a página atual for igual a page.paginator.num_pages(última página) desabilite o botão "Próximo" -->
+                    <a class="page-link {% if page.number == page.paginator.num_pages %}disabled{% endif %}" {% if page.number != page.paginator.num_pages %}href="{% url 'editar_vendas' slug %}?page={{ page.next_page_number }}&nome_cliente={{ request.GET.nome_cliente }}&dia={{ request.GET.dia }}&nome_produto={{ request.GET.nome_produto }}&nome_vendedor={{ request.GET.nome_vendedor }}&acao={{ request.GET.acao }}"{% endif %}>Próximo &raquo;</a>
+                {% else %}
+                    <!-- Verifica se há uma próxima página -->
+                    <!-- Cria um link para a próxima página -->
+                    <a class="page-link {% if page.number == page.paginator.num_pages %}disabled{% endif %}" {% if page.number != page.paginator.num_pages %}href="{% url 'editar_vendas' slug %}?page={{ page.next_page_number }}"{% endif %}>Próximo &raquo;</a>
+                {% endif %}
+            {% else %}
+                <!-- Não há uma próxima página -->
+                <!-- Mostra um texto "Próximo" desabilitado -->
+                <span class="page-link disabled">Próximo &raquo;</span>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endif %}
+<br>
+{% for venda in page %}
+    {% if request.GET.nome_cliente or request.GET.dia or request.GET.nome_produto or request.GET.nome_vendedor or request.GET.acao %}
+        <div class="rectangle_editar_vendas">
+            <div class="left-side">
+                <!-- Acessando a tabela VendasControle pela relação -->
+                {% with venda.id_venda as venda_controle %}
+                    <p>Nome do cliente: {{ venda.nome_cliente }}</p>
+                    <p>Valor Pago: R$ {{ venda_controle.valor_pago }}</p>
+                    <p>Vendido por: {{ venda.criado_por }}</p>
+                    <p>Finalizado por: {{ venda.alterado_por }}</p>
+                    <p>Forma de Pagamento: {{venda.forma_venda}}</p>
+                    <p>Data da Venda: {{ venda.data_criacao }}</p>
+                {% endwith %}
+            </div>
+            <div class="right-side">
+                <!-- Coloque ambos os botões dentro de um novo container -->
+                <div class="button-container">
+                    <a href="{% url 'acoes_vendas' venda.id_venda %}" class="btn btn-primary">Visualizar</a>
+                    <a onclick="EstornarVenda('{{ venda.id_venda }}')" class="btn btn-warning">Estornar</a>
+                </div>
+            </div>
+        </div>
+        <br>
+    {% endif %}
+{% endfor %}
+
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+    $(document).ready(function(){
+        $('#nome_cliente').on('input', function() { // só está sendo permitido letras minusculas e espaços
+            var value = $(this).val();
+            var newValue = value.toLowerCase().replace(/[^a-z\s]/ig, ''); // Remove caracteres não permitidos
+
+            if (newValue.length > 30) {
+                newValue = newValue.substring(0, 30); // Limita o tamanho a 30 caracteres
+            }
+
+            if (value !== newValue) {
+                $(this).val(newValue);
+            }
+        });
+
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load filters %}
+
+{% block 'body' %}
+<h1>Relatório Produtos</h1>
+<form action="" method="GET" >
+    <div class="col-md">
+        <label for="nome_produto">Nome do Produto:</label>
+        <input type="text" name="nome_produto" id="nome_produto">
+    </div>
+    <div class="col-md">
+        <label for="id_venda">ID da Venda:</label>
+        <input type="text" name="id_venda" id="id_venda">
+    </div>
+    <div class="col-md">
+        <label for="dia">Data:</label>
+        <input type="date" name="dia" id="dia">
+    </div>
+    <label for="acao">Qual ação deseja filtrar ?</label>
+    <select name="acao" id="acao">
+        <option value="" selected disabled>Selecione</option>
+        <option value="Venda_Item">Venda</option>
+        <option value="Troca">Troca</option>
+        <option value="Estorno">Estorno</option>
+    </select>
+
+    <a class="btn btn-info" style="color: white;" href="{% url 'editar_vendas' slug %}" class="btnbtn-primary">Voltar</a>
+    <button id="btn-submit" type="submit" class="btn btn-success">Pesquisar</button>&nbsp;&nbsp;
+    <a class="btn btn-info" href="{% url 'export_csv_troca_estorno' %}?nome_produto={{request.GET.nome_produto}}&id_venda={{request.GET.id_venda}}&dia={{request.GET.dia}}&acao={{request.GET.acao}}">Exportar Planilha</a>
+</form>
+<br>
+{% if page.has_other_pages %}
+    <div class="btn-group" role="group" aria-label="Item Pagination">
+        {% if page.has_previous %} <!-- Se existe alguma página antes, mostre Anterior-->
+            {% if request.GET.nome_produto or request.GET.dia or request.GET.acao%}
+                <a class="btn btn-info" href="{% url 'export_troca_estorno' slug %}?page={{page.previous_page_number}}&nome_produto={{request.GET.nome_produto}}&id_venda={{request.GET.id_venda}}&dia={{request.GET.dia}}&acao={{request.GET.acao}}">&laquo</a>
+            {% else%}
+                <a class="btn btn-info" href="{% url 'export_troca_estorno' slug %}?page={{page.previous_page_number}}">&laquo</a>
+            {% endif %}
+        {% endif %}
+
+        {% for page_num in page.paginator.page_range %}
+            {% if request.GET.nome_produto or request.GET.dia or request.GET.model or request.GET.acao%}
+                {% if page.number == page_num %}
+                    <button class="btn btn-outline-primary active">
+                        <span>{{ page_num }} (Atual)</span>
+                    </button>
+                {% else %}
+                    <a href="{% url 'export_troca_estorno' slug %}?page={{ page_num }}&nome_produto={{request.GET.nome_produto}}&id_venda={{request.GET.id_venda}}&dia={{request.GET.dia}}&acao={{request.GET.acao}}" class="btn btn-outline-primary">
+                        {{ page_num }}</a>
+                {% endif %}
+            {% else %}
+                {% if page.number == page_num %}
+                    <button class="btn btn-outline-primary active">
+                        <span>{{ page_num }} (Atual)</span>
+                    </button>
+                {% else %}
+                    <a href="{% url 'export_troca_estorno' slug %}?page={{ page_num }}" class="btn btn-outline-primary">
+                        {{ page_num }}</a>
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+        
+            {% if page.has_next %}<!-- Se existe alguma página depois, mostre Próximo-->
+                {% if request.GET.nome_produto or request.GET.dia or request.GET.acao%}
+                    <a class="btn btn-info" href="{% url 'export_troca_estorno' slug %}?page={{page.next_page_number}}&nome_produto={{request.GET.nome_produto}}&id_venda={{request.GET.id_venda}}&dia={{request.GET.dia}}&acao={{request.GET.acao}}">&raquo</a>
+                {% else %}
+                    <a class="btn btn-info" href="{% url 'export_troca_estorno' slug %}?page={{page.next_page_number}}">&raquo</a>
+                {% endif %}          
+            {% endif %}
+    </div>
+{% endif %}
+<br>
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Ação</th>
+            <th>ID Venda</th>
+            <th>Tipo</th>
+            <th>Nome do Produto</th>
+            <th>Tamanho do Produto</th>
+            <th>Categoria</th>
+            <th>Quantidade Antiga</th>
+            <th>Quantidade Nova</th>
+            <th>Tamanho Novo</th>
+            <th>Cor Nova</th>
+            <th>Data Criação</th>
+            <th>Criado Por</th>
+            <th>Ano Festa</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for log in page.object_list %}<!-- pegando o page.object_list que é a lista de páginas em vez de "for log in logs"-->
+        <tr>
+            <td>{{ log.acao }}</td>
+            <td>{{ log.id_venda }}</td>
+            <td>{{ log.tipo }}</td>
+            <td>{{ log.nome_produto }}</td>
+            {% if log.tamanho_produto == None %}
+                <td> </td>
+            {% else %}
+                <td>{{ log.tamanho_produto }}</td>
+            {% endif %}
+            <td>{{ log.categoria }}</td>
+            <td>{{ log.quantidade_antiga }}</td>
+            {% if log.quantidade_nova == 0 and log.acao == "Venda_Item" %}
+                <td> </td>
+            {% else %}
+                <td>{{ log.quantidade_nova }}</td>
+            {% endif %}
+            {% if log.tamanho_produto_novo == "0" %}
+                <td> </td>
+            {% else %}
+                <td>{{ log.tamanho_produto_novo }}</td>
+            {% endif %}
+            {% if log.cor_produto_novo == "0"%}
+                <td> </td>
+            {% else %}
+                <td>{{ log.cor_produto_novo }}</td>
+            {% endif %}
+            <td>{{ log.data_criacao }}</td>
+            <td>{{ log.criado_por }}</td>
+            <td>{{ log.ano_festa }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

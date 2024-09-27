@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block 'body' %}
+<h1>Listar Logs</h1>
+<form action="" method="GET" >
+    <div class="col-md">
+        <label for="nome_user">Nome do Usuário:</label>
+        <input type="text" name="nome_user" id="nome_user">
+    </div>
+    <div class="col-md">
+        <label for="dia">Data:</label>
+        <input type="date" name="dia" id="dia">
+    </div>
+    <div class="col-md">
+        <label for="model">Modelo:</label>
+        <input type="text" name="model" id="model">
+    </div>
+    <label for="acao">Qual ação deseja filtrar ?</label>
+    <select name="acao" id="acao">
+        <option value="" selected disabled>Selecione</option>
+        <option value="Inclusão">Inclusão</option>
+        <option value="Alteração">Alteração</option>
+        <option value="Exclusão">Exclusão</option>
+        <option value="Troca">Troca</option>
+        <option value="Troca_Geral">Troca Geral</option>
+        <option value="Estorno">Estorno</option>
+        <option value="Cancelamento">Cancelamento</option>
+    </select>
+
+    <a class="btn btn-info" style="color: white;" href="{% url 'home' %}" class="btnbtn-primary">Voltar</a>
+    <button id="btn-submit" type="submit" class="btn btn-primary">Pesquisar</button>
+</form>
+<br>
+{% if page.has_other_pages %}
+    <div class="pagination">
+        {% if page.has_previous %}
+            {% if request.GET.nome_user or request.GET.dia or request.GET.model or request.GET.acao %}
+                <!-- Verifica se há uma página anterior -->
+                <!-- Verifica se o usuário está buscando algo nos campos acima -->
+                <!-- Cria um link para a página anterior com os parâmetros de filtro na URL com base nos campos preenchidos -->
+                <!-- Se a página atual for igual a 1(primeira página) desabilite o botão "Anterior" -->
+                <a class="page-link {% if page.number == 1 %}disabled{% endif %}" {% if page.number != 1 %}href="{% url 'listar_logs' %}?page={{ page.previous_page_number }}&nome_user={{ request.GET.nome_user }}&dia={{ request.GET.dia }}&model={{ request.GET.model }}&acao={{ request.GET.acao }}"{% endif %}>&laquo; Anterior</a>
+            {% else %}
+                <!-- Verifica se há uma página anterior -->
+                <!-- Cria um link para a página anterior -->
+                <a class="page-link {% if page.number == 1 %}disabled{% endif %}" {% if page.number != 1 %}href="{% url 'listar_logs' %}?page={{ page.previous_page_number }}"{% endif %}>&laquo; Anterior</a>
+            {% endif %}
+        {% else %}
+            <!-- Não há uma página anterior -->
+            <!-- Mostra um texto "Anterior" desabilitado -->
+            <span class="page-link disabled">&laquo; Anterior</span>
+        {% endif %}
+
+        {% for page_num in page.paginator.page_range %}
+            {% if request.GET.nome_user or request.GET.dia or request.GET.model or request.GET.acao %}
+                {% if page_num == page.number %}
+                    <!-- Verifica se a página atual é igual ao número da iteração -->
+                    <!-- Mostra o número da página atual destacado -->
+                    <span class="page-link active">{{ page_num }} (Atual)</span>
+                {% elif page_num >= page.number|add:-15 and page_num <= page.number|add:15 %}
+                    <!-- Verifica se o número da iteração está dentro do intervalo de páginas próximas à página atual -->
+                    <!-- Cria um link para o número da página com os parâmetros de filtro na URL -->
+                    <a class="page-link" href="{% url 'listar_logs' %}?page={{ page_num }}&nome_user={{ request.GET.nome_user }}&dia={{ request.GET.dia }}&model={{ request.GET.model }}&acao={{ request.GET.acao }}">{{ page_num }}</a>
+                {% endif %}
+            {% else %}
+                {% if page_num == page.number %}
+                    <!-- Verifica se a página atual é igual ao número da iteração -->
+                    <!-- Mostra o número da página atual destacado -->
+                    <span class="page-link active">{{ page_num }} (Atual)</span>
+                {% elif page_num >= page.number|add:-15 and page_num <= page.number|add:15 %}
+                    <!-- Verifica se o número da iteração está dentro do intervalo de páginas próximas à página atual -->
+                    <!-- Cria um link para o número da página -->
+                    <a class="page-link" href="{% url 'listar_logs' %}?page={{ page_num }}">{{ page_num }}</a>
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+
+        {% if page.has_next %}
+            {% if request.GET.nome_user or request.GET.dia or request.GET.model or request.GET.acao %}
+                <!-- Verifica se há uma próxima página -->
+                <!-- Verifica se o usuário está buscando algo nos campos acima -->
+                <!-- Cria um link para a página anterior com os parâmetros de filtro na URL com base nos campos preenchidos -->
+                <!-- Se a página atual for igual a page.paginator.num_pages(última página) desabilite o botão "Próximo" -->
+                <a class="page-link {% if page.number == page.paginator.num_pages %}disabled{% endif %}" {% if page.number != page.paginator.num_pages %}href="{% url 'listar_logs' %}?page={{ page.next_page_number }}&nome_user={{ request.GET.nome_user }}&dia={{ request.GET.dia }}&model={{ request.GET.model }}&acao={{ request.GET.acao }}"{% endif %}>Próximo &raquo;</a>
+            {% else %}
+                <!-- Verifica se há uma próxima página -->
+                <!-- Cria um link para a próxima página -->
+                <a class="page-link {% if page.number == page.paginator.num_pages %}disabled{% endif %}" {% if page.number != page.paginator.num_pages %}href="{% url 'listar_logs' %}?page={{ page.next_page_number }}"{% endif %}>Próximo &raquo;</a>
+            {% endif %}
+        {% else %}
+            <!-- Não há uma próxima página -->
+            <!-- Mostra um texto "Próximo" desabilitado -->
+            <span class="page-link disabled">Próximo &raquo;</span>
+        {% endif %}
+    </div>
+{% endif %}
+<br>
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Nome do Usuário</th>
+            <th>Data</th>
+            <th>Ação</th>
+            <th>Modelo</th>
+            <th>Nome do Objeto</th>
+            <th>Campos Alteração</th>
+            <th>Valores Antigos</th>
+            <th>Valores Novos</th>
+            <th>Campos Inclusão</th>
+            <th>Valores Inclusão</th>
+            <th>Campos Exclusão</th>
+            <th>Valores Exclusão</th>
+            <!-- <th>ID do Usuário</th> -->
+        </tr>
+    </thead>
+    <tbody>
+    {% for log in page.object_list %}<!-- pegando o page.object_list que é a lista de páginas em vez de "for log in logs"-->
+        <tr>
+            <td>{{ log.nome_user }}</td>
+            <td>{{ log.data }}</td>
+            <td>{{ log.acao }}</td>
+            <td>{{ log.model }}</td>
+            <td>{{ log.nome_objeto }}</td>
+            <td>{{ log.campos_alteracao }}</td>
+            <td>{{ log.valores_antigos }}</td>
+            <td>{{ log.valores_novos }}</td>
+            <td>{{ log.campos_inclusao }}</td>
+            <td>{{ log.valores_inclusao }}</td>
+            <td>{{ log.campos_exclusao }}</td>
+            <td>{{ log.valores_exclusao }}</td>
+            <!-- <td>{{ log.id_user }}</td> -->
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

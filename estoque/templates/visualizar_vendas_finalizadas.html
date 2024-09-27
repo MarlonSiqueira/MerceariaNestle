@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static%}
+
+{% block 'body' %}
+    <div class="container">
+        {% if tamanho_produto == "" %}
+            {% if "Sem Cor" in cor_str %}
+                <h1>Venda do Produto: {{nome_produto}}</h1>
+            {% else %}
+                <h1>Venda do Produto: {{nome_produto}} ({{cor}})</h1>
+            {% endif %}
+            <h3>Data da venda: {{data_criacao}}</h3>
+        {% elif tamanho_produto != 0 %}
+            {% if "Sem Cor" in cor_str %}
+                <h1>Venda do Produto: {{nome_produto}} &nbsp;Tamanho: {{tamanho_produto}}</h1>
+            {% else %}
+                <h1>Venda do Produto: {{nome_produto}} ({{cor}}) &nbsp;Tamanho: {{tamanho_produto}}</h1>
+            {% endif %}
+            <h3>Data da venda: {{data_criacao}}</h3>
+        {% endif %}
+        <label>Nome do Cliente:</label>
+        <input class="form-control" value="{{nome_cliente}}" disabled=True>
+        <br>
+        <label>Categoria:</label>
+        <input class="form-control" value="{{categoria_venda}}" disabled=True>
+        <br>
+        <label>Quantidade Vendida:</label>
+        <input class="form-control" value="{{quantidade_venda}}" disabled=True>
+        <br>
+        <label>Preço Venda:</label>
+        <input class="form-control" value="{{preco_venda_total}}" disabled=True>
+        <br>
+        {% if desconto_total != "R$ 0.00" and desconto_autorizado == "R$ 0.00"%}
+        <label>Desconto:</label>
+        <input class="form-control" value="{{desconto_total}}" disabled=True>
+        <br>
+        {% endif %}
+        {% if desconto_total == "R$ 0.00" and desconto_autorizado != "R$ 0.00"%}
+        <label>Desconto Autorizado:</label>
+        <input class="form-control" value="{{desconto_autorizado}}" disabled=True>
+        <br>
+        <label>Autorizado por:</label>
+        <input class="form-control" value="{{autorizado_por}}" disabled=True>
+        <br>
+        {% endif %}
+        {% if user.cargo != "V" or user.cargo != "C" %}
+        <label>Lucro:</label>
+        <input class="form-control" value="{{lucro}}" disabled=True>
+        <br>
+        {% endif %}
+        <label>Forma de Pagamento:</label>
+        <input class="form-control" value="{{forma_venda}}" disabled=True>
+        <br>
+        <label>Venda Finalizada:</label>
+        <input class="form-control" value="SIM" disabled=True>
+        <br>
+        <label>Vendido por:</label>
+        <input class="form-control" value="{{vendido_por}}" disabled=True>
+        <br>
+        <a href="{% url 'vendas_finalizadas' ano_festa %}" class="btn btn-primary">Voltar</a>
+    </div>
+{% endblock %}

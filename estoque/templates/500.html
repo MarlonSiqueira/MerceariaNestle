@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block 'body' %}
+<h1 class="mt-5 text-center text-danger">Esse item que você procura não existe</h1>
+<h6 class="text-center" style="color: black">Provavelmente foi deletado do sistema.</h6>
+
+<h4 class="text-center" style="color: black">Caso tenha tentado realizar alguma ação e não conseguiu, contate a administração.</h4>
+<div class="container">
+    <a href="{% url 'home' %}" class="btn btn-info">Voltar ao início</a>
+<!-- <a href="{% url 'home' %}" class="btn btn-outline-danger btn-sm" style="border-radius: 15px; width: 200px">Voltar ao início</a> -->
+</div>
+{% endblock %}

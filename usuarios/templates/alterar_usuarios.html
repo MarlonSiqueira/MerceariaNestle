@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load define_action %}
+
+{% block 'body' %}
+    <div class="container">
+        <form action="" method="POST">{% csrf_token %}
+            {% if not username %}
+            <br>
+            <label>Login do usuário:</label>
+            <input type="text" placeholder="Digite o username" name="username" id="username" class="form-control">
+            <br>
+            <select class="form-control" name="opcao">
+                <option selected disabled value="">Selecione</option>
+                <option value="username">Username</option>
+                <option value="e-mail">E-mail</option>
+                <option value="anofesta">Ano Festa</option>
+                <option value="cargo">Cargo</option>
+                <option value="acesso">Acesso</option>
+            </select>
+            <br>
+            <a class="btn btn-info" style="color: white;" href="{% url 'home' %}" class="btn btn-primary">Voltar</a>
+            <input type="submit" value="Enviar" class="btn btn-success">
+            {% endif %}
+            {% if username %}
+            <br>
+            <label>Login do usuário:</label>
+            <input type="text" readonly value="{{username}}" name="username_encontrado" class="form-control">
+            <hr class="bg-hr">
+            {% endif %}
+            {% if opcao == "e-mail" %}
+            <label>Novo E-mail:</label>
+            <input type="email" placeholder="Digite o novo e-mail" name="novo_email" class="form-control">
+            <br>
+            {% elif opcao == "username" %}
+            <label>Novo Nome:</label>
+            <input type="text" placeholder="Digite o novo nome" name="novo_nome" id="novo_nome" class="form-control">
+            <br>
+            <label>Novo Sobrenome:</label>
+            <input type="text" placeholder="Digite o novo sobrenome" name="novo_sobrenome" id="novo_sobrenome" class="form-control">
+            <br>
+            {% elif opcao == "anofesta" %}
+            <label>Novo Ano do Usuário:</label>
+            <input type="text" placeholder="Digite o ano atual para confirmar (validade 2 anos)" name="novo_ano" id="novo_ano" class="form-control">
+            <br>
+            {% elif opcao == "cargo" %}
+                <label>Novo Cargo do Usuário:</label>
+                {% if cargo_user_logado == "A" or cargo_user_logado == "P" %}
+                    <select class="form-control" name="novo_cargo">
+                        <option selected disabled value="">Selecione</option>
+                        <option value="V">Vendedor</option>
+                        <option value="C">Caixa</option>
+                        <option value="CL">Casal Lojinha</option>
+                        <option value="CF">Casal Festa</option>
+                    </select>
+                    {% elif cargo_user_logado == "CF" %}
+                        <select class="form-control" name="novo_cargo">
+                            <option selected disabled value="">Selecione</option>
+                            <option value="V">Vendedor</option>
+                            <option value="C">Caixa</option>
+                            <option value="CL">Casal Lojinha</option>
+                        </select>
+                    {% elif cargo_user_logado == "CL" %}
+                    <select class="form-control" name="novo_cargo">
+                        <option selected disabled value="">Selecione</option>
+                        <option value="V">Vendedor</option>
+                        <option value="C">Caixa</option>
+                    </select>
+                {% endif %}
+                <br>
+            {% elif opcao == "acesso" %}
+                <label>Configurar Acesso do usuário:</label>
+                <select class="form-control" name="configurar_acesso">
+                    <option selected disabled value="">Selecione</option>
+                    <option value="True">Ativado</option>
+                    <option value="False">Desativado</option>
+                </select>
+            <br>
+            {% endif %}
+            {% if username %}
+            <a class="btn btn-info" style="color: white;" href="{% url 'home' %}" class="btnbtn-primary">Voltar</a>
+            <input type="submit" value="Enviar" class="btn btn-success">
+            {% endif %}
+        </form>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+    $(document).ready(function(){
+        $('#username').on('input', function() { // mascara novo nome
+            var username_encontrado = $(this).val();
+            username_encontrado = username_encontrado.toLowerCase(); // Converter para letras minúsculas
+            
+            // Aplicar a máscara
+            username_encontrado = username_encontrado.replace(/[^a-z.]/g, ''); // Remover caracteres não alfabéticos
+            
+            // Limitar o tamanho do username_encontrado
+            if (username_encontrado.length > 30) {
+                username_encontrado = username_encontrado.substr(0, 30);
+            }
+
+            $(this).val(username_encontrado);
+        });
+
+        $('#novo_nome').on('input', function() { // mascara novo nome
+            var username = $(this).val();
+            username = username.toLowerCase(); // Converter para letras minúsculas
+            
+            // Aplicar a máscara
+            username = username.replace(/[^a-z]/g, ''); // Remover caracteres não alfabéticos
+            
+            // Limitar o tamanho do username
+            if (username.length > 15) {
+                username = username.substr(0, 15);
+            }
+
+            $(this).val(username);
+        });
+
+        $('#novo_sobrenome').on('input', function() { // mascara novo sobrenome
+            var sobrenome = $(this).val();
+            sobrenome = sobrenome.toLowerCase(); // Converter para letras minúsculas
+            
+            // Aplicar a máscara
+            sobrenome = sobrenome.replace(/[^a-z]/g, ''); // Remover caracteres não alfabéticos
+            
+            // Limitar o tamanho do sobrenome
+            if (sobrenome.length > 15) {
+                sobrenome = sobrenome.substr(0, 15);
+            }
+
+            $(this).val(sobrenome);
+        });
+
+        $('#novo_ano').mask('0000')
+    });
+
+</script>
+{% endblock %}

@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load filters %}
+{% load define_action %}
+
+{% block 'body' %}
+<div class="container">
+        {% if data_modelo_2 == ano_atual_str %}
+            <form action="" method="POST" enctype="multipart/form-data"> {% csrf_token %}
+
+            <br>
+            <label>Selecione o nome do produto:</label>
+            <select class="form-control" onchange="funcao(this.value)" name="nome_produto" id="nome_produto">
+                {% for nome_produto in nome_produtos %}
+                <option value="{{nome_produto.nome_produto}}">{{nome_produto.nome_produto}}</option>
+                {% endfor %}
+            </select>
+            <br hidden id="tamanho3">
+            <label hidden id="tamanho1">Selecione o tamanho da Camisa:</label>
+            <select name="tamanho_produto" id="tamanho2" class="form-control">
+                {% for tamanho in tamanho_produtos %}
+                    <option value="{{ tamanho.tamanho_produto }}" data-secao="{{ tamanho.secao }}">{{ tamanho.tamanho_produto }}</option>
+                {% endfor %}
+            </select>
+            <br>
+            <div id="cor_div">
+                <label>Selecione a cor do produto:</label>
+                <select class="form-control" name="cor_infantil" id="cor_infantil" style="display: block;">
+                    {% for cor in cores %}
+                        {% if cor.secao == "Infantil" %}
+                            <option value="{{cor.id}}">{{cor.titulo}}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <select class="form-control" name="cor_adulto" id="cor_adulto" style="display: block;">
+                    {% for cor in cores %}
+                        <option value="{{cor.id}}">
+                            {{cor.titulo}}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <br>
+            <label>Selecione a categoria do produto:</label>
+            <select class="form-control" name="categoria" id="categoria">
+                {% for categoria in categorias %}
+                <option value="{{categoria.id}}">{{categoria.titulo}}</option>
+                {% endfor %}
+            </select>
+
+            <br>
+
+            <label>Quantidade:</label>
+            <input class="form-control" type="text" name="quantidade" id="quantidade" placeholder="0">
+
+            <br>
+
+            <label>Preço de Compra:</label>
+            <input class="form-control" type="text" name="preco_compra" id="preco_compra" placeholder="0">
+
+            <br>
+
+            <label>Preço de Venda:</label>
+            <input class="form-control" type="text" name="preco_venda" id="preco_venda" placeholder="0">
+
+            <br>
+
+            <a href="{% url 'cadastrogeral_festa' ano_atual_str %}" class="btn btn-info">Voltar</a>
+            <input type="submit" id='Enviar' value="Criar" class="btn btn-primary">
+            </form>
+            
+            <hr style="background-color: gray;">
+        {% endif %}
+        <form action="" method="GET">
+            <div class="row d-flex">
+                <div class="col-md">
+                    <input class="form-control" type="text" name="nome_produto" placeholder="Nome...">
+                </div>
+
+                <div class="col-md">
+                    <select class="form-control" name="categoria">
+                        <option value="">Todas as categorias</option>
+                        {% for categoria in categorias %}
+                        <option value="{{categoria.id}}">{{categoria.titulo}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md">
+                    <input class="form-control" type="text" name="preco_min" id="preco_min" placeholder="Preço Mínimo">
+                </div>
+                
+                <div class="col-md">
+                    <input class="form-control" type="text" name="preco_max" id="preco_max" placeholder="Preço Máximo">
+                </div>
+                <div>
+                    &nbsp; &nbsp;<input type="submit" value="Filtrar" id="filtrar_add_produto" class="btn btn-success">
+                </div>
+                {% if data_modelo_2 == ano_atual_str %}
+                    {% if user.cargo == "A" or user.cargo == "P" or user.cargo == "CF" or user.cargo == "CL" %}
+                    <div class="col-md">
+                        <a class="btn btn-info" id="exportar_add_produto" href="{% url 'export_entrada_produtos' ano_atual_str%}">Exportar Planilha</a>
+                    </div>
+                    {% endif %}
+                {% elif data_modelo_2 != ano_atual_str%}
+                &nbsp&nbsp&nbsp
+                <a href="{% url 'cadastrogeral_festa' ano_atual_str %}" class="btn btn-info">Voltar</a>
+                &nbsp&nbsp&nbsp
+                <a class="btn btn-info" id="exportar_add_produto" href="{% url 'export_entrada_produtos' ano_atual_str%}">Exportar Planilha</a>
+            {% endif %}
+            </div>
+        </form>
+            <br>
+        <div class="listar_produtos">
+            <div class="row">
+            <div>
+
+            </div>
+            {% for produto in produtos %}
+                {% if id_ano_festa == produto.ano_festa_id %}
+                    <div class="col-md">
+                        <div style="background-color: #e0ffff; width: 18rem" class="card" style="width: 18rem;">
+                            <div class="card-body">
+                                {% if "Sem Cor" in produto.label %}
+                                    <h5 class="card-title">{{produto.nome_produto}}</h5>
+                                {% else %}
+                                    <h5 class="card-title">{{produto.label}}</h5>
+                                {% endif %}
+                                <span class="badge badge-info">{{produto.categoria}}</span>
+                                <h6 class="card-title">Quantidade em Estoque: {{produto.quantidade}}</h6>
+                                {% if data_modelo_2 == ano_atual_str %}
+                                {% define produto.slug as slugproduto %}
+                                <a href="{% url 'produto' produto.slug %}" class="btn btn-primary">Alterar</a>
+                                <a onclick="excluirProduto(`{{slugproduto}}`)" class="btn btn-danger">Excluir</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <br>
+                    </div>
+                {%endif%}
+            {% endfor %}
+            </div>
+        </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function atualizarConteudo() {
+        var nomeProdutoSelect = document.getElementById("nome_produto");
+        var tamanhoSelect_open = document.getElementById("tamanho2");
+        var CorInfantil_open = document.getElementById("cor_infantil");
+        var CorAdulto_open = document.getElementById("cor_adulto");
+
+        // Verifica o valor selecionado em "nome_produto"
+        var nomeProdutoSelecionado = nomeProdutoSelect.value;
+
+        var selectedOption_open = tamanhoSelect_open.options[tamanhoSelect_open.selectedIndex];
+        var selectedSecao_open = selectedOption_open.getAttribute("data-secao");
+        var isHidden = tamanhoSelect_open.hidden;
+
+        // Verifica se o elemento está oculto e se o valor da propriedade "data-secao" é 0
+        if (isHidden) {
+            selectedSecao_open = 0
+        }
+
+        CorAdulto_open.style.display = "block";
+
+        if (nomeProdutoSelecionado.toLowerCase() === "camisa") {
+            // Oculta a opção "Sem Cor"
+            var options = CorAdulto_open.options;
+            for (var i = 0; i < options.length; i++) {
+                if (options[i].text === "Sem Cor") {
+                    options[i].style.display = "none";
+                } else {
+                    options[i].style.display = "block";
+                }
+            }
+        }else {
+            CorAdulto_open.style.display = "none";
+
+            // Exibe todas as opções em "cor_adulto"
+            var options = CorAdulto_open.options;
+            for (var i = 0; i < options.length; i++) {
+                options[i].style.display = "block";
+            }
+        }
+
+        //Sempre que abrir a página
+        if (selectedSecao_open === "Infantil") {
+            CorInfantil_open.style.display = "block";
+            CorAdulto_open.style.display = "none";
+        } else {
+            CorInfantil_open.style.display = "none";
+            CorAdulto_open.style.display = "block";
+        }
+    }
+    
+    document.addEventListener("DOMContentLoaded", function() {
+        atualizarConteudo(); // Chamando a função atualizarConteudo, definida anteriormente, pra ser executada sozinha assim que a página for carregada
+
+        var tamanhoSelect = document.getElementById("tamanho2");
+        var CorInfantil = document.getElementById("cor_infantil");
+        var CorAdulto = document.getElementById("cor_adulto");
+
+        tamanhoSelect.addEventListener("change", function() {
+            var selectedOption = tamanhoSelect.options[tamanhoSelect.selectedIndex];
+            var selectedSecao = selectedOption.getAttribute("data-secao");
+
+            //apenas ao alterar
+            if (selectedSecao === "Infantil") {
+                CorInfantil.style.display = "block";
+                CorAdulto.style.display = "none";
+            } else {
+                CorInfantil.style.display = "none";
+                CorAdulto.style.display = "block";
+            }
+        });
+        
+
+        // Obtenha o valor selecionado inicialmente
+        var valorSelecionado = document.getElementById("nome_produto").value;
+        
+        // Chame a função funcao() assim que carrega a tela com o valor selecionado
+        funcao(valorSelecionado);
+    });
+
+
+    $(document).ready(function(){
+        $('#quantidade').mask('000')
+        $('#preco_compra').mask('000,00', {reverse: true})
+        $('#preco_venda').mask('000,00', {reverse: true})
+        $('#preco_min').mask('000,00', {reverse: true})
+        $('#preco_max').mask('000,00', {reverse: true})
+    });
+
+    /////////// Ao Enviar o Formulário /////////////
+    var submitButton = document.getElementById("Enviar");
+    submitButton.addEventListener("click", function(event) {
+        var CorInfantil_enviar = document.getElementById("cor_infantil");
+        var CorAdulto_enviar = document.getElementById("cor_adulto");
+
+        if (CorAdulto_enviar.style.display === "none") {
+            CorAdulto_enviar.value = "0";
+        }else {
+            if (CorInfantil_enviar.style.display === "none") {
+                CorInfantil_enviar.value = "0";
+            }
+        }
+    });
+
+    //Ordenar o nome dos produtos ao carregar a tela
+    window.onload = function() {
+        //Inicio Nome Produto
+        var itensOrdenados = $('#nome_produto option').sort(function (a, b) {
+            return a.text < b.text ? -1 : 1;
+        });
+    
+        $('#nome_produto').html(itensOrdenados);
+        //Fim Nome Produto
+
+        //Inicio Tamanho
+        var itensOrdenados_tamanho = $('#tamanho2 option').sort(function (a, b) {
+            return a.text < b.text ? -1 : 1;
+        });
+
+        $('#tamanho2').html(itensOrdenados_tamanho);
+        //Fim Tamanho
+
+        //Inicio Cor
+        var itensOrdenados_cor = $('#cor_adulto option').sort(function (a, b) {
+            return a.text < b.text ? -1 : 1;
+        });
+    
+        $('#cor_adulto').html(itensOrdenados_cor);
+        //Fim Cor
+
+        //Inicio Categoria
+        var itensOrdenados_categoria = $('#categoria option').sort(function (a, b) {
+            return a.text < b.text ? -1 : 1;
+        });
+    
+        $('#categoria').html(itensOrdenados_categoria);
+        //Fim Categoria
+    }
+
+</script>
+{% endblock %}

@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% load filtersvenda %}
+{% load define_action %}
+
+{% block 'body' %}
+<div class="container">
+        {% if data_modelo_2 == ano_atual_str %}
+            {% for all_venda in all_vendas %}
+                {% if all_venda.ano_festa_id == id_ano_festa %}
+                    {% if all_venda.venda_finalizada != 1 and all_venda.alteracoes_finalizadas != 1 %}
+                    <div class="rectangle">
+                        <div class="left-side">
+                            <p>Nome do cliente: {{all_venda.nome_cliente}}</p>
+                            {% if all_venda.desconto_total > 0 %}
+                            <p>Desconto: R$ {{all_venda.desconto_total}}</p>
+                            {% endif %}
+                            <p>Preço à ser Cobrado: <span data-preco-venda="{{ all_venda.novo_preco_venda_total }}">R$ {{all_venda.novo_preco_venda_total}}</span></p>
+                            {% if all_venda.forma_venda == "Dinheiro" %}
+                                <div class="input-row">
+                                    <label for="valor_pago_{{forloop.counter}}">Valor Pago:</label> &nbsp;
+                                    <input class="form-control quantity-input valor-pago" type="text" style="width: 75px;" name="valor_pago_{{forloop.counter}}" id="valor_pago_{{forloop.counter}}">
+                                    <label for="troco{{forloop.counter}}">&nbsp; Troco: &nbsp;</label>
+                                    <input class="form-control quantity-input troco" disabled style="width: 75px;" type="text" value="0" name="troco{{forloop.counter}}" id="troco{{forloop.counter}}">
+                                </div>
+                            {% else %}
+                                <div class="input-row-hidden">
+                                    <label style="display: none;" for="valor_pago_{{forloop.counter}}">Valor Pago:</label> &nbsp;
+                                    <input class="form-control quantity-input valor-pago" type="text" style="display: none; height: 0; visibility: hidden;" name="valor_pago_{{forloop.counter}}" value="0" id="valor_pago_{{forloop.counter}}">
+                                    <label style="display: none;" for="troco{{forloop.counter}}">&nbsp; Troco: &nbsp;</label>
+                                    <input class="form-control quantity-input troco" disabled style="display: none; height: 0; visibility: hidden;" type="text" value="0" name="troco{{forloop.counter}}" id="troco{{forloop.counter}}">
+                                </div>
+                            {% endif %}
+                            <p>Forma de Pagamento: {{all_venda.forma_venda}}</p>
+                            <div class="d-flex flex-column align-items-start">
+                                {% if all_venda.forma_venda == "Crédito" %}
+                                    <div class="input-row">
+                                        <label for="quantidade_parcelas{{forloop.counter}}">Quantidade de Parcelas:</label> &nbsp;
+                                        <input class="form-control quantity-inputq quantidade_parcelas" type="number" style="width: 75px;" name="quantidade_parcelas{{forloop.counter}}" id="quantidade_parcelas{{forloop.counter}}" value="1">&nbsp;
+                                    </div>
+                                {% else %}
+                                    <div class="input-row-hidden">
+                                        <label style="display: none;" for="quantidade_parcelas{{forloop.counter}}">Quantidade de Parcelas:</label> &nbsp;
+                                        <input class="form-control quantity-inputq quantidade_parcelas" type="number" style="display: none; height: 0; visibility: hidden;" name="quantidade_parcelas{{forloop.counter}}" id="quantidade_parcelas{{forloop.counter}}" value="0">&nbsp;
+                                    </div>
+                                {% endif %}
+                                <a href="{% url 'conferir_vendas_geral' all_venda.slug %}" style="width: 200px; height: 38px;" class="btn btn-primary">Visualizar</a>
+                            </div>
+                        </div>
+                        <div class="right-side">
+                            {% define all_venda.slug as slugvenda %}
+                            <a data-slug="{{slugvenda}}" data-counter="{{forloop.counter}}" onclick="excluirVenda(this)" style="margin-right: 10px;" class="btn btn-danger">Cancelar</a>
+                            <a data-slug="{{slugvenda}}" data-counter="{{forloop.counter}}" onclick="confirmarVenda(this)" class="btn btn-success">Confirmar</a>
+                        </div>
+                    </div>
+                    <br>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+            <br>
+            <a href="{% url 'cadastrogeral_festa' ano_atual_str %}" class="btn btn-info">Voltar</a>
+        {% endif %}
+        <br>
+        <br>
+        <form action="" method="GET">
+            {% if page.has_other_pages %}
+                <div class="btn-group" role="group" aria-label="Item Pagination">
+                    {% if page.has_previous %} <!-- Se existe alguma página antes, mostre Anterior-->
+                        {% if request.GET.nome_cliente or request.GET.nome_produto or request.categoria%}
+                            <a class="btn btn-info" href="{% url 'vendas_finalizadas' ano_atual_str %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
+                        {% else%}
+                            <a class="btn btn-info" href="{% url 'vendas_finalizadas' ano_atual_str %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
+                        {% endif %}
+                    {% endif %}
+
+                    {% for page_num in page.paginator.page_range %}
+                        {% if request.GET.nome_cliente or request.GET.nome_produto or request.categoria%}
+                            {% if page.number == page_num %}
+                                <button class="btn btn-outline-primary active">
+                                    <span>{{ page_num }} (Atual)</span>
+                                </button>
+                            {% else %}
+                                <a href="{% url 'vendas_finalizadas' ano_atual_str %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
+                                    {{ page_num }}</a>
+                            {% endif %}
+                        {% else %}
+                            {% if page.number == page_num %}
+                                <button class="btn btn-outline-primary active">
+                                    <span>{{ page_num }} (Atual)</span>
+                                </button>
+                            {% else %}
+                                <a href="{% url 'vendas_finalizadas' ano_atual_str %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
+                                    {{ page_num }}</a>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                        {% if page.has_next %}<!-- Se existe alguma página depois, mostre Próximo-->
+                            {% if request.GET.nome_cliente or request.GET.nome_produto or request.categoria%}
+                                <a class="btn btn-info" href="{% url 'vendas_finalizadas' ano_atual_str %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
+                            {% else %}
+                                <a class="btn btn-info" href="{% url 'vendas_finalizadas' ano_atual_str %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
+                            {% endif %}          
+                        {% endif %}
+                </div>
+            {% endif %}
+            <br>
+            <br>
+            <div class="row">
+                <div class="col-md">
+                    <input class="form-control" type="text" name="nome_cliente" value="{{request.GET.nome_cliente}}" placeholder="Nome do Cliente">
+                </div>
+
+                <div class="col-md">
+                    <input class="form-control" type="text" name="nome_produto" value="{{request.GET.nome_produto}}" placeholder="Nome do Produto">
+                </div>
+
+                <div class="col-md">
+                    <select class="form-control" name="categoria">
+                        <option value="">Todas as categorias</option>
+                        {% for categoria in categorias %}
+                        <option value="{{categoria.id}}">{{categoria.titulo}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md">
+                    <input class="form-control" type="text" name="preco_min" id="preco_min" value="{{request.GET.preco_min}}" placeholder="Preço Mínimo">
+                </div>
+                
+                <div class="col-md">
+                    <input class="form-control" type="text" name="preco_max" id="preco_max" value="{{request.GET.preco_max}}" placeholder="Preço Máximo">
+                </div>
+
+            </div>
+            <div class="row">
+                <div class="col-md">
+                    <label>Funcionário</label>
+                    <input class="form-control" type="text" value="{{request.GET.vendedor}}" name="vendedor" placeholder="Digite o nome do funcionário">
+                </div>
+                <div class="col-md">
+                    <label>De</label>
+                    <input class="form-control" type="date" value="{{request.GET.dt_start}}" name="dt_start">
+                </div>
+
+                <div class="col-md">
+                    <label>Até</label>
+                    <input class="form-control" type="date" value="{{request.GET.dt_end}}" name="dt_end">
+                </div>
+            </div>
+            <br>
+                <input type="submit" value="Filtrar" class="btn btn-success">&nbsp;
+                {% if data_modelo_2 == ano_atual_str %}
+                    {% if user.cargo == "A" or user.cargo == "P" or user.cargo == "CF" or user.cargo == "CL" %}
+                        <a class="btn btn-info" href="{% url 'export_csv_finalizadas' %}?nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">Exportar Planilha</a>&nbsp;
+                    {% endif %}
+                {% elif data_modelo_2 != ano_atual_str %}
+                    <a class="btn btn-info" href="{% url 'export_csv_finalizadas' %}?nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">Exportar Planilha</a>&nbsp;
+                    <a href="{% url 'cadastrogeral_festa' ano_atual_str %}" class="btn btn-info">Voltar</a>
+                {% endif %}
+        </form>
+            <br>
+            <div class="row">
+                {% for venda in page.object_list %}
+                    {% if id_ano_festa == venda.ano_festa_id %}
+                        {% if venda.venda_finalizada == 1 %}
+                            <div class="col-md-4">
+                                <div style="background-color: #e0ffff; width: 18rem" class="card" style="width: 18rem;">
+                                    <div class="card-body">
+                                        {% if "Sem Cor" in venda.label_vendas_get %}
+                                            <h5 class="card-title">{{venda.nome_produto}}</h5>
+                                        {% else %}
+                                            <h5 class="card-title">{{venda.label_vendas_get}}</h5>
+                                        {% endif %}
+                                        <span class="badge badge-info">{{venda.categoria}}</span>
+                                        <br>
+                                        <br>
+                                            <a href="{% url 'visualizar_vendas_finalizadas' venda.slug %}" class="btn btn-primary">Visualizar</a>
+                                    </div>
+                                </div>
+                                <br>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                    {% if forloop.counter|divisibleby:3 %}
+                        <div class="clearfix"></div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+    //Calculando Troco
+    document.addEventListener("DOMContentLoaded", function () {
+        var valorPagoInputs = document.querySelectorAll(".valor-pago");
+        var trocoInputs = document.querySelectorAll(".troco");
+        var spanPrecoVendas = document.querySelectorAll(".rectangle span");
+        var timeout;
+
+        valorPagoInputs.forEach(function (valorPagoInput, index) {
+            valorPagoInput.addEventListener("input", function () {
+                clearTimeout(timeout); // Limpa o timeout anterior, se houver
+
+                // Aguarda 100 milissegundos após a última entrada do usuário
+                timeout = setTimeout(function () {
+                    // Obtenha o valor do preço cobrado para este elemento
+                    var precoCobrado = parseFloat(spanPrecoVendas[index].getAttribute("data-preco-venda").replace(',', '.'));
+
+                    // Obtenha o valor pago e substitua ',' por '.'
+                    var valorPago = valorPagoInput.value.trim() === "" ? 0 : parseFloat(valorPagoInput.value.replace(',', '.'));
+
+                    // Calcule o troco
+                    var troco = valorPago - precoCobrado;
+                    
+                    if (troco < 0){
+                        troco = 0
+                    }
+
+                    // Exiba o troco no elemento de troco correspondente
+                    trocoInputs[index].value = troco.toFixed(2).replace('.', ',');
+                }, 100); // Espera 100 milissegundos
+            });
+        });
+    });
+    
+    $(document).ready(function(){
+        $('#preco_min').mask('000,00', {reverse: true})
+        $('#preco_max').mask('000,00', {reverse: true})
+
+        // Seleciona todos os elementos com a classe 'form-control quantity-input' e aplica a máscara
+        $('input.form-control.quantity-input').each(function() {
+            var id = $(this).attr('id');
+            if (id) {
+                $(this).mask('000,00', {reverse: true});
+            }
+        });
+    });
+
+</script>
+{% endblock %}

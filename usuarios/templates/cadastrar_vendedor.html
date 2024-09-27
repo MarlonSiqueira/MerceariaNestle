@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load define_action %}
+
+{% block 'body' %}
+    <div class="container">
+        {% if user.is_authenticated %}
+            {% if user.cargo == "A" %}
+                <form action="" method="POST">{% csrf_token %}
+                    <br>
+                    <label>Nome </label>
+                    <input type="text" id="nome" placeholder="Digite o nome do vendedor" name="nome" class="form-control">
+                    <br>
+                    <label>Sobrenome </label>
+                    <input type="text" id="sobrenome" placeholder="Digite o sobrenome do vendedor" name="sobrenome" class="form-control">
+                    <br>
+                    <label>E-mail </label>
+                    <input type="email" placeholder="Digite o e-mail do vendedor" name="email" class="form-control">
+                    <br>
+                    <a href="{% url 'cadastrogeral_comunidade' nome_e_cidade_comunidade %}" class="btn btn-info">Voltar</a>
+                    <input type="submit" value="Criar"class="btn btn-primary">
+                </form>
+                <hr class="bg-hr">
+            {% endif %}
+        {% endif %}
+            <form action="" method="GET">
+                <div class="row">
+                    <div class="col-md">
+                        <input class="form-control" type="text" name="nome" placeholder="Nome...">
+                    </div>
+        
+                    <div class="col-md">
+                        <select class="form-control" name="vendedoresnome">
+                            <option value="">Todos os vendedores</option>
+                            {% for vendedor in vendedores %}
+                                {% if id_comunidade == vendedor.nome_comunidade_id %}     
+                                <option value="{{vendedor.username}}">{{vendedor.username}}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+        
+                    <div class="col-md">
+                        <input class="form-control" type="email" name="email" placeholder="E-mail...">
+                    </div>
+        
+                    <div class="col-md">
+                        <input type="submit" value="Filtrar" class="btn btn-success">
+                    </div>
+                </div>
+            </form>
+            <br>
+            <table class="table table-striped table-light">
+                    <thead>
+                    <tr>
+                        <th scope="col">Login</th>
+                        <th scope="col">E-mail</th>
+                        <th scope="col">Último Login</th>
+                        <th scope="col">Excluir</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        {% for vendedor in vendedores%}
+                            {% if id_comunidade == vendedor.nome_comunidade_id %}
+                                <tr>
+                                    <th>{{vendedor.username}}</th>
+                                    <td>{{vendedor.email}}</td>
+                                    <td>{% if not vendedor.last_login %}
+                                            Aguardando Primeiro Acesso
+                                        {% else %}
+                                            {{vendedor.last_login}}
+                                        {% endif %}
+                                    </td>
+                                    {% define vendedor.id as idvendedor %}
+                                    <td><a onclick="excluirVendedor(`{{idvendedor}}`)" class="btn btn-danger">Excluir</a></td>
+                                </tr>
+                            {%endif%}   
+                        {% endfor %}
+                    </tbody>
+                </table>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+    $(document).ready(function(){
+        $('#nome').on('input', function() { // mascara novo first_name
+            var first_name = $(this).val();
+            first_name = first_name.toLowerCase(); // Converter para letras minúsculas
+            
+            // Aplicar a máscara
+            first_name = first_name.replace(/[^a-z]/g, ''); // Remover caracteres não alfabéticos
+            
+            // Limitar o tamanho do first_name
+            if (first_name.length > 15) {
+                first_name = first_name.substr(0, 15);
+            }
+
+            $(this).val(first_name);
+        });
+
+        $('#sobrenome').on('input', function() { // mascara novo last_name
+            var last_name = $(this).val();
+            last_name = last_name.toLowerCase(); // Converter para letras minúsculas
+            
+            // Aplicar a máscara
+            last_name = last_name.replace(/[^a-z]/g, ''); // Remover caracteres não alfabéticos
+            
+            // Limitar o tamanho do last_name
+            if (last_name.length > 15) {
+                last_name = last_name.substr(0, 15);
+            }
+
+            $(this).val(last_name);
+        });
+    });
+
+</script>
+{% endblock %}

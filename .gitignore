@@ -1,0 +1,6 @@
+venv
+.idea
+app/med*
+db.sqlite3*
+.env
+*.pyc

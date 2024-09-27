@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load filters %}
+{% load define_action %}
+
+{% block 'body' %}
+<div class="container">
+    <form action="{% url 'add_cor' %}" method="POST" enctype="multipart/form-data"> {% csrf_token %}
+    
+    <br>
+    <label>Nome da Nova Cor:</label>
+    <input class="form-control" type="text" name="titulo" id="titulo">
+    <br>
+    <label>Seção da Nova Cor:</label>
+    <select class="form-control" name="secao_cor_produto" id="secao_cor_produto">
+        <option selected disabled value="Selecione uma opção">Selecione uma opção</option>
+        <option value="Infantil">Infantil</option>
+        <option value="Adulto">Adulto</option>
+    </select>
+    <br>
+
+    <a href="{% url 'home' %}" class="btn btn-info">Voltar</a>
+    <input type="submit" value="Criar" class="btn btn-primary">
+    </form>
+
+    <hr style="background-color: gray;">
+    <div class="listar_cores">
+        <div class="row">
+        <div>
+
+        </div>
+        {% for cor in cores %}
+            {% if cor.titulo != "Sem Cor" %}
+                <div class="col-md">
+                    <div style="background-color: #e0ffff; width: 18rem" class="card" style="width: 18rem;">
+                        <div class="card-body">
+                            <h5 class="card-title">{{cor.titulo}}</h5>
+                            <!-- <a href="#" class="btn btn-primary">Alterar</a> -->
+                            {% define cor.slug as slugcor %}
+                            <a onclick="excluirCor(`{{slugcor}}`)" class="btn btn-danger">Excluir</a>
+
+                        </div>
+                    </div>
+                    <br>
+                </div>
+            {% endif %}
+        {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+    $(document).ready(function(){
+        $('#titulo').on('input', function() { // mascara novo nome
+            var titulo = $(this).val();
+            
+            // Aplicar a máscara permitindo letras minúsculas, números, parênteses e hífens
+            titulo = titulo.toLowerCase();
+
+            // Limitar o tamanho do titulo
+            if (titulo.length > 30) {
+                titulo = titulo.substr(0, 30);
+            }
+
+            $(this).val(titulo);
+        });
+    });
+</script>
+{% endblock %}

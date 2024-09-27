@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load filtersvenda %}
+{% load define_action %}
+
+{% block 'body' %}
+<form id="acoes_vendas_form_troca" action="" method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <br>
+    {% if conferir_vendas.quantidade > 0 %}
+        <div class="container">
+            <div class="conferir-troca">
+                <div class="left-side">
+                    <p>Nome do cliente: {{conferir_vendas.nome_cliente}}</p>
+                    {% if "Sem Cor" in conferir_vendas.label_vendas_get%}
+                        <p>Produto: {{conferir_vendas.nome_produto}}</p>
+                    {% else %}
+                        <p>Produto: {{conferir_vendas.label_vendas_get}}</p>
+                    {% endif %}
+                    <div class="input-row">
+                        <label for="quantidade">Quantidade:</label> &nbsp;
+                        {% if conferir_vendas.forma_venda != "Débito" and conferir_vendas.forma_venda != "Crédito" %}
+                        <label>{{conferir_vendas.quantidade}}</label>
+                        {% else %}
+                        <label>{{conferir_vendas.quantidade}}</label>
+                        {% endif %}
+                    </div>
+                    {% if conferir_vendas.desconto_total > 0 and conferir_vendas.autorizado_por != "0" %}
+                    <br>
+                    <p>Desconto: <span class="desconto-totalissimo" id="desconto_total_{{forloop.counter}}" data-desconto-total="{{conferir_vendas.desconto_total}}">{{conferir_vendas.desconto_total}}</span></p>
+                    <input type="hidden" class="desconto-totalissimo-input" name="desconto-totalissimo" id="desconto_totalissimo_input{{forloop.counter}}" value="{{conferir_vendas.desconto_total}}">
+                    {% elif conferir_vendas.desconto_total > 0 and conferir_vendas.autorizado_por == "0" %}
+                    <p>Desconto: <span class="desconto-total" id="desconto_total_{{forloop.counter}}">{{conferir_vendas.desconto_total}}</span></p>
+                    <input type="hidden" class="desconto-total-input" name="desconto-total[]" id="desconto_total_input{{forloop.counter}}" value="{{conferir_vendas.desconto_total}}">
+                    {% else %}
+                    <input type="hidden" class="desconto-total-input" name="desconto-total[]" id="desconto_total_input{{forloop.counter}}" value="{{conferir_vendas.desconto_total}}">
+                    {% endif %}
+                    <p>Preço: R$ <span class="preco-venda-total" id="preco_venda_total_{{forloop.counter}}">{{conferir_vendas.preco_venda_total}}</span>
+                        <input type="hidden" class="preco-venda-total-input" name="preco-venda-total" id="preco_venda_total_input_{{forloop.counter}}" value="{{conferir_vendas.preco_venda_total}}">
+                    </p>
+                    <input type="hidden" class="autorizado-por-input" name="autorizado_por" id="autorizado_por_{{forloop.counter}}" data-autorizado="{{conferir_vendas.autorizado_por}}">
+                </div>
+                <div class="right-side">
+                    {% define conferir_vendas.slug as slugvenda %}
+                    <div class="linha">
+                        <label for="opcao_item">Quantidade à
+                            <select required class="form-control" name="opcao_item" id="opcao_item">
+                                <!-- <option required value="Estornar">Estornar</option> -->
+                                <!-- <option disabled selected required value="Selecione">Selecione</option> -->
+                                <option selected required value="Trocar">Trocar</option>
+                            </select>
+                        </label>
+                        <input class="form-control quantity-input" type="text" style="width: 53px" value="{{conferir_vendas.quantidade}}" name="quantidade_item" id="quantidade_{{forloop.counter}}" data-quantidade-padrao="{{conferir_vendas.quantidade}}" data-desconto-base="{{conferir_vendas.desconto_total}}">
+                        <br>
+                    </div>
+                    {% if 'camisa' in conferir_vendas.label_vendas_get %}
+                    <div class="linha">
+                        <label>Para o tamanho</label>
+                        <select required class="form-control" name="tamanho" id="tamanho">
+                            {% for tamanho in tamanhos %}
+                                <option value="{{ tamanho.tamanho_produto }}" data-secao="{{ tamanho.secao }}">{{ tamanho.tamanho_produto }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <div class="linha">
+                        <label>Para a cor</label>
+                        <select required class="form-control" style="width: 6rem" name="cor_infantil" id="cor_infantil" style="display: block;">
+                            {% for cor in cores %}
+                                {% if cor.secao == "Infantil" %}
+                                    <option value="{{cor.id}}">{{cor.titulo}}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <select class="form-control" style="width: 6rem" name="cor_adulto" id="cor_adulto" style="display: block;">
+                            {% for cor in cores %}
+                                {% if "Sem Cor" in cor.titulo %}
+                                    pass
+                                {% else %}
+                                    <option value="{{cor.id}}">{{cor.titulo}}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <input hidden name="label_vendas_get" value="{{conferir_vendas.label_vendas_get}}">
+                <input hidden name="cor_atual" value="{{conferir_vendas.cor_id}}">
+                <input hidden name="tamanho_atual" value="{{conferir_vendas.tamanho_produto_id}}">
+            </div>
+            <br>
+            <br>
+            <a href="{% url 'acoes_vendas' id_venda %}" class="btn btn-info">Voltar</a>
+            <input type="submit" name="Salvar" id="Salvar" value="Salvar" class="btn btn-success" onclick="disableButton()">
+        </div>
+    {% else %}
+        <div class="container">
+            <h3>Esse produto não tem quantidade à ser trocado, retorne à tela anterior</h3>
+            <br>
+            <a href="{% url 'acoes_vendas' id_venda %}" class="btn btn-info">Voltar</a>
+        </div>
+    {% endif %}
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function atualizarConteudo() {
+        var tamanhoSelect_open = document.getElementById("tamanho");
+        var CorInfantil_open = document.getElementById("cor_infantil");
+        var CorAdulto_open = document.getElementById("cor_adulto");
+
+        if (tamanhoSelect_open) {
+            var selectedOption_open = tamanhoSelect_open.options[tamanhoSelect_open.selectedIndex];
+            var selectedSecao_open = selectedOption_open.getAttribute("data-secao");
+
+            var isHidden = tamanhoSelect_open.hidden;
+
+            // Verifica se o elemento está oculto e se o valor da propriedade "data-secao" é 0
+            if (isHidden) {
+                selectedSecao_open = 0
+            }
+        }
+        
+        //Sempre que abrir a página
+        if (selectedSecao_open === "Infantil") {
+            CorInfantil_open.style.display = "block";
+            CorAdulto_open.style.display = "none";
+        } else {
+            CorInfantil_open.style.display = "none";
+            CorAdulto_open.style.display = "block";            
+        }
+    }
+    
+    document.addEventListener("DOMContentLoaded", function() {
+        atualizarConteudo(); // Chamando a função atualizarConteudo, definida anteriormente, pra ser executada sozinha assim que a página for carregada
+
+        var tamanhoSelect = document.getElementById("tamanho");
+        var CorInfantil = document.getElementById("cor_infantil");
+        var CorAdulto = document.getElementById("cor_adulto");
+        
+        if (tamanhoSelect) {
+            tamanhoSelect.addEventListener("change", function() {
+                var selectedOption = tamanhoSelect.options[tamanhoSelect.selectedIndex];
+                var selectedSecao = selectedOption.getAttribute("data-secao");
+
+                //apenas ao alterar
+                if (selectedSecao === "Infantil") {
+                    CorInfantil.style.display = "block";
+                    CorAdulto.style.display = "none";
+                } else {
+                    CorInfantil.style.display = "none";
+                    CorAdulto.style.display = "block";
+                }
+            });
+        };
+    });
+
+    $(document).ready(function() {
+        $('.quantity-input').mask('000', { reverse: true }) // quantidade
+        // Função para calcular o preço base
+    });
+
+    ////////// Ao Enviar o Formulário /////////////
+    var submitButton = document.getElementById("Salvar");
+    submitButton.addEventListener("click", function(event) {
+        var CorInfantil_enviar = document.getElementById("cor_infantil");
+        var CorAdulto_enviar = document.getElementById("cor_adulto");
+
+        if (CorAdulto_enviar.style.display === "none") {
+            CorAdulto_enviar.value = "0";
+        }else {
+            if (CorInfantil_enviar.style.display === "none") {
+                CorInfantil_enviar.value = "0";
+            }
+        }
+    });
+
+    function disableButton() {
+        // Desabilita o botão ao clicar em enviar
+        document.getElementById("Salvar").disabled = true;
+
+          // Envia o formulário após um pequeno atraso (50ms)
+            setTimeout(function() {
+                document.getElementById("acoes_vendas_form_troca").submit();
+            }, 50);
+    }
+    
+</script>
+{% endblock %}

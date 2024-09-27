@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block 'body' %}
+<div class="container">
+    <form action="" method="POST" enctype="multipart/form-data"> {% csrf_token %}   
+    <br>
+    <label>CNPJ:</label>
+    <input class="form-control" type="text" name="cnpj" id="cnpj">
+    <br>
+    <label>Tipo:</label>
+    <select class="form-control" name="tipo" id="tipo">
+        <option value="ONG">ONG</option>
+        <option value="IGREJA">IGREJA</option>
+        <option value="ASSOCIACAO">ASSOCIAÇÃO</option>
+        <option value="OUTROS">OUTROS</option>
+    </select>
+    <br>
+    <label>Nome da Comunidade:</label>
+    <input class="form-control" type="text" name="nome_comunidade" id="nome_comunidade">
+    <br>
+    <label>Cidade:</label>
+    <input class="form-control" type="text" name="cidade" id="cidade">
+    <br>
+    <label>Responsável 01:</label>
+    <input class="form-control" type="text" name="responsavel_01" id="responsavel_01">
+    <br>
+    <label>Celular 01:</label>
+    <input class="form-control" type="text" name="celular_01" id="celular_01">
+    <br>
+    <label>Responsável 02:</label>
+    <input class="form-control" type="text" name="responsavel_02" id="responsavel_02">
+    <br>
+    <label>Celular 02:</label>
+    <input class="form-control" type="text" name="celular_02" id="celular_02">
+    <br>
+    <a class="btn btn-info" style="color: white;" href="{% url 'home' %}" class="btnbtn-primary">Voltar</a>
+    <input type="submit" value="Criar" class="btn btn-primary">
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+
+<style>
+    .valid {
+        background-color: #d4edda !important; /* Fundo verde claro para indicar campo válido */
+    }
+
+    .invalid {
+        background-color: #f8d7da !important; /* Fundo vermelho claro para indicar campo inválido */
+    }
+</style>
+
+<script>
+    $(document).ready(function(){
+        $('#cnpj').mask('00.000.000/0000-00')
+        $('#celular_01').mask('(00) 0000-00009', {
+            onKeyPress: function (val, e, field, options) {
+                // Aplica a máscara adequada dependendo do comprimento do número digitado
+                field.mask(val.length > 14 ? '(00) 00000-0000' : '(00) 0000-00009', options);
+            }
+        });
+        $('#celular_02').mask('(00) 0000-00009', {
+            onKeyPress: function (val, e, field, options) {
+                // Aplica a máscara adequada dependendo do comprimento do número digitado
+                field.mask(val.length > 14 ? '(00) 00000-0000' : '(00) 0000-00009', options);
+            }
+        });
+        
+        // Validações do CNPJ
+        $('#cnpj').on('input', function () {
+            let cnpj = $(this).val();
+            if (validateCNPJ(cnpj)) {
+                $(this).removeClass('invalid').addClass('valid');
+                $('form input[type="submit"]').prop('disabled', false);
+            } else {
+                $(this).removeClass('valid').addClass('invalid');
+                $('form input[type="submit"]').prop('disabled', true);
+            }
+        });
+
+        $('form').on('submit', function(e) { // Adicionado aqui
+            // Bloqueia o envio se o CNPJ não for válido
+            if (!validateCNPJ($('#cnpj').val())) {
+                e.preventDefault();
+                alert('CNPJ inválido. Corrija antes de enviar.');
+            }
+        });
+
+        // Função de validação de CNPJ
+        function validateCNPJ(cnpj) {
+            cnpj = cnpj.replace(/[^\d]+/g, ''); // Remove caracteres não numéricos
+
+            if (cnpj.length !== 14) return false;
+
+            // Elimina CNPJs inválidos conhecidos
+            if (/^(\d)\1+$/.test(cnpj)) return false;
+
+            // Valida os dois dígitos verificadores
+            let tamanho = cnpj.length - 2;
+            let numeros = cnpj.substring(0, tamanho);
+            let digitos = cnpj.substring(tamanho);
+            let soma = 0;
+            let pos = tamanho - 7;
+
+            for (let i = tamanho; i >= 1; i--) {
+                soma += numeros.charAt(tamanho - i) * pos--;
+                if (pos < 2) pos = 9;
+            }
+
+            let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+            if (resultado != digitos.charAt(0)) return false;
+
+            tamanho = tamanho + 1;
+            numeros = cnpj.substring(0, tamanho);
+            soma = 0;
+            pos = tamanho - 7;
+
+            for (let i = tamanho; i >= 1; i--) {
+                soma += numeros.charAt(tamanho - i) * pos--;
+                if (pos < 2) pos = 9;
+            }
+
+            resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+            if (resultado != digitos.charAt(1)) return false;
+
+            return true;
+        }
+    });
+
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load static%}
+
+{% block 'body' %}
+    <div class="container">
+        {% if tamanho_produto == "" %}
+            {% if "Sem Cor" in cor_produto_str %}
+                <h1>Produto: {{nome_produto}}</h1>
+            {% else %}
+                <h1>Produto: {{nome_produto}} {{cor_produto}}</h1>
+            {% endif %}
+
+        {% elif tamanho_produto != 0 %}
+            {% if "Sem Cor" in cor_produto_str %}
+                <h1>Produto: {{nome_produto}} &nbsp;Tamanho: {{tamanho_produto}}</h1>
+            {% else %}
+                <h1>Produto: {{nome_produto}} ({{cor_produto}}) &nbsp;Tamanho: {{tamanho_produto}}</h1>
+            {% endif %}
+        {% endif %}
+        <form action="" method="POST" enctype="multipart/form-data"> {% csrf_token %}
+            <table>
+                {{form.as_table}}
+            </table>
+            <br>
+            <div class="input-row">
+                <h6>Abastecer Quantidade:</h6> &nbsp;
+                <input class="form-control quantity-input" style="width: 8em;" type="text" name="abastecer_quantidade" id="abastecer_quantidade">
+            </div>
+            <a href="{% url 'add_produto_redirect' ano_atual_str %}" class="btn btn-info">Voltar</a>
+            <button type="submit" class="btn btn-success">Salvar</button>
+        </form>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+    $(document).ready(function(){
+        $('#id_quantidade').mask('000')
+        $('#id_preco_compra').mask('000,00', {reverse: true})
+        $('#id_preco_venda').mask('000,00', {reverse: true})
+        $('#abastecer_quantidade').mask('000')
+    });
+
+</script>
+{% endblock %}
