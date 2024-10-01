@@ -12,14 +12,34 @@ from django.utils.html import strip_tags
 from django.shortcuts import get_object_or_404
 
 
-def correcao_formato_data(data):
-    # Converte a string DD/MM/YYYY para um objeto datetime
-    data_formatada = datetime.strptime(data, '%d/%m/%Y')
-    
-    # Converte para o formato YYYY-MM-DD
-    data_formatada_iso = data_formatada.strftime('%Y-%m-%d')
+def validar_cpf(request, cpf, slug):
+    cpf = cpf.replace('.', '').replace('-', '')  # Remove caracteres não numéricos
 
-    return data_formatada_iso
+    if len(cpf) != 11:
+        messages.add_message(request, messages.ERROR, 'CPF deve ter 11 dígitos.')
+        return redirect(reverse('cadastrar_familia', kwargs={"slug":slug}))
+        
+    if cpf.isdigit() and len(set(cpf)) == 1:
+        messages.add_message(request, messages.ERROR, 'CPF inválido.')
+        return redirect(reverse('cadastrar_familia', kwargs={"slug":slug}))
+
+    # Valida os dois dígitos verificadores
+    def calcular_digito(cpf, tamanho):
+        soma = 0
+        for i in range(tamanho):
+            soma += int(cpf[i]) * (tamanho + 1 - i)
+        resultado = 0 if soma % 11 < 2 else 11 - (soma % 11)
+        return resultado
+
+    # Valida o primeiro dígito verificador
+    if calcular_digito(cpf, 9) != int(cpf[9]):
+        messages.add_message(request, messages.ERROR, 'CPF inválido.')
+        return redirect(reverse('cadastrar_familia', kwargs={"slug":slug}))
+
+    # Valida o segundo dígito verificador
+    if calcular_digito(cpf, 10) != int(cpf[10]):
+        messages.add_message(request, messages.ERROR, 'CPF inválido.')
+        return redirect(reverse('cadastrar_familia', kwargs={"slug":slug}))
 
 
 def enviar_email(destinatario, cargo, nome_usuario_email, username):
@@ -34,9 +54,9 @@ def enviar_email(destinatario, cargo, nome_usuario_email, username):
     email.send()#Enviando o E-mail
 
 
-def Validacoes_Get_Familia(request, slug, nome_completo, data_nascimento, cpf, familiasnome, familias):
+def Validacoes_Get_Familia(request, slug, nome_completo, cpf, familiasnome, familias):
     with transaction.atomic():
-        if nome_completo or data_nascimento or cpf or familiasnome:
+        if nome_completo or cpf or familiasnome:
             if nome_completo:
                 familias = familias.filter(nome_beneficiado__contains=nome_completo)#Verificando se existem familias com o nome preenchido
                 if not familias:
@@ -58,9 +78,9 @@ def Validacoes_Get_Familia(request, slug, nome_completo, data_nascimento, cpf, f
 
         return familias
 
-def Validacoes_Post_Cadastro_Familia_Campos_Preenchidos(request, slug, nome_completo, data_nascimento, cpf, tam_nome):
+def Validacoes_Post_Cadastro_Familia_Campos_Preenchidos(request, slug, nome_completo, cpf, tam_nome):
     with transaction.atomic():
-        if nome_completo or data_nascimento or cpf:
+        if nome_completo or cpf:
             if tam_nome > 128:
                 transaction.set_rollback(True)
                 messages.add_message(request, messages.ERROR, 'Nome e Sobrenome não pode ter mais de 15 caracteres')#Verificando se está vazio
@@ -84,30 +104,26 @@ def Validacoes_Post_Cadastro_Familia_Campos_Preenchidos(request, slug, nome_comp
             if tam_nome < 8:
                 transaction.set_rollback(True)
                 messages.add_message(request, messages.ERROR, 'Nome deve conter 8 ou mais caracteres')#verificando o tamanho da string
-                return redirect(reverse('cadastrar_familia', kwargs={"slug":slug})) 
-            if not data_nascimento:
-                transaction.set_rollback(True)
-                messages.add_message(request, messages.ERROR, 'Data de Nascimento não pode ser vazio')#Verificando se está vazio
                 return redirect(reverse('cadastrar_familia', kwargs={"slug":slug}))     
-            if data_nascimento.isspace():
-                transaction.set_rollback(True)
-                messages.add_message(request, messages.ERROR, 'Data de Nascimento não pode conter apenas espaços vazios')#Verificando se contém apenas espaço vazio
-                return redirect(reverse('cadastrar_familia', kwargs={"slug":slug})) 
-            if not cpf:
-                transaction.set_rollback(True)
-                messages.add_message(request, messages.ERROR, 'CPF não pode ser vazio')#Verificando se está vazio
-                return redirect(reverse('cadastrar_familia', kwargs={"slug":slug}))    
             if cpf.isspace():
                 transaction.set_rollback(True)
                 messages.add_message(request, messages.ERROR, 'CPF não pode conter apenas espaços vazios')#Verificando se contém apenas espaço vazio
+                return redirect(reverse('cadastrar_familia', kwargs={"slug":slug}))
+            if not cpf:
+                transaction.set_rollback(True)
+                messages.add_message(request, messages.ERROR, 'CPF não pode ser vazio')#Verificando se está vazio
                 return redirect(reverse('cadastrar_familia', kwargs={"slug":slug})) 
+            else:
+                validar_cpf(request, cpf, slug)
         else:
             transaction.set_rollback(True)
             messages.add_message(request, messages.ERROR, 'Os campos precisam ser preenchidos')#Verificando se contém apenas espaço vazio
             return redirect(reverse('cadastrar_familia', kwargs={"slug":slug}))
 
+    return None
 
-def Validacoes_Post_Cadastro_Familia_Validacoes_Familia(request, slug, id_comunidade, slug_comunidade, nome_completo, data_nascimento, cpf, nome_comunidade, cidade_comunidade):
+
+def Validacoes_Post_Cadastro_Familia_Validacoes_Familia(request, slug, id_comunidade, slug_comunidade, nome_completo, cpf, nome_comunidade, cidade_comunidade):
     with transaction.atomic():
         if id_comunidade != 0:
             familia = Familia.objects.filter(cpf=cpf)#Procurando familias que tenham o mesmo cpf digitado
@@ -122,32 +138,18 @@ def Validacoes_Post_Cadastro_Familia_Validacoes_Familia(request, slug, id_comuni
                     transaction.set_rollback(True)
                     messages.add_message(request, messages.ERROR, 'Esse Família já existe em outra comunidade, caso necessário, solicite alteração ao administrador')
                     return redirect(reverse('cadastrar_familia', kwargs={"slug":slug}))
-            if not familia:
-                familia = Familia.objects.filter(nome_beneficiado=nome_completo)#Procurando familias pelo nome
-                if familia:
-                    familia = Familia.objects.get(nome_beneficiado=nome_completo)#Buscando familias que tenham o mesmo nome digitado
-                    id_comunidade_familia = familia.nome_comunidade_id #Pegando o ID da familia
-                    if id_comunidade_familia == id_comunidade:
-                        transaction.set_rollback(True)
-                        messages.add_message(request, messages.ERROR, 'Esse Família já existe nessa comunidade')
-                        return redirect(reverse('cadastrar_familia', kwargs={"slug":slug}))
-                    if familia and id_comunidade_familia != id_comunidade:
-                        transaction.set_rollback(True)
-                        messages.add_message(request, messages.ERROR, 'Esse Família já existe em outra comunidade, caso necessário, solicite alteração ao administrador')
-                        return redirect(reverse('cadastrar_familia', kwargs={"slug":slug}))
-
-        data_nascimento = correcao_formato_data(data_nascimento)
 
         familia = Familia.objects.create(
             cpf=cpf,
             nome_beneficiado=nome_completo,
-            data_nascimento=data_nascimento,
             criado_por=request.user,
             nome_comunidade_id=id_comunidade,
             nome_comunidade_str=nome_comunidade,
             cidade_comunidade=cidade_comunidade,
             ativo="sim"
         )
+        
+    return None
 
 
 def Validacoes_Get_Cadastro_Usuario(request, cargo, slug, nome, sobrenome, email, usuariosnome, usuarios):
@@ -256,6 +258,8 @@ def Validacoes_Post_Cadastro_Usuario_Campos_Preenchidos(request, slug, cargo, no
             messages.add_message(request, messages.ERROR, 'Os campos precisam ser preenchidos')#Verificando se contém apenas espaço vazio
             return redirect(reverse(f'{url_cargo}', kwargs={"slug":slug}))
 
+    return None
+
 
 def Validacoes_Post_Cadastro_Usuario_Validacoes_Usuario(request, slug, cargo, id_comunidade, slug_comunidade, nome, sobrenome, email, username, SENHA_PADRAO, nome_comunidade, cidade_comunidade):
     if cargo == "V":
@@ -314,3 +318,5 @@ def Validacoes_Post_Cadastro_Usuario_Validacoes_Usuario(request, slug, cargo, id
         nome_usuario_email = nome
         cargo = nome_cargo
         enviar_email(destinatario, cargo, nome_usuario_email, username)
+    
+    return None

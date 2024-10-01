@@ -37,7 +37,6 @@ class Users(AbstractUser):
 class Familia(models.Model):
     cpf = models.CharField(max_length=14, null=True, blank=True, unique=True)
     nome_beneficiado = models.CharField(max_length=128, unique=False, null=True, editable=False)
-    data_nascimento = models.DateField(null=True, blank=True)
     ultima_compra = models.DateField(null=True, blank=True)
     criado_por = models.CharField(max_length=128, unique=False, null=True, editable=False)
     data_criacao = models.CharField(max_length=20, null=True, editable=False)

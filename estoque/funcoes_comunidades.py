@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.contrib import messages
 from django.db import transaction
 
+
 def Capturar_Ano_Atual():
     data_modelo = timezone.localtime(timezone.now())
     ano_atual_str = data_modelo.strftime("%Y")
@@ -43,32 +44,46 @@ def Consultar_Uma_Comunidade(valor, opcao):
 
 
 def Validacoes_Cadastro_Comunidades(request, cnpj, tipo, nome_comunidade, cidade_comunidade, responsavel_01, celular_01, responsavel_02, celular_02):
-    if cnpj == 0 or not cnpj:  
-        messages.add_message(request, messages.ERROR, 'CNPJ não pode ser vazio')
-        return redirect(reverse('cadastrar_comunidade'))
-    else:
-        validar_cnpj(request, cnpj)
+    with transaction.atomic():
+        if cnpj == 0 or not cnpj:
+            messages.add_message(request, messages.ERROR, 'CNPJ não pode ser vazio')
+            return redirect(reverse('cadastrar_comunidade'))
+        else:
+            validar_cnpj(request, cnpj)
 
-    if tipo == 0 or not tipo:  
-        messages.add_message(request, messages.ERROR, 'Tipo não pode ser vazio')
-        return redirect(reverse('cadastrar_comunidade'))
-    if nome_comunidade == 0 or not nome_comunidade:
-        messages.add_message(request, messages.ERROR, 'Nome da Comunidade não pode ser vazio')
-        return redirect(reverse('cadastrar_comunidade'))
-    if cidade_comunidade == 0 or not cidade_comunidade:  
-        messages.add_message(request, messages.ERROR, 'Nome da Cidade não pode ser vazio')
-        return redirect(reverse('cadastrar_comunidade'))
-    if responsavel_01 == 0 or not responsavel_01:  
-        messages.add_message(request, messages.ERROR, 'Responsável_01 não pode ser vazio')
-        return redirect(reverse('cadastrar_comunidade'))
-    if celular_01 == 0 or not celular_01:  
-        messages.add_message(request, messages.ERROR, 'Celular_01 não pode ser vazio')
-        return redirect(reverse('cadastrar_comunidade'))
-    if responsavel_02 == responsavel_01:  
-        messages.add_message(request, messages.ERROR, 'Os Responsáveis não podem ser iguais')
-        return redirect(reverse('cadastrar_comunidade'))
-    if celular_02 == celular_01:  
-        messages.add_message(request, messages.ERROR, 'Os celulares não podem ser iguais')
+        if tipo == 0 or not tipo:  
+            messages.add_message(request, messages.ERROR, 'Tipo não pode ser vazio')
+            return redirect(reverse('cadastrar_comunidade'))
+        if nome_comunidade == 0 or not nome_comunidade:
+            messages.add_message(request, messages.ERROR, 'Nome da Comunidade não pode ser vazio')
+            return redirect(reverse('cadastrar_comunidade'))
+        if cidade_comunidade == 0 or not cidade_comunidade:  
+            messages.add_message(request, messages.ERROR, 'Nome da Cidade não pode ser vazio')
+            return redirect(reverse('cadastrar_comunidade'))
+        if responsavel_01 == 0 or not responsavel_01:  
+            messages.add_message(request, messages.ERROR, 'Responsável_01 não pode ser vazio')
+            return redirect(reverse('cadastrar_comunidade'))
+        if celular_01 == 0 or not celular_01:  
+            messages.add_message(request, messages.ERROR, 'Celular_01 não pode ser vazio')
+            return redirect(reverse('cadastrar_comunidade'))
+        if celular_01:
+            tam_celular_01 = len(celular_01)
+            if tam_celular_01 < 14:
+                messages.add_message(request, messages.ERROR, 'Número de celular_01 inexistente')
+                return redirect(reverse('cadastrar_comunidade'))
+        if responsavel_02 == responsavel_01:  
+            messages.add_message(request, messages.ERROR, 'Os Responsáveis não podem ser iguais')
+            return redirect(reverse('cadastrar_comunidade'))
+        if celular_02 == celular_01:  
+            messages.add_message(request, messages.ERROR, 'Os celulares não podem ser iguais')
+            return redirect(reverse('cadastrar_comunidade'))
+        if celular_02:
+            tam_celular_02 = len(celular_02)
+            if tam_celular_02 < 14:
+                messages.add_message(request, messages.ERROR, 'Número de celular_02 inexistente')
+                return redirect(reverse('cadastrar_comunidade'))
+
+    return None
 
 
 def validar_cnpj(request, cnpj):
@@ -127,7 +142,8 @@ def Cadastrar_Comunidade(cnpj, tipo, nome_comunidade, cidade, responsavel_01, ce
                         celular_01=celular_01,
                         responsavel_02=responsavel_02,
                         celular_02=celular_02,
-                        criado_por=criado_por
+                        criado_por=criado_por,
+                        ativo="sim"
                         )
     comunidade.save()
 

@@ -2,7 +2,7 @@
 var url_atual = window.location.pathname; //Full Path
 var url_sem_slug = url_atual.split('/');
 var url_sem_slug = url_sem_slug[1];
-
+console.log(url_sem_slug)
 
 //Funções tela de vendas
 if (url_sem_slug == "/vendas/"){
@@ -422,7 +422,8 @@ if (url_sem_slug == "/add_tamanho/"){
 }
 
 //Funções tela dos Nome dos Produtos
-if (url_sem_slug == "/add_novonome_produto/"){
+if (url_sem_slug == "add_novonome_produto"){
+    console.log("teste1")
     //////////////////////////////////////////////////////
     //Modal Excluir Nome dos Produtos tela de Cadastro de Nome dos Produtos
     function excluirNomeProduto(slugnomeproduto){

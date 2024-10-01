@@ -26,7 +26,7 @@ urlpatterns = [
 
     path('estornar_venda_geral_pos/<slug:slug>/', views.estornar_venda_geral_pos, name="estornar_venda_geral_pos"),#Estornar Venda Geral Pós Finalização
 
-    path('add_novonome_produto/', views.add_novonome_produto, name="add_novonome_produto"),#Adicionar Novo Nome de Produto
+    path('add_novonome_produto/<slug:slug>/', views.add_novonome_produto, name="add_novonome_produto"),#Adicionar Novo Nome de Produto
     path('excluir_novonome_produto/<slug:slug>/', views.excluir_novonome_produto, name="excluir_novonome_produto"),#Excluir Novo Nome do Produto
 
 

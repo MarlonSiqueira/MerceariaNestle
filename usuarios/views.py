@@ -33,8 +33,8 @@ SENHA_PADRAO = os.environ.get('SENHA_PADRAO')
 @has_permission_decorator('cadastrar_vendedor')
 def cadastrar_vendedor(request, slug):
     opcao = "slug"
-    if request.method == "GET":
-        if request.user.is_authenticated:
+    if request.user.is_authenticated:
+        if request.method == "GET":
             if request.user.cargo == "A" or request.user.cargo == "R":
                 nome = request.GET.get('nome')
                 sobrenome = request.GET.get('sobrenome')
@@ -60,13 +60,13 @@ def cadastrar_vendedor(request, slug):
                             'id_comunidade': resultado[0]
                         }
                     return render(request, 'cadastrar_vendedor.html', context)
+                else:
+                    messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+                    return redirect(reverse('home'))
             else:
                 messages.add_message(request, messages.ERROR, 'Você não tem permissão para isso ou não está logado')
                 return redirect(reverse('home'))
-        else:
-            return redirect(reverse('login'))
-    if request.method == "POST":
-        if request.user.is_authenticated:
+        if request.method == "POST":
             nome = request.POST.get('nome')
             sobrenome = request.POST.get('sobrenome')
             email = request.POST.get('email')
@@ -77,16 +77,20 @@ def cadastrar_vendedor(request, slug):
             tam_sobrenome = len(sobrenome)
             tam_email = len(email)
 
-            Validacoes_Post_Cadastro_Usuario_Campos_Preenchidos(request, slug, cargo, nome, sobrenome, email, tam_nome, tam_sobrenome, tam_email)
+            validacao_campos = Validacoes_Post_Cadastro_Usuario_Campos_Preenchidos(request, slug, cargo, nome, sobrenome, email, tam_nome, tam_sobrenome, tam_email)
+            if validacao_campos:
+                return validacao_campos
 
             resultado = Consultar_Uma_Comunidade(slug, opcao)
 
-            Validacoes_Post_Cadastro_Usuario_Validacoes_Usuario(request, slug, cargo, resultado[0], resultado[1], nome, sobrenome, email, username, SENHA_PADRAO, resultado[4], resultado[5])
+            validacao_usuario = Validacoes_Post_Cadastro_Usuario_Validacoes_Usuario(request, slug, cargo, resultado[0], resultado[1], nome, sobrenome, email,username, SENHA_PADRAO, resultado[4], resultado[5])
+            if validacao_usuario:
+                return validacao_usuario
 
             messages.add_message(request, messages.SUCCESS, 'Vendedor criado com sucesso')
             return redirect(reverse('cadastrar_vendedor', kwargs={"slug": slug}))
-        else:
-            return redirect(reverse('login'))
+    else:
+        return redirect(reverse('login'))
 
 
 @has_permission_decorator('excluir_vendedor')
@@ -117,8 +121,8 @@ def excluir_vendedor(request, id):
 def cadastrar_responsavel(request, slug):
     opcao = "slug"
     slug = "geral"
-    if request.method == "GET":
-        if request.user.is_authenticated:
+    if request.user.is_authenticated:
+        if request.method == "GET":
             if request.user.cargo == "A":
                 nome = request.GET.get('nome')
                 sobrenome = request.GET.get('sobrenome')
@@ -142,30 +146,31 @@ def cadastrar_responsavel(request, slug):
             else:
                 messages.add_message(request, messages.ERROR, 'Você não tem permissão para isso ou não está logado')
                 return redirect(reverse('home'))
-        else:
-            return redirect(reverse('login'))
-    if request.method == "POST":
-        if request.user.is_authenticated:
-            nome = request.POST.get('nome')
-            sobrenome = request.POST.get('sobrenome')
-            email = request.POST.get('email')
-            username = nome.casefold()+"."+sobrenome.casefold()
-            cargo = "R"
+        if request.method == "POST":
+                nome = request.POST.get('nome')
+                sobrenome = request.POST.get('sobrenome')
+                email = request.POST.get('email')
+                username = nome.casefold()+"."+sobrenome.casefold()
+                cargo = "R"
 
-            tam_nome = len(nome)
-            tam_sobrenome = len(sobrenome)
-            tam_email = len(email)
+                tam_nome = len(nome)
+                tam_sobrenome = len(sobrenome)
+                tam_email = len(email)
 
-            Validacoes_Post_Cadastro_Usuario_Campos_Preenchidos(request, slug, cargo, nome, sobrenome, email, tam_nome, tam_sobrenome, tam_email)
+                validacao_campos = Validacoes_Post_Cadastro_Usuario_Campos_Preenchidos(request, slug, cargo, nome, sobrenome, email, tam_nome, tam_sobrenome, tam_email)
+                if validacao_campos:
+                    return validacao_campos
 
-            resultado = Consultar_Uma_Comunidade(slug, opcao)
+                resultado = Consultar_Uma_Comunidade(slug, opcao)
 
-            Validacoes_Post_Cadastro_Usuario_Validacoes_Usuario(request, slug, cargo, resultado[0], resultado[1], nome, sobrenome, email, username, SENHA_PADRAO, resultado[4], resultado[5])
+                validacao_usuarios = Validacoes_Post_Cadastro_Usuario_Validacoes_Usuario(request, slug, cargo, resultado[0], resultado[1], nome, sobrenome, email, username, SENHA_PADRAO, resultado[4], resultado[5])
+                if validacao_usuarios:
+                    return validacao_usuarios
 
-            messages.add_message(request, messages.SUCCESS, 'Responsável Geral criado com sucesso')
-            return redirect(reverse('cadastrar_responsavel', kwargs={"slug": slug}))
-        else:
-            return redirect(reverse('login'))
+                messages.add_message(request, messages.SUCCESS, 'Responsável Geral criado com sucesso')
+                return redirect(reverse('cadastrar_responsavel', kwargs={"slug": slug}))
+    else:
+        return redirect(reverse('login'))
 
 
 @has_permission_decorator('excluir_responsavel_geral')
@@ -194,11 +199,10 @@ def excluir_responsavel(request, id):
 @has_permission_decorator('cadastrar_familia')
 def cadastrar_familia(request, slug):
     opcao = "slug"
-    if request.method == "GET":
-        if request.user.is_authenticated:
+    if request.user.is_authenticated:
+        if request.method == "GET":  
             if request.user.cargo == "A" or request.user.cargo == "R":
                 nome_completo = request.GET.get('nome_completo')
-                data_nascimento = request.GET.get('data_nascimento')
                 cpf = request.GET.get('cpf')
                 familiasnome = request.GET.get('familiasnome')
 
@@ -211,7 +215,7 @@ def cadastrar_familia(request, slug):
                 resultado = Consultar_Uma_Comunidade(slug, opcao)
 
                 if resultado[0] != 0:
-                    familias = Validacoes_Get_Familia(request, slug, nome_completo, data_nascimento, cpf, familiasnome, familias)
+                    familias = Validacoes_Get_Familia(request, slug, nome_completo, cpf, familiasnome, familias)
                     context = {
                             'slug': slug,
                             'nome_e_cidade_comunidade': slug,
@@ -219,29 +223,32 @@ def cadastrar_familia(request, slug):
                             'id_comunidade': resultado[0]
                         }
                     return render(request, 'cadastrar_familia.html', context)
+                else:
+                    messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+                    return redirect(reverse('home'))
             else:
                 messages.add_message(request, messages.ERROR, 'Você não tem permissão para isso ou não está logado')
                 return redirect(reverse('home'))
-        else:
-            return redirect(reverse('login'))
-    if request.method == "POST":
-        if request.user.is_authenticated:
+        if request.method == "POST":
             nome_completo = request.POST.get('nome_completo')
-            data_nascimento = request.POST.get('data_nascimento')
             cpf = request.POST.get('cpf')
 
             tam_nome = len(nome_completo)
 
-            Validacoes_Post_Cadastro_Familia_Campos_Preenchidos(request, slug, nome_completo, data_nascimento, cpf, tam_nome)
+            validacao_campos = Validacoes_Post_Cadastro_Familia_Campos_Preenchidos(request, slug, nome_completo, cpf, tam_nome)
+            if validacao_campos:
+                return validacao_campos
 
             resultado = Consultar_Uma_Comunidade(slug, opcao)
 
-            Validacoes_Post_Cadastro_Familia_Validacoes_Familia(request, slug, resultado[0], resultado[1], nome_completo, data_nascimento, cpf, resultado[4], resultado[5])
+            validacao_familia = Validacoes_Post_Cadastro_Familia_Validacoes_Familia(request, slug, resultado[0], resultado[1], nome_completo, cpf, resultado[4], resultado[5])
+            if validacao_familia:
+                return validacao_familia
             
             messages.add_message(request, messages.SUCCESS, 'Família criada com sucesso')
             return redirect(reverse('cadastrar_familia', kwargs={"slug": slug}))
-        else:
-            return redirect(reverse('login'))
+    else:
+        return redirect(reverse('login'))
 
 
 @has_permission_decorator('excluir_familia')

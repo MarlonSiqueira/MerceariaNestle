@@ -34,10 +34,11 @@ class Comunidade(models.Model):
 class NomeProduto(models.Model):
     nome_produto = models.CharField(max_length=128)
     slug = models.SlugField(unique=True, blank=True, null=True)
-    secao = models.CharField(max_length=15, unique=False, null=True)
     criado_por = models.CharField(max_length=128, unique=False, null=True, editable=False)
     data_criacao = models.CharField(max_length=20, null=True, editable=False)
     nome_comunidade = models.ForeignKey(Comunidade, on_delete=models.PROTECT, null=True)
+    nome_comunidade_str = models.CharField(max_length=60, unique=False, null=True, blank=True)
+    cidade_comunidade = models.CharField(max_length=60, unique=False, null=True, blank=True)
 
     def __str__(self):
         return self.nome_produto
@@ -46,9 +47,8 @@ class NomeProduto(models.Model):
         if not self.slug:
             data_modelo = timezone.localtime(timezone.now())
             data_modelo_1 = data_modelo.strftime("%d/%m/%Y %H:%M:%S") 
-            ano_atual = data_modelo.strftime("%Y") 
             self.data_criacao = data_modelo_1
-            self.slug = slugify(self.nome_produto + "-" + ano_atual)
+            self.slug = slugify(self.nome_produto + "-" + self.nome_comunidade_str + "-" + self.cidade_comunidade)
         return super().save(*args, **kwargs)
 
 class Produto(models.Model):
@@ -63,9 +63,11 @@ class Produto(models.Model):
     alterado_por = models.CharField(max_length=128, unique=False, null=True, editable=False)
     data_alteracao = models.CharField(max_length=20, null=True, editable=False)
     nome_comunidade = models.ForeignKey(Comunidade, on_delete=models.PROTECT, null=True)
-    img = models.CharField(max_length=3, blank=True, null=True)
     alterando_produto = models.CharField(max_length=128, unique=False, default=0)
     ultimo_acesso = models.CharField(max_length=20, default=0)
+    cod_produto = models.PositiveIntegerField(default=0)
+    cod_barras = models.PositiveIntegerField(default=0)
+    peso = models.DecimalField(max_digits=5, decimal_places=3, default=0)
 
     def equals(self, other):
         """Compara se dois objetos Produto são iguais"""
