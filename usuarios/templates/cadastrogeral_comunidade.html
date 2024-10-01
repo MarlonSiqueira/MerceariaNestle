@@ -4,15 +4,15 @@
 <div class="container">
     <form action="" method="POST" enctype="multipart/form-data"> {% csrf_token %}
             {% if user.is_authenticated %}
-                {% if user.cargo == "A" %}
+                {% if user.cargo == "A" or user.cargo == "R" %}
                     <div class="row d-flex justify-content-left align-items-left h-100">
                             <div class="col-12 col-md-8 col-lg-6 col-xl-5">
                                 <div class="mb-md-5 mt-md-4 pb-5">
                                     <div class="nav-item dropright">
                                         <a class="btn dropdown-toggle" href="#" style="color: white; background-color: blue;" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Estoque</a>
                                     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                        <a class="dropdown-item" href="{% url 'add_produto' nome_e_cidade_comunidade %}">Abastecer/Visualizar</a>
-                                        <a class="dropdown-item" href="{% url 'alterar_preco_produto' nome_e_cidade_comunidade %}">Alterar Preço Venda Geral</a>
+                                        <a class="dropdown-item" href="{% url 'add_produto' slug %}">Abastecer/Visualizar</a>
+                                        <a class="dropdown-item" href="{% url 'alterar_preco_produto' slug %}">Alterar Preço Venda Geral</a>
                                         <a class="dropdown-item" href="/add_novonome_produto">Cadastrar Novo Produto</a>
                                         <a class="dropdown-item" href="/add_tamanho">Cadastrar Novo Tamanho</a>
                                         <a class="dropdown-item" href="/add_cor">Cadastrar Nova Cor</a>
@@ -23,23 +23,23 @@
                                     <div class="nav-item dropright">
                                         <a class="btn dropdown-toggle" href="#" style="color: white; background-color: blue;" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Vendas</a>
                                         <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                            <a class="dropdown-item" href="{% url 'vendas' nome_e_cidade_comunidade %}">Realizar Venda</a>
-                                            <a class="dropdown-item" href="{% url 'vendas_finalizadas' nome_e_cidade_comunidade %}">Finalizar Venda</a>
-                                            <a class="dropdown-item" href="{% url 'editar_vendas' nome_e_cidade_comunidade %}">Trocar/Estornar</a>
+                                            <a class="dropdown-item" href="{% url 'vendas' slug %}">Realizar Venda</a>
+                                            <a class="dropdown-item" href="{% url 'vendas_finalizadas' slug %}">Finalizar Venda</a>
+                                            <a class="dropdown-item" href="{% url 'editar_vendas' slug %}">Trocar/Estornar</a>
                                         </div>
                                     </div>
                                     <br>
                                     <div class="nav-item dropright">
                                         <a class="btn dropdown-toggle" href="#" style="color: white; background-color: blue;" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Cadastrar Funcionários</a>
                                     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                        <a class="dropdown-item" href="{% url 'cadastrar_vendedor' nome_e_cidade_comunidade %}">Cadastrar Vendedor</a>
+                                        <a class="dropdown-item" href="{% url 'cadastrar_vendedor' slug %}">Cadastrar Vendedor</a>
                                     </div>
                                     </div>
                                     <br>
-                                    <a class="btn toggle" style="color: white; background-color: blue;" href="{% url 'editar_festa' nome_e_cidade_comunidade %}">Cadastrar Famílias</a>
+                                    <a class="btn toggle" style="color: white; background-color: blue;" href="{% url 'cadastrar_familia' slug %}">Cadastrar Famílias</a>
                                     <br>
                                     <br>
-                                        <a class="btn toggle" style="color: white; background-color: blue;" href="{% url 'editar_festa' nome_e_cidade_comunidade %}">Editar Festa</a>
+                                        <a class="btn toggle" style="color: white; background-color: blue;" href="{% url 'editar_festa' slug %}">Editar Festa</a>
                                     <br>
                                     <br>
                                         <a class="btn btn-info" style="color: white;" href="{% url 'comunidades' %}" class="btnbtn-primary">Voltar</a>
@@ -53,8 +53,8 @@
                                 <div class="nav-item dropright">
                                     <a class="btn dropdown-toggle" href="#" style="color: white; background-color: blue;" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Estoque</a>
                                 <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                    <a class="dropdown-item" href="{% url 'add_produto' nome_e_cidade_comunidade %}">Abastecer/Visualizar</a>
-                                    <a class="dropdown-item" href="{% url 'alterar_preco_produto' nome_e_cidade_comunidade %}">Alterar Preço Venda Geral</a>
+                                    <a class="dropdown-item" href="{% url 'add_produto' slug %}">Abastecer/Visualizar</a>
+                                    <a class="dropdown-item" href="{% url 'alterar_preco_produto' slug %}">Alterar Preço Venda Geral</a>
                                     <a class="dropdown-item" href="/add_novonome_produto">Cadastrar Novo Produto</a>
                                     <a class="dropdown-item" href="/add_tamanho">Cadastrar Novo Tamanho</a>
                                     <a class="dropdown-item" href="/add_cor">Cadastrar Nova Cor</a>
@@ -65,21 +65,20 @@
                                 <div class="nav-item dropright">
                                     <a class="btn dropdown-toggle" href="#" style="color: white; background-color: blue;" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Vendas</a>
                                     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                        <a class="dropdown-item" href="{% url 'vendas' nome_e_cidade_comunidade %}">Realizar Venda</a>
-                                        <a class="dropdown-item" href="{% url 'vendas_finalizadas' nome_e_cidade_comunidade %}">Finalizar Venda</a>
-                                        <a class="dropdown-item" href="{% url 'editar_vendas' nome_e_cidade_comunidade %}">Trocar/Estornar</a>
+                                        <a class="dropdown-item" href="{% url 'vendas' slug %}">Realizar Venda</a>
+                                        <a class="dropdown-item" href="{% url 'vendas_finalizadas' slug %}">Finalizar Venda</a>
+                                        <a class="dropdown-item" href="{% url 'editar_vendas' slug %}">Trocar/Estornar</a>
                                     </div>
                                 </div>
                                 <br>
                                 <div class="nav-item dropright">
                                     <a class="btn dropdown-toggle" href="#" style="color: white; background-color: blue;" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Cadastrar Usuários</a>
                                 <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                    <a class="dropdown-item" href="{% url 'cadastrar_vendedor' nome_e_cidade_comunidade %}">Cadastrar Vendedor</a>
-                                    <a class="dropdown-item" href="{% url 'cadastrar_responsavel_geral' nome_e_cidade_comunidade %}">Cadastrar Responsável Geral</a>
+                                    <a class="dropdown-item" href="{% url 'cadastrar_vendedor' slug %}">Cadastrar Vendedor</a>
                                 </div>
                                 </div>
                                 <br>
-                                    <a class="btn toggle" style="color: white; background-color: blue;" href="{% url 'editar_festa' nome_e_cidade_comunidade %}">Editar Festa</a>
+                                    <a class="btn toggle" style="color: white; background-color: blue;" href="{% url 'editar_festa' slug %}">Editar Festa</a>
                                 <br>
                                 <br>
                                     <a class="btn btn-info" style="color: white;" href="{% url 'comunidades' %}" class="btnbtn-primary">Voltar</a>

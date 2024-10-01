@@ -4,7 +4,7 @@
 <div class="container">
     <form action="" method="POST" enctype="multipart/form-data"> {% csrf_token %}
         {% if user.is_authenticated %}
-            {% if user.cargo == "A" %}
+            {% if user.cargo == "A" or user.cargo == "R" %}
                 <br>
                 <div class="col">
                     <div class="col-lg-15 col-md-13 col-sm-13 col-xs-15">

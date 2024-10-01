@@ -35,14 +35,18 @@ class Users(AbstractUser):
 
 
 class Familia(models.Model):
-    nome_comunidade = models.ForeignKey(Comunidade, on_delete=models.PROTECT, null=True)
     cpf = models.CharField(max_length=14, null=True, blank=True, unique=True)
     nome_beneficiado = models.CharField(max_length=128, unique=False, null=True, editable=False)
+    data_nascimento = models.DateField(null=True, blank=True)
     ultima_compra = models.DateField(null=True, blank=True)
     criado_por = models.CharField(max_length=128, unique=False, null=True, editable=False)
     data_criacao = models.CharField(max_length=20, null=True, editable=False)
     alterado_por = models.CharField(max_length=128, unique=False, null=True, editable=False)
     data_alteracao = models.CharField(max_length=20, null=True, editable=False)
+    ativo = models.CharField(max_length=3, unique=False, null=True, editable=False)
+    nome_comunidade = models.ForeignKey(Comunidade, on_delete=models.PROTECT, null=True, blank=True)
+    nome_comunidade_str = models.CharField(max_length=60, unique=False, null=True, blank=True)
+    cidade_comunidade = models.CharField(max_length=60, unique=False, null=True, blank=True)
 
     def __str__(self):
         return self.cpf

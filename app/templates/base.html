@@ -31,16 +31,10 @@
             {% if user.is_authenticated %}
                 {% if user.cargo == "A" %}
                     <div><font color="gold">Admin</font></div>
-                {%elif user.cargo == "P"%}
-                    <div><font color="gold">Padre</font></div>
-                {%elif user.cargo == "CF"%}
-                    <div><font color="gold">Casal Festa</font></div>
-                {%elif user.cargo == "CL"%}
-                    <div><font color="gold">Casal Lojinha</font></div>
+                {%elif user.cargo == "R"%}
+                    <div><font color="gold">Responsável Geral</font></div>
                 {%elif user.cargo == "V"%}
                     <div><font color="gold">Vendedor</font></div>
-                {%elif user.cargo == "C"%}
-                    <div><font color="gold">Caixa</font></div>
                 {% endif %} 
                 &nbsp
                 &nbsp

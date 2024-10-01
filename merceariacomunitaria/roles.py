@@ -9,14 +9,16 @@ class TrocarSenha(AbstractUserRole):
 class Vendedor(AbstractUserRole):
     available_permissions = {
         'logado': True,
+        'cadastrar_comunidade': True,
         'acessar_comunidade': True,
     }
 
 class ResponsavelGeral(AbstractUserRole):
     available_permissions = {
         'logado': True,
+        'cadastrar_comunidade': True,
+        'cadastrar_familia': True,
         'acessar_comunidade': True,
-        'acessar_todas_comunidades': True,
         'editar_comunidade': True,
         'cadastrar_vendedor': True,
         'acessar_logs': True,
@@ -27,8 +29,9 @@ class ResponsavelGeral(AbstractUserRole):
 class Admin(AbstractUserRole):
     available_permissions = {
         'logado': True,
+        'cadastrar_comunidade': True,
+        'cadastrar_familia': True,
         'acessar_comunidade': True,
-        'acessar_todas_comunidades': True,
         'editar_comunidade': True,
         'cadastrar_vendedor': True,
         'cadastrar_responsavel_geral': True,

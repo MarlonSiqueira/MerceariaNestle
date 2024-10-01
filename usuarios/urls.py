@@ -9,11 +9,14 @@ urlpatterns = [
     path('', views.home, name="home"),#Home
     #path('festas/', views.festas, name="festas"),#Festas
     path('alterar_usuarios/', views.alterar_usuarios, name="alterar_usuarios"),#Alterar_usuarios
-    path('comunidades/', views.comunidades, name="comunidades"),#Consultar omunidades
+    path('comunidades/', views.comunidades, name="comunidades"),#Consultar comunidades
 
     path('cadastrar_vendedor/<str:slug>', views.cadastrar_vendedor, name="cadastrar_vendedor"),#Cadastrar Vendedor
     path('excluir_vendedor/<str:id>/', views.excluir_vendedor, name="excluir_vendedor"),#Excluir Vendedor
     
+    path('cadastrar_familia/<str:slug>', views.cadastrar_familia, name="cadastrar_familia"),#Cadastrar Familia
+    path('excluir_familia/<str:id>/', views.excluir_familia, name="excluir_familia"),#Excluir Familia
+
     path('cadastrar_responsavel/<str:slug>', views.cadastrar_responsavel, name="cadastrar_responsavel"),#Cadastrar Responsavel Geral
     path('excluir_responsavel/geral/<str:id>/', views.excluir_responsavel, name="excluir_responsavel/geral"),#Excluir Responsavel Geral
 

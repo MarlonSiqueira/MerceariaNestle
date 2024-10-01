@@ -966,7 +966,7 @@ def excluir_cor(request, slug):
 def cadastrar_comunidade (request):
     if request.method == "GET":
         if request.user.is_authenticated:
-            if request.user.cargo == "A":
+            if request.user.cargo == "A" or request.user.cargo == "R":
                 return render(request, 'cadastrar_comunidade.html')
             else:
                 messages.add_message(request, messages.ERROR, 'Você não tem permissão para isso ou não está logado')

@@ -35,7 +35,7 @@ def cadastrar_vendedor(request, slug):
     opcao = "slug"
     if request.method == "GET":
         if request.user.is_authenticated:
-            if request.user.cargo == "A":
+            if request.user.cargo == "A" or request.user.cargo == "R":
                 nome = request.GET.get('nome')
                 sobrenome = request.GET.get('sobrenome')
                 email = request.GET.get('email')
@@ -52,7 +52,7 @@ def cadastrar_vendedor(request, slug):
                 resultado = Consultar_Uma_Comunidade(slug, opcao)
 
                 if resultado[0] != 0:
-                    Validacoes_Get_Cadastro_Usuario(request, cargo, slug, nome, sobrenome, email, vendedoresnome, vendedores)
+                    vendedores = Validacoes_Get_Cadastro_Usuario(request, cargo, slug, nome, sobrenome, email, vendedoresnome, vendedores)
                     context = {
                             'slug': slug,
                             'nome_e_cidade_comunidade': slug,
@@ -70,7 +70,6 @@ def cadastrar_vendedor(request, slug):
             nome = request.POST.get('nome')
             sobrenome = request.POST.get('sobrenome')
             email = request.POST.get('email')
-            vendedoresnome = request.POST.get('vendedoresnome')
             username = nome.casefold()+"."+sobrenome.casefold()
             cargo = "V"
 
@@ -113,7 +112,7 @@ def excluir_vendedor(request, id):
         return redirect(reverse('cadastrar_vendedor', kwargs={"slug":resultado[1]}))
 
 
-#Funções para a tela de cadastrar_vendedor
+#Funções para a tela de cadastrar_responsavel
 @has_permission_decorator('cadastrar_responsavel_geral')
 def cadastrar_responsavel(request, slug):
     opcao = "slug"
@@ -134,7 +133,7 @@ def cadastrar_responsavel(request, slug):
 
                 responsaveis = Users.objects.filter(Buscaresponsaveis)
 
-                Validacoes_Get_Cadastro_Usuario(request, cargo, slug, nome, sobrenome, email, responsaveisnome, responsaveis)
+                responsaveis = Validacoes_Get_Cadastro_Usuario(request, cargo, slug, nome, sobrenome, email, responsaveisnome, responsaveis)
                 context = {
                         'slug': slug,
                         'responsaveis': responsaveis,
@@ -150,7 +149,6 @@ def cadastrar_responsavel(request, slug):
             nome = request.POST.get('nome')
             sobrenome = request.POST.get('sobrenome')
             email = request.POST.get('email')
-            responsaveisnome = request.POST.get('responsaveisnome')
             username = nome.casefold()+"."+sobrenome.casefold()
             cargo = "R"
 
@@ -190,6 +188,83 @@ def excluir_responsavel(request, id):
     except ProtectedError:#Caso não consiga, entre aqui
         messages.add_message(request, messages.ERROR, 'Esse Responsável Geral não pode ser excluído pois possui logs vinculados')
         return redirect(reverse('cadastrar_responsavel', kwargs={"slug": slug}))
+
+
+#Funções para a tela de cadastrar familia
+@has_permission_decorator('cadastrar_familia')
+def cadastrar_familia(request, slug):
+    opcao = "slug"
+    if request.method == "GET":
+        if request.user.is_authenticated:
+            if request.user.cargo == "A" or request.user.cargo == "R":
+                nome_completo = request.GET.get('nome_completo')
+                data_nascimento = request.GET.get('data_nascimento')
+                cpf = request.GET.get('cpf')
+                familiasnome = request.GET.get('familiasnome')
+
+                Buscafamilias = Q(
+                    Q(ativo="sim")
+                )
+
+                familias = Familia.objects.filter(Buscafamilias)
+
+                resultado = Consultar_Uma_Comunidade(slug, opcao)
+
+                if resultado[0] != 0:
+                    familias = Validacoes_Get_Familia(request, slug, nome_completo, data_nascimento, cpf, familiasnome, familias)
+                    context = {
+                            'slug': slug,
+                            'nome_e_cidade_comunidade': slug,
+                            'familias': familias,
+                            'id_comunidade': resultado[0]
+                        }
+                    return render(request, 'cadastrar_familia.html', context)
+            else:
+                messages.add_message(request, messages.ERROR, 'Você não tem permissão para isso ou não está logado')
+                return redirect(reverse('home'))
+        else:
+            return redirect(reverse('login'))
+    if request.method == "POST":
+        if request.user.is_authenticated:
+            nome_completo = request.POST.get('nome_completo')
+            data_nascimento = request.POST.get('data_nascimento')
+            cpf = request.POST.get('cpf')
+
+            tam_nome = len(nome_completo)
+
+            Validacoes_Post_Cadastro_Familia_Campos_Preenchidos(request, slug, nome_completo, data_nascimento, cpf, tam_nome)
+
+            resultado = Consultar_Uma_Comunidade(slug, opcao)
+
+            Validacoes_Post_Cadastro_Familia_Validacoes_Familia(request, slug, resultado[0], resultado[1], nome_completo, data_nascimento, cpf, resultado[4], resultado[5])
+            
+            messages.add_message(request, messages.SUCCESS, 'Família criada com sucesso')
+            return redirect(reverse('cadastrar_familia', kwargs={"slug": slug}))
+        else:
+            return redirect(reverse('login'))
+
+
+@has_permission_decorator('excluir_familia')
+def excluir_familia(request, id):
+    try :#Tente Excluir
+        opcao = "id"
+        vendedor = get_object_or_404(Users, id=id)
+        vendedor_atual = Users.objects.get(username=vendedor)
+
+        id_comunidade_vendedor = vendedor_atual.nome_comunidade_id #Pegando o ID da comunidade do vendedor
+        resultado = Consultar_Uma_Comunidade(id_comunidade_vendedor, opcao)
+        if resultado[1]:
+            if hasattr(vendedor, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
+                    # se a flag _excluido já está setada, não chama o sinal
+                pass
+            else:#Caso não tenha sido excluído ele chama o registro.
+                user_deleted(instance=vendedor, user=request.user)
+            vendedor.delete()
+            messages.add_message(request, messages.SUCCESS, 'Vendedor excluído com sucesso')
+            return redirect(reverse('cadastrar_vendedor', kwargs={"slug":resultado[1]}))
+    except ProtectedError:#Caso não consiga, entre aqui
+        messages.add_message(request, messages.ERROR, 'Esse Vendedor não pode ser excluído pois possui logs vinculados')
+        return redirect(reverse('cadastrar_vendedor', kwargs={"slug":resultado[1]}))
 
 
 def login(request):
@@ -244,7 +319,7 @@ def home(request):
 
 
 #Funções para a tela de consulta das comunidades
-@has_permission_decorator('comunidades')
+@has_permission_decorator('acessar_comunidade')
 def comunidades(request):
     if request.method == "GET":
         if request.user.is_authenticated:
@@ -268,17 +343,16 @@ def comunidades(request):
             return render(request, 'login.html')
 
 #Função para a tela de acessos da comunidade
-@has_permission_decorator('acessar_comunidade')
+@has_permission_decorator('cadastrar_comunidade')
 def cadastrogeral_comunidade(request, slug):
     if request.method == "GET":
         if request.user.is_authenticated:
             opcao = "slug"
-            if request.user.cargo == "A":
+            if request.user.cargo == "A" or request.user.cargo == "R":
                 resultado = Consultar_Uma_Comunidade(slug, opcao)
                 if resultado[0] != 0:
                     context = {
                         'slug': slug,
-                        'nome_e_cidade_comunidade': slug
                     }
                     return render(request, 'cadastrogeral_comunidade.html', context)
                 else:
@@ -710,8 +784,8 @@ def alterar_usuarios(request):
             cargo = user_antigo.cargo
             festa_usuario = user_antigo.festa_usuario
             
-            festa = Festa.objects.get(ano_festa=ano_atual)#Pegando o ano Atual
-            id_ano_festa = festa.id
+            # festa = Festa.objects.get(ano_festa=ano_atual)#Pegando o ano Atual
+            # id_ano_festa = festa.id
 
             if novo_ano != ano_atual:
                 messages.add_message(request, messages.ERROR, 'Você não está digitando o ano atual')#Respondendo que o ano digitado não é o ano atual
@@ -732,7 +806,7 @@ def alterar_usuarios(request):
 
             user = Users.objects.get(username=username)
             user.festa_usuario = ano_atual
-            user.ano_festa_id = id_ano_festa
+            # user.ano_festa_id = id_ano_festa
             user.data_alteracao = data_alteracao
             user.alterado_por = alterado_por
             user.save()

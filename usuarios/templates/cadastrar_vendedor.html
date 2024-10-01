@@ -4,7 +4,7 @@
 {% block 'body' %}
     <div class="container">
         {% if user.is_authenticated %}
-            {% if user.cargo == "A" %}
+            {% if user.cargo == "A" or user.cargo == "R" %}
                 <form action="" method="POST">{% csrf_token %}
                     <br>
                     <label>Nome </label>
@@ -55,11 +55,13 @@
                         <th scope="col">Login</th>
                         <th scope="col">E-mail</th>
                         <th scope="col">Último Login</th>
-                        <th scope="col">Excluir</th>
+                        {% if user.cargo == "A" or user.cargo == "R" %}
+                            <th scope="col">Excluir</th>
+                        {% endif %}
                     </tr>
                     </thead>
                     <tbody>
-                        {% for vendedor in vendedores%}
+                        {% for vendedor in vendedores %}
                             {% if id_comunidade == vendedor.nome_comunidade_id %}
                                 <tr>
                                     <th>{{vendedor.username}}</th>
@@ -71,7 +73,9 @@
                                         {% endif %}
                                     </td>
                                     {% define vendedor.id as idvendedor %}
-                                    <td><a onclick="excluirVendedor(`{{idvendedor}}`)" class="btn btn-danger">Excluir</a></td>
+                                    {% if user.cargo == "A" or user.cargo == "R" %}
+                                        <td><a onclick="excluirVendedor(`{{idvendedor}}`)" class="btn btn-danger">Excluir</a></td>
+                                    {% endif %}
                                 </tr>
                             {%endif%}   
                         {% endfor %}
