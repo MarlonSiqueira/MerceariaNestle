@@ -2,7 +2,6 @@
 var url_atual = window.location.pathname; //Full Path
 var url_sem_slug = url_atual.split('/');
 var url_sem_slug = url_sem_slug[1];
-console.log(url_sem_slug)
 
 //Funções tela de vendas
 if (url_sem_slug == "/vendas/"){
@@ -423,7 +422,6 @@ if (url_sem_slug == "/add_tamanho/"){
 
 //Funções tela dos Nome dos Produtos
 if (url_sem_slug == "add_novonome_produto"){
-    console.log("teste1")
     //////////////////////////////////////////////////////
     //Modal Excluir Nome dos Produtos tela de Cadastro de Nome dos Produtos
     function excluirNomeProduto(slugnomeproduto){
@@ -449,6 +447,81 @@ if (url_sem_slug == "add_novonome_produto"){
         })
     }
 }
+
+
+//Funções tela de Cadastro de Familias
+if (url_sem_slug == "cadastrar_familia"){
+    //////////////////////////////////////////////////////
+    //Modal Excluir Familia tela de Cadastro de Familias
+    function excluirfamilia(idfamilia){
+        Swal.fire({
+            "title": "Tem certeza ?",
+            "text": "Essa ação não pode ser desfeita",
+            "icon": "question",
+            "showCancelButton": true,
+            "showCloseButton": true,
+            "cancelButtonText": "Não, Cancelar",
+            "confirmButtonText": "Sim, Excluir",
+            "reverseButtons": true,
+            "confirmButtonColor": "#dc3545",
+            "focusConfirm": true,
+            "allowEscapeKey": false,
+            "allowEnterKey": false,
+            "allowOutsideClick": false
+        })
+        .then(function(result){
+            if(result.isConfirmed) {
+                window.location.pathname = "excluir_familia/" + idfamilia + "/"
+            }
+        })
+    }
+
+
+    function inativarfamilia(idfamilia){
+        Swal.fire({
+            "title": "Tem certeza ?",
+            "icon": "question",
+            "showCancelButton": true,
+            "showCloseButton": true,
+            "cancelButtonText": "Não, Cancelar",
+            "confirmButtonText": "Sim, Inativar",
+            "reverseButtons": true,
+            "confirmButtonColor": "#dc3545",
+            "focusConfirm": true,
+            "allowEscapeKey": false,
+            "allowEnterKey": false,
+            "allowOutsideClick": false
+        })
+        .then(function(result){
+            if(result.isConfirmed) {
+                window.location.pathname = "inativar_familia/" + idfamilia + "/"
+            }
+        })
+    }
+
+    function ativarfamilia(idfamilia){
+        Swal.fire({
+            "title": "Tem certeza ?",
+            "icon": "question",
+            "showCancelButton": true,
+            "showCloseButton": true,
+            "cancelButtonText": "Não, Cancelar",
+            "confirmButtonText": "Sim, ativar",
+            "reverseButtons": true,
+            "confirmButtonColor": "#dc3545",
+            "focusConfirm": true,
+            "allowEscapeKey": false,
+            "allowEnterKey": false,
+            "allowOutsideClick": false
+        })
+        .then(function(result){
+            if(result.isConfirmed) {
+                window.location.pathname = "ativar_familia/" + idfamilia + "/"
+            }
+        })
+    }
+}
+
 
 //Funções tela de Cadastro de Vendedores
 if (url_sem_slug == "cadastrar_vendedor"){
@@ -482,7 +555,7 @@ if (url_sem_slug == "cadastrar_vendedor"){
 //Funções tela de Cadastro do Responsável Geral
 if (url_sem_slug == "cadastrar_responsavel"){
     //////////////////////////////////////////////////////
-    //Modal Excluir Vendedor tela de Cadastro do Responsável Geral
+    //Modal Excluir Responsável tela de Cadastro do Responsável Geral
     function excluirResponsavelGeral(idresponsavel){
         Swal.fire({
             "title": "Tem certeza ?",

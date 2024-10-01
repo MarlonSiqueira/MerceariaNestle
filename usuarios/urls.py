@@ -16,6 +16,8 @@ urlpatterns = [
     
     path('cadastrar_familia/<str:slug>', views.cadastrar_familia, name="cadastrar_familia"),#Cadastrar Familia
     path('excluir_familia/<str:id>/', views.excluir_familia, name="excluir_familia"),#Excluir Familia
+    path('inativar_familia/<str:id>/', views.inativar_familia, name="inativar_familia"),#Inativar Familia
+    path('ativar_familia/<str:id>/', views.ativar_familia, name="ativar_familia"),#Ativar Familia
 
     path('cadastrar_responsavel/<str:slug>', views.cadastrar_responsavel, name="cadastrar_responsavel"),#Cadastrar Responsavel Geral
     path('excluir_responsavel/geral/<str:id>/', views.excluir_responsavel, name="excluir_responsavel/geral"),#Excluir Responsavel Geral

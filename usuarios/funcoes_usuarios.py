@@ -151,6 +151,56 @@ def Validacoes_Post_Cadastro_Familia_Validacoes_Familia(request, slug, id_comuni
         
     return None
 
+def Registrar_Log_Alteracao_Status_Familia(request, id, status, slug):
+    contador_alteracao = 0
+    familia_anteriormente = None
+    familia_anteriormente = Familia.objects.get(id=id)
+    campos_alteracao = []
+    with transaction.atomic():
+        if familia_anteriormente:
+            familia_anteriormente.ativo = str(familia_anteriormente.ativo)
+
+            if familia_anteriormente.ativo:
+                campos_alteracao.append('ativo')
+                contador_alteracao += 1
+
+            if campos_alteracao == []:
+                transaction.set_rollback(True)
+                familia_anteriormente.alterando_produto = "0" #Voltando pra Zero
+                familia_anteriormente.ultimo_acesso = "0" #Voltando pra Zero
+                familia_anteriormente.save()
+                messages.add_message(request, messages.ERROR, (f'Nada foi alterado'))
+                return redirect(reverse('add_produto', kwargs={"slug":slug}))
+            else:
+                familia_alterado = None
+                familia_alterado = Familia.objects.get(id=id)
+                familia_alterado.ativo = status
+                familia_alterado.save()
+                
+                familia_novo = None
+                familia_novo = Familia.objects.get(id=id)
+                if campos_alteracao:
+                    valores_antigos = []
+                    valores_novos = []
+                    for campo in campos_alteracao:
+                        valor_antigo = getattr(familia_anteriormente, campo)
+                        valor_novo = getattr(familia_novo, campo)
+                        valores_antigos.append(f'{campo}: {valor_antigo}')
+                        valores_novos.append(f'{campo}: {valor_novo}')
+                if contador_alteracao > 0:        
+                    id_user = Users.objects.get(username=request.user)
+                    id_user = id_user.id
+                    LogsItens.objects.create(
+                        id_user = id_user,
+                        nome_user=request.user,
+                        nome_objeto=str(slug),
+                        acao='Alteração',
+                        model = "Familia",
+                        campos_alteracao=', '.join(campos_alteracao),
+                        valores_antigos=', '.join(valores_antigos),
+                        valores_novos=', '.join(valores_novos)
+                    )
+
 
 def Validacoes_Get_Cadastro_Usuario(request, cargo, slug, nome, sobrenome, email, usuariosnome, usuarios):
     if cargo == "V":

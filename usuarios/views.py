@@ -20,7 +20,7 @@ from merceariacomunitaria.settings import EMAIL_HOST_USER,  EMAIL_HOST_PASSWORD
 from .forms import PasswordResetConfirmForm
 from django.contrib.auth.hashers import make_password
 from urllib.parse import urlparse
-from usuarios.signals import user_deleted
+from usuarios.signals import user_deleted, familia_deleted
 from estoque.models import LogsItens, VendasControle, Vendas
 from urllib.parse import urlencode
 from dotenv import load_dotenv #lendo o arquivo .env pt1
@@ -95,13 +95,12 @@ def cadastrar_vendedor(request, slug):
 
 @has_permission_decorator('excluir_vendedor')
 def excluir_vendedor(request, id):
-    try :#Tente Excluir
-        opcao = "id"
-        vendedor = get_object_or_404(Users, id=id)
-        vendedor_atual = Users.objects.get(username=vendedor)
+    opcao = "id"
+    vendedor = get_object_or_404(Users, id=id)
 
-        id_comunidade_vendedor = vendedor_atual.nome_comunidade_id #Pegando o ID da comunidade do vendedor
-        resultado = Consultar_Uma_Comunidade(id_comunidade_vendedor, opcao)
+    id_comunidade_vendedor = vendedor.nome_comunidade_id #Pegando o ID da comunidade do vendedor
+    resultado = Consultar_Uma_Comunidade(id_comunidade_vendedor, opcao)
+    try :#Tente Excluir
         if resultado[1]:
             if hasattr(vendedor, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
                     # se a flag _excluido já está setada, não chama o sinal
@@ -175,12 +174,11 @@ def cadastrar_responsavel(request, slug):
 
 @has_permission_decorator('excluir_responsavel_geral')
 def excluir_responsavel(request, id):
+    slug = "geral"
     try :#Tente Excluir
-        slug = "geral"
         responsavel = get_object_or_404(Users, id=id)
-        responsavel_atual = Users.objects.get(username=responsavel)
 
-        id_responsavel = responsavel_atual.id #Pegando o ID do responsavel
+        id_responsavel = responsavel.id #Pegando o ID do responsavel
         if id_responsavel == int(id):
             if hasattr(responsavel, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
                     # se a flag _excluido já está setada, não chama o sinal
@@ -206,11 +204,7 @@ def cadastrar_familia(request, slug):
                 cpf = request.GET.get('cpf')
                 familiasnome = request.GET.get('familiasnome')
 
-                Buscafamilias = Q(
-                    Q(ativo="sim")
-                )
-
-                familias = Familia.objects.filter(Buscafamilias)
+                familias = Familia.objects.all()
 
                 resultado = Consultar_Uma_Comunidade(slug, opcao)
 
@@ -253,25 +247,58 @@ def cadastrar_familia(request, slug):
 
 @has_permission_decorator('excluir_familia')
 def excluir_familia(request, id):
-    try :#Tente Excluir
-        opcao = "id"
-        vendedor = get_object_or_404(Users, id=id)
-        vendedor_atual = Users.objects.get(username=vendedor)
+    opcao = "id"
+    familia = get_object_or_404(Familia, id=id)
 
-        id_comunidade_vendedor = vendedor_atual.nome_comunidade_id #Pegando o ID da comunidade do vendedor
-        resultado = Consultar_Uma_Comunidade(id_comunidade_vendedor, opcao)
+    id_comunidade_familia = familia.nome_comunidade_id #Pegando o ID da comunidade do familia
+    resultado = Consultar_Uma_Comunidade(id_comunidade_familia, opcao)
+    try :#Tente Excluir
         if resultado[1]:
-            if hasattr(vendedor, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
+            if hasattr(familia, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
                     # se a flag _excluido já está setada, não chama o sinal
                 pass
             else:#Caso não tenha sido excluído ele chama o registro.
-                user_deleted(instance=vendedor, user=request.user)
-            vendedor.delete()
-            messages.add_message(request, messages.SUCCESS, 'Vendedor excluído com sucesso')
-            return redirect(reverse('cadastrar_vendedor', kwargs={"slug":resultado[1]}))
+                familia_deleted(instance=familia, user=request.user)
+            familia.delete()
+            messages.add_message(request, messages.SUCCESS, 'Familia excluída com sucesso')
+            return redirect(reverse('cadastrar_familia', kwargs={"slug":resultado[1]}))
     except ProtectedError:#Caso não consiga, entre aqui
-        messages.add_message(request, messages.ERROR, 'Esse Vendedor não pode ser excluído pois possui logs vinculados')
-        return redirect(reverse('cadastrar_vendedor', kwargs={"slug":resultado[1]}))
+        messages.add_message(request, messages.ERROR, 'Esse Familia não pode ser excluída pois possui logs vinculados')
+        return redirect(reverse('cadastrar_familia', kwargs={"slug":resultado[1]}))
+
+
+@has_permission_decorator('inativar_familia')
+def inativar_familia(request, id):
+    opcao = "id"
+    status = "nao"
+    familia = get_object_or_404(Familia, id=id)
+
+    id_comunidade_familia = familia.nome_comunidade_id #Pegando o ID da comunidade do familia
+    resultado = Consultar_Uma_Comunidade(id_comunidade_familia, opcao)
+    if resultado[1]:
+        validacao = Registrar_Log_Alteracao_Status_Familia(request, id, status, resultado[1])
+        if validacao:
+            return validacao
+
+        messages.add_message(request, messages.SUCCESS, 'Familia inativada com sucesso')
+        return redirect(reverse('cadastrar_familia', kwargs={"slug":resultado[1]}))
+
+
+@has_permission_decorator('ativar_familia')
+def ativar_familia(request, id):
+    opcao = "id"
+    status = "sim"
+    familia = get_object_or_404(Familia, id=id)
+
+    id_comunidade_familia = familia.nome_comunidade_id #Pegando o ID da comunidade do familia
+    resultado = Consultar_Uma_Comunidade(id_comunidade_familia, opcao)
+    if resultado[1]:
+        validacao = Registrar_Log_Alteracao_Status_Familia(request, id, status, resultado[1])
+        if validacao:
+            return validacao
+
+        messages.add_message(request, messages.SUCCESS, 'Familia ativada com sucesso')
+        return redirect(reverse('cadastrar_familia', kwargs={"slug":resultado[1]}))
 
 
 def login(request):
