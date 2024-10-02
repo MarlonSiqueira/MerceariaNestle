@@ -20,13 +20,13 @@
 
             <br>
 
-            <label>Preço de Compra:</label>
-            <input class="form-control" type="text" name="preco_compra" id="preco_compra" placeholder="0">
+            <label>Peso (KG):</label>
+            <input class="form-control" type="text" name="peso" id="peso" placeholder="Exemplo: 0.500 = (500g), 1.000 = (1kg)">
 
             <br>
 
-            <label>Preço de Venda:</label>
-            <input class="form-control" type="text" name="preco_venda" id="preco_venda" placeholder="0">
+            <label>Preço de Compra:</label>
+            <input class="form-control" type="text" name="preco_compra" id="preco_compra" placeholder="0">
 
             <br>
 
@@ -92,107 +92,12 @@
 
 {% block scripts %}
 <script>
-    function atualizarConteudo() {
-        var nomeProdutoSelect = document.getElementById("nome_produto");
-        var tamanhoSelect_open = document.getElementById("tamanho2");
-        var CorInfantil_open = document.getElementById("cor_infantil");
-        var CorAdulto_open = document.getElementById("cor_adulto");
-
-        // Verifica o valor selecionado em "nome_produto"
-        var nomeProdutoSelecionado = nomeProdutoSelect.value;
-
-        var selectedOption_open = tamanhoSelect_open.options[tamanhoSelect_open.selectedIndex];
-        var selectedSecao_open = selectedOption_open.getAttribute("data-secao");
-        var isHidden = tamanhoSelect_open.hidden;
-
-        // Verifica se o elemento está oculto e se o valor da propriedade "data-secao" é 0
-        if (isHidden) {
-            selectedSecao_open = 0
-        }
-
-        CorAdulto_open.style.display = "block";
-
-        if (nomeProdutoSelecionado.toLowerCase() === "camisa") {
-            // Oculta a opção "Sem Cor"
-            var options = CorAdulto_open.options;
-            for (var i = 0; i < options.length; i++) {
-                if (options[i].text === "Sem Cor") {
-                    options[i].style.display = "none";
-                } else {
-                    options[i].style.display = "block";
-                }
-            }
-        }else {
-            CorAdulto_open.style.display = "none";
-
-            // Exibe todas as opções em "cor_adulto"
-            var options = CorAdulto_open.options;
-            for (var i = 0; i < options.length; i++) {
-                options[i].style.display = "block";
-            }
-        }
-
-        //Sempre que abrir a página
-        if (selectedSecao_open === "Infantil") {
-            CorInfantil_open.style.display = "block";
-            CorAdulto_open.style.display = "none";
-        } else {
-            CorInfantil_open.style.display = "none";
-            CorAdulto_open.style.display = "block";
-        }
-    }
-    
-    document.addEventListener("DOMContentLoaded", function() {
-        atualizarConteudo(); // Chamando a função atualizarConteudo, definida anteriormente, pra ser executada sozinha assim que a página for carregada
-
-        var tamanhoSelect = document.getElementById("tamanho2");
-        var CorInfantil = document.getElementById("cor_infantil");
-        var CorAdulto = document.getElementById("cor_adulto");
-
-        tamanhoSelect.addEventListener("change", function() {
-            var selectedOption = tamanhoSelect.options[tamanhoSelect.selectedIndex];
-            var selectedSecao = selectedOption.getAttribute("data-secao");
-
-            //apenas ao alterar
-            if (selectedSecao === "Infantil") {
-                CorInfantil.style.display = "block";
-                CorAdulto.style.display = "none";
-            } else {
-                CorInfantil.style.display = "none";
-                CorAdulto.style.display = "block";
-            }
-        });
-        
-
-        // Obtenha o valor selecionado inicialmente
-        var valorSelecionado = document.getElementById("nome_produto").value;
-        
-        // Chame a função funcao() assim que carrega a tela com o valor selecionado
-        funcao(valorSelecionado);
-    });
-
-
     $(document).ready(function(){
         $('#quantidade').mask('000')
         $('#preco_compra').mask('000,00', {reverse: true})
-        $('#preco_venda').mask('000,00', {reverse: true})
         $('#preco_min').mask('000,00', {reverse: true})
         $('#preco_max').mask('000,00', {reverse: true})
-    });
-
-    /////////// Ao Enviar o Formulário /////////////
-    var submitButton = document.getElementById("Enviar");
-    submitButton.addEventListener("click", function(event) {
-        var CorInfantil_enviar = document.getElementById("cor_infantil");
-        var CorAdulto_enviar = document.getElementById("cor_adulto");
-
-        if (CorAdulto_enviar.style.display === "none") {
-            CorAdulto_enviar.value = "0";
-        }else {
-            if (CorInfantil_enviar.style.display === "none") {
-                CorInfantil_enviar.value = "0";
-            }
-        }
+        $('#peso').mask('0.000')
     });
 
     //Ordenar o nome dos produtos ao carregar a tela
@@ -204,30 +109,6 @@
     
         $('#nome_produto').html(itensOrdenados);
         //Fim Nome Produto
-
-        //Inicio Tamanho
-        var itensOrdenados_tamanho = $('#tamanho2 option').sort(function (a, b) {
-            return a.text < b.text ? -1 : 1;
-        });
-
-        $('#tamanho2').html(itensOrdenados_tamanho);
-        //Fim Tamanho
-
-        //Inicio Cor
-        var itensOrdenados_cor = $('#cor_adulto option').sort(function (a, b) {
-            return a.text < b.text ? -1 : 1;
-        });
-    
-        $('#cor_adulto').html(itensOrdenados_cor);
-        //Fim Cor
-
-        //Inicio Categoria
-        var itensOrdenados_categoria = $('#categoria option').sort(function (a, b) {
-            return a.text < b.text ? -1 : 1;
-        });
-    
-        $('#categoria').html(itensOrdenados_categoria);
-        //Fim Categoria
     }
 
 </script>

@@ -129,7 +129,7 @@ def add_produto(request, slug):
         preco_max = request.GET.get('preco_max')
 
         resultado = Consultar_Uma_Comunidade(slug, opcao)
-        if resultado[0]:
+        if resultado[0] != 0:
             produtos = Produto.objects.filter(nome_comunidade_id=resultado[0])
 
             Validacao_Alterando_Produto()
@@ -153,187 +153,36 @@ def add_produto(request, slug):
             return redirect(reverse('home'))
     elif request.method == "POST":
         nome = request.POST.get('nome_produto')
-        categoria = request.POST.get('categoria')
-        tamanho = request.POST.get('tamanho_produto')
         quantidade = request.POST.get('quantidade')
         preco_compra = request.POST.get('preco_compra')
-        preco_venda = request.POST.get('preco_venda')
-        cor_infantil = request.POST.get('cor_infantil')
-        cor_adulto = request.POST.get('cor_adulto')
-
-        cor = 0
-        if cor_infantil is None or not cor_infantil:
-            cor = cor_adulto
-        else:
-            cor = cor_infantil
-        
+        peso = request.POST.get('peso')
         preco_compra = preco_compra.replace(',', '.') # Substitui a vírgula pelo ponto
-        preco_venda = preco_venda.replace(',', '.') # Substitui a vírgula pelo ponto
+        preco_venda = 1.00
+        nome_produto_original = nome
 
-        caminho_sem_img = 'no_image_produto/sem_imagem.png'
-        tamanhoc = "camisa"
-        camisa = nome.lower()
-        nomestr = str(nome)
-        slug = slug
-        ano_festa = slug
-        anofesta = slug
-        produtoslug = 0
-        data_str = str(anofesta)
-        tamanho_str = "-"
+        resultado = Consultar_Uma_Comunidade(slug, opcao)
+        if resultado[0] != 0:
 
-        nome_da_cor = Cor.objects.get(id=cor)
-        nome_cor = nome_da_cor.titulo
-        
-        label = nome + " (" + nome_cor + ")"
-        if tamanhoc in camisa:#Verifica se dentro de nome tem a palavra "camisa"
-            tamanho_str = str(tamanho)
-            label = nome + " " + tamanho_str + " (" + nome_cor + ")"
-        slugp = slugify(nome + "-" + tamanho_str + "-" + nome_cor + "-" + data_str) 
+            label = nome
+            slugp = slugify(nome + "-" + slug) 
 
-        if nome:
-            nome_produto = NomeProduto.objects.filter(nome_produto=nome)
-            for nome_produto in nome_produto:
-                nome = nome_produto.id
+            validacao = Validacoes_Post_Cadastro_Estoque(request, slug, nome, preco_compra, preco_venda, quantidade, slugp, peso)    
+            if validacao:
+                return validacao
 
-        if not preco_compra:
-            preco_compra = 0
-        if not preco_venda:
-            preco_venda = 0
-        if not quantidade:
-            quantidade = 0
+            nome = Capturar_Id_Do_Nome_Do_Produto(nome)
 
-        if tamanho and tamanhoc not in camisa: 
-            tamanho = ""
-            if not tamanho and tamanhoc in camisa:
-                url = reverse('add_produto', kwargs={"slug": slug})
-                url_with_values = url + '?' + urlencode({'quantidade': quantidade, 'preco_compra': preco_compra, 'preco_venda': preco_venda})
-                messages.add_message(request, messages.ERROR, 'Tamanho não pode ser vazio')
-                return redirect(url_with_values)
-        elif tamanho and tamanhoc in camisa:
-            tamanho_produto = TamanhoProduto.objects.filter(tamanho_produto=tamanho)
-            for tamanho_produto in tamanho_produto:
-                tamanho = tamanho_produto.id
+            num_sequencial = Gerando_Numero_Sequencial()
 
-        if ano_festa:
-            festa = Festa.objects.all()
-            for festa in festa:
-                if festa.ano_festa == ano_festa:
-                    ano_festa = festa.id
+            Cadastro_Estoque(request, nome, label, quantidade, preco_compra, preco_venda, slugp, resultado[0], num_sequencial, peso)
 
-        last_number = ImagemVenda.objects.aggregate(max_id=Max('verificador'))['max_id'] #Pegando o valor mais alto de verificador
-        if last_number is not None:
-            last_number = int(last_number)  # Converter para inteiro
-            num_aleatorio = str(last_number + 1).zfill(8) #Criando um com 8 digitos e somando +1 ao numero
+            Cadastro_Planilhas_Estoque_E_Validacoes_Post_Cadastro_Estoque(request, slugp, quantidade, preco_compra, preco_venda)
+
+            messages.add_message(request, messages.SUCCESS, f'Produto {nome_produto_original} Cadastrado com sucesso')
+            return redirect(reverse('add_produto', kwargs={"slug":slug}))
         else:
-            num_aleatorio = '00000001' #caso seja o primeiro será o 00000001
-
-        if nome or tamanho or categoria or quantidade or preco_compra or preco_venda or slug:
-            preco_compra_ = float(preco_compra)#Garantindo que seja decimal
-            preco_venda_ = float(preco_venda)#Garantindo que seja decimal
-            quantidade_ = int(quantidade)#Garantindo que seja inteiro
-            if not nome:
-                url = reverse('add_produto', kwargs={"slug": slug}) # Fazendo isso aqui + JS, retorna os campos preenchidos.
-                url_with_values = url + '?' + urlencode({'quantidade': quantidade, 'preco_compra': preco_compra, 'preco_venda': preco_venda})
-                messages.add_message(request, messages.ERROR, 'Nome do Produto não pode ser vazio')
-                return redirect(url_with_values)
-            if not categoria:
-                url = reverse('add_produto', kwargs={"slug": slug})
-                url_with_values = url + '?' + urlencode({'quantidade': quantidade, 'preco_compra': preco_compra, 'preco_venda': preco_venda})
-                messages.add_message(request, messages.ERROR, 'Categoria não pode ser vazia')
-                return redirect(url_with_values)
-            if quantidade_ == 0 or not quantidade_:
-                url = reverse('add_produto', kwargs={"slug": slug})
-                url_with_values = url + '?' + urlencode({'nome':nome, 'quantidade': quantidade, 'preco_compra': preco_compra, 'preco_venda': preco_venda})
-                messages.add_message(request, messages.ERROR, 'Quantidade não pode ser vazia')
-                return redirect(url_with_values)
-            if preco_compra_ == 0 or not preco_compra_:
-                url = reverse('add_produto', kwargs={"slug": slug})
-                url_with_values = url + '?' + urlencode({'quantidade': quantidade, 'preco_compra': preco_compra, 'preco_venda': preco_venda})
-                messages.add_message(request, messages.ERROR, 'Preço de Compra não pode ser vazio')
-                return redirect(url_with_values)
-            if preco_compra_ >= preco_venda_:
-                url = reverse('add_produto', kwargs={"slug": slug})
-                url_with_values = url + '?' + urlencode({'quantidade': quantidade, 'preco_compra': preco_compra, 'preco_venda': preco_venda})
-                messages.add_message(request, messages.ERROR, 'Preço de Compra deve ser menor do que Preço de Venda')
-                return redirect(url_with_values)
-            if preco_venda_ == 0 or not preco_venda:
-                url = reverse('add_produto', kwargs={"slug": slug})
-                url_with_values = url + '?' + urlencode({'quantidade': quantidade, 'preco_compra': preco_compra, 'preco_venda': preco_venda})
-                messages.add_message(request, messages.ERROR, 'Preço de Venda não pode ser vazio')
-                return redirect(url_with_values)
-            if nome:
-                produtoslug = Produto.objects.filter(slug=slugp)
-                if tamanhoc in camisa:#Olha Se dentro de nome tem a palavra "camisa" e se tiver vai entrar aqui e conferir o slug
-                    if produtoslug:
-                        produtoslug = Produto.objects.get(slug=slugp)
-                        url = reverse('add_produto', kwargs={"slug": slug})
-                        url_with_values = url + '?' + urlencode({'quantidade': quantidade, 'preco_compra': preco_compra, 'preco_venda': preco_venda})
-                        messages.add_message(request, messages.ERROR, 'Já existe um Produto com esse nome, tamanho e cor cadastrado')
-                        return redirect(url_with_values)
-                if produtoslug:#Se não for camisa vai entrar aqui e conferir o slug
-                    produtoslug = Produto.objects.get(slug=slugp)     
-                    url = reverse('add_produto', kwargs={"slug": slug})
-                    url_with_values = url + '?' + urlencode({'quantidade': quantidade, 'preco_compra': preco_compra, 'preco_venda': preco_venda})
-                    messages.add_message(request, messages.ERROR, 'Já existe um Produto com esse nome e cor cadastrado')
-                    return redirect(url_with_values)                   
-
-            booleanimg = "NAO"
-            with transaction.atomic(): #Só será executado quando não houver erro
-                produto = Produto(nome_produto_id = nome, 
-                                categoria_id = categoria,
-                                tamanho_produto_id = tamanho,
-                                quantidade = quantidade, 
-                                preco_compra = preco_compra, 
-                                preco_venda = preco_venda,
-                                criado_por = request.user,
-                                cor_id = cor,
-                                slug = slugp,
-                                ano_festa_id = ano_festa,
-                                label = label)
-                produto.save()
-
-                produto = Produto.objects.get(slug=slugp) #Pegando o produto recem-criado
-                tamanho_p_excel = ""
-                if tamanho:
-                    tamanho_p_excel = produto.tamanho_produto
-                categoria_p_excel = produto.categoria
-                nome_produto_p_excel = str(produto.nome_produto) + " (" + str(produto.cor) + ")"
-                ano_festa_p_excel = produto.ano_festa
-
-                id_user = Users.objects.get(username=request.user) #Adicionando na tabela de entrada para exportar
-                id_user = id_user.id
-
-                data_modelo_update = timezone.localtime(timezone.now())
-                data_modelo_update_1 = data_modelo_update.strftime("%d/%m/%Y %H:%M:%S") 
-                data_alteracao = data_modelo_update_1
-
-                p_excel_filtro = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Entrada", tamanho_produto=tamanho_p_excel) #Pegando o produto alterado
-                if p_excel_filtro:
-                    p_excel_filtro = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Entrada", tamanho_produto=tamanho_p_excel) #Pegando o produto alterado
-                    p_excel_filtro.quantidade += int(quantidade)
-                    p_excel_filtro.ultima_alteracao = data_alteracao
-                    p_excel_filtro.alterado_por = request.user.username
-                    p_excel_filtro.save()
-                else:
-                    p_excel = P_Excel(acao="Entrada",
-                                    id_user = id_user,
-                                    nome_user=request.user,
-                                    nome_produto = nome_produto_p_excel,
-                                    tamanho_produto = tamanho_p_excel, 
-                                    categoria = categoria_p_excel,
-                                    quantidade = quantidade, 
-                                    preco_compra = preco_compra, 
-                                    preco_venda = preco_venda,
-                                    ano_festa = ano_festa_p_excel)
-                    p_excel.save()
-
-                data_modelo = timezone.localtime(timezone.now())
-                data_modelo_1 = data_modelo.strftime("%d-%m-%Y") 
-                data_criacao = data_modelo_1
-                produto.save()
-
-                messages.add_message(request, messages.SUCCESS, f'Produto {nomestr} Cadastrado com sucesso')#Cadastrando sem Imagem
-                return redirect(reverse('add_produto', kwargs={"slug":anofesta}))
+            messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+            return redirect(reverse('home'))
 
 #Função para a tela de adicionar Novo nome de Produtos
 @has_permission_decorator('cadastrar_produtos')
@@ -342,7 +191,7 @@ def add_novonome_produto(request, slug):
     if request.user.is_authenticated:
         if request.method == "GET":
             resultado = Consultar_Uma_Comunidade(slug, opcao)
-            if resultado[0]:
+            if resultado[0] != 0:
                 produtos = NomeProduto.objects.filter(nome_comunidade_id=resultado[0])
 
                 context = {

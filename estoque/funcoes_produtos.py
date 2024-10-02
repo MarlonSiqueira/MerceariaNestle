@@ -1,10 +1,13 @@
 from .models import *
+from usuarios.models import *
+from .funcoes_comunidades import *
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Max
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.contrib import messages
 from django.db import transaction
+from urllib.parse import urlencode
 
 
 # def Consultar_Valores_Dos_Produtos(valor, opcao):
@@ -113,3 +116,127 @@ def Validacao_Produtos_Filtrados(request, slug, produtos, nome, preco_min, preco
                 return redirect(reverse('add_produto', kwargs={"slug":slug}))
 
     return None 
+
+
+def Capturar_Id_Do_Nome_Do_Produto(nome):
+    nome_produto = NomeProduto.objects.filter(nome_produto=nome)
+    for nome_produto in nome_produto:
+        nome = nome_produto.id
+
+    return nome
+
+
+def Validacoes_Post_Cadastro_Estoque(request, slug, nome, preco_compra, preco_venda, quantidade, slugp, peso):
+    with transaction.atomic():
+        if nome:
+            nome = Capturar_Id_Do_Nome_Do_Produto(nome)
+
+            if not preco_compra:
+                preco_compra = 0
+            if not quantidade:
+                quantidade = 0
+            if not peso:
+                peso = 0
+
+            if nome or quantidade or preco_compra or preco_venda or slug or peso:
+                preco_compra_ = float(preco_compra)#Garantindo que seja decimal
+                preco_venda_ = float(preco_venda)#Garantindo que seja decimal
+                peso_ = float(peso)#Garantindo que seja decimal
+                quantidade_ = int(quantidade)#Garantindo que seja inteiro
+
+                if not nome:
+                    transaction.set_rollback(True)
+                    url = reverse('add_produto', kwargs={"slug": slug}) # Fazendo isso aqui + JS, retorna os campos preenchidos.
+                    url_with_values = url + '?' + urlencode({'quantidade': quantidade, 'preco_compra': preco_compra, 'peso': peso})
+                    messages.add_message(request, messages.ERROR, 'Nome do Produto não pode ser vazio')
+                    return redirect(url_with_values)
+                if quantidade_ == 0 or not quantidade_:
+                    transaction.set_rollback(True)
+                    url = reverse('add_produto', kwargs={"slug": slug})
+                    url_with_values = url + '?' + urlencode({'nome':nome, 'quantidade': quantidade, 'preco_compra': preco_compra, 'peso': peso})
+                    messages.add_message(request, messages.ERROR, 'Quantidade não pode ser vazia')
+                    return redirect(url_with_values)
+                if preco_compra_ == 0 or not preco_compra_:
+                    transaction.set_rollback(True)
+                    url = reverse('add_produto', kwargs={"slug": slug})
+                    url_with_values = url + '?' + urlencode({'quantidade': quantidade, 'preco_compra': preco_compra, 'peso': peso})
+                    messages.add_message(request, messages.ERROR, 'Preço de Compra não pode ser vazio')
+                    return redirect(url_with_values)
+                if peso_ == 0 or not peso_:
+                    transaction.set_rollback(True)
+                    url = reverse('add_produto', kwargs={"slug": slug})
+                    url_with_values = url + '?' + urlencode({'quantidade': quantidade, 'preco_compra': preco_compra, 'peso': peso})
+                    messages.add_message(request, messages.ERROR, 'Peso não pode ser vazio')
+                    return redirect(url_with_values)
+                if preco_venda_ == 0 or not preco_venda:
+                    transaction.set_rollback(True)
+                    url = reverse('add_produto', kwargs={"slug": slug})
+                    url_with_values = url + '?' + urlencode({'quantidade': quantidade, 'preco_compra': preco_compra, 'peso': peso})
+                    messages.add_message(request, messages.ERROR, 'Preço de Venda não pode ser vazio')
+                    return redirect(url_with_values)
+                if nome:
+                    produtoslug = Produto.objects.filter(slug=slugp)
+                    if produtoslug:
+                        transaction.set_rollback(True)    
+                        url = reverse('add_produto', kwargs={"slug": slug})
+                        url_with_values = url + '?' + urlencode({'quantidade': quantidade, 'preco_compra': preco_compra, 'peso': peso})
+                        messages.add_message(request, messages.ERROR, 'Já existe um Produto com esse nome cadastrado na comunidade')
+                        return redirect(url_with_values)
+
+    return None
+
+
+def Gerando_Numero_Sequencial():
+    last_number = Produto.objects.aggregate(max_id=Max('cod_produto'))['max_id'] #Pegando o valor mais alto de cod_produto
+    if last_number is not None:
+        last_number = int(last_number)  # Converter para inteiro
+        num_sequencial = str(last_number + 1).zfill(9) #Criando um com 9 digitos e somando +1 ao numero
+    else:
+        num_sequencial = '000000001' #caso seja o primeiro será o 000000001
+
+    return num_sequencial
+
+
+def Cadastro_Estoque(request, nome, label, quantidade, preco_compra, preco_venda, slugp, nome_comunidade, cod_produto, peso):
+    produto = Produto(
+                    nome_produto_id = nome,
+                    label = label,
+                    quantidade = quantidade, 
+                    preco_compra = preco_compra, 
+                    preco_venda = preco_venda,
+                    slug = slugp,
+                    criado_por = request.user,
+                    nome_comunidade_id=nome_comunidade,
+                    cod_produto=cod_produto,
+                    peso=peso
+                    )
+    produto.save()
+
+
+def Cadastro_Planilhas_Estoque_E_Validacoes_Post_Cadastro_Estoque(request, slugp, quantidade, preco_compra, preco_venda):
+    produto = Produto.objects.get(slug=slugp) #Pegando o produto recem-criado
+    nome_produto_p_excel = str(produto.nome_produto)
+    nome_comunidade_p_excel = produto.nome_comunidade
+
+    id_user = Users.objects.get(username=request.user) #Adicionando na tabela de entrada para exportar
+    id_user = id_user.id
+
+    data_alteracao = Capturar_Ano_E_Hora_Atual()
+
+    p_excel_filtro = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Entrada",)#Pegando o produto alterado
+    if p_excel_filtro:
+        p_excel_filtro = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Entrada",) #Pegando o produto alterado
+        p_excel_filtro.quantidade += int(quantidade)
+        p_excel_filtro.ultima_alteracao = data_alteracao
+        p_excel_filtro.alterado_por = request.user.username
+        p_excel_filtro.save()
+    else:
+        p_excel = P_Excel(acao="Entrada",
+                        id_user = id_user,
+                        nome_user=request.user,
+                        nome_produto = nome_produto_p_excel,
+                        quantidade = quantidade, 
+                        preco_compra = preco_compra, 
+                        preco_venda = preco_venda,
+                        nome_comunidade = nome_comunidade_p_excel)
+        p_excel.save()

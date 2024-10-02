@@ -17,24 +17,22 @@ def produto_saved(sender, instance, created, **kwargs): #Insert
         campos_inclusao = []
         if produto_inclusao:
             if produto_inclusao:
+                produto_inclusao.nome_produto_id = str(produto_inclusao.nome_produto_id)
                 produto_inclusao.quantidade = str(produto_inclusao.quantidade)
                 produto_inclusao.preco_compra = str(produto_inclusao.preco_compra)
                 produto_inclusao.preco_venda = str(produto_inclusao.preco_venda)
-                produto_inclusao.nome_produto_id = str(produto_inclusao.nome_produto_id)
+                produto_inclusao.nome_comunidade_id = str(produto_inclusao.nome_comunidade_id)
 
                 if produto_inclusao.nome_produto_id:
                     campos_inclusao.append('nome_produto') 
-                if produto_inclusao.tamanho_produto_id:
-                    produto_inclusao.tamanho_produto_id = str(produto_inclusao.tamanho_produto_id)
-                    campos_inclusao.append('tamanho_produto') 
-                elif produto_inclusao.tamanho_produto_id == None: 
-                    pass
                 if produto_inclusao.quantidade:
                     campos_inclusao.append('quantidade')                  
                 if produto_inclusao.preco_compra:
                     campos_inclusao.append('preco_compra')
                 if produto_inclusao.preco_venda:
                     campos_inclusao.append('preco_venda')
+                if produto_inclusao.nome_comunidade_id:
+                    campos_inclusao.append('nome_comunidade_id')
 
                 if campos_inclusao:
                     valores_inclusao = []
@@ -74,23 +72,22 @@ def produto_deleted(instance, user=None, **kwargs): #Delete
 
     produto_exclusao = instance
     campos_exclusao = []
+    produto_exclusao.nome_produto_id = str(produto_exclusao.nome_produto_id)
     produto_exclusao.quantidade = str(produto_exclusao.quantidade)
     produto_exclusao.preco_compra = str(produto_exclusao.preco_compra)
     produto_exclusao.preco_venda = str(produto_exclusao.preco_venda)
-    produto_exclusao.nome_produto_id = str(produto_exclusao.nome_produto_id)
+    produto_exclusao.nome_comunidade_id = str(produto_exclusao.nome_comunidade_id)
+
     if produto_exclusao.nome_produto_id:
         campos_exclusao.append('nome_produto')
-    if produto_exclusao.tamanho_produto_id:
-        produto_exclusao.tamanho_produto_id = str(produto_exclusao.tamanho_produto_id)
-        campos_exclusao.append('tamanho_produto')
-    elif produto_exclusao.tamanho_produto_id == None: 
-        pass
     if produto_exclusao.quantidade:
         campos_exclusao.append('quantidade')                  
     if produto_exclusao.preco_compra:
         campos_exclusao.append('preco_compra')
     if produto_exclusao.preco_venda:
         campos_exclusao.append('preco_venda')
+    if produto_exclusao.nome_comunidade_id:
+        campos_exclusao.append('nome_comunidade_id')
 
     if campos_exclusao:
         valores_exclusao = []

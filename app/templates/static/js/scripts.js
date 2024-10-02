@@ -285,31 +285,14 @@ if (url_atual.substring(0, url_sem_slug.length - 9) == "/acoes_vendas/"){
 }
 
 //Funções tela dos produtos
-if (url_sem_slug == "/add_produto/"){
+if (url_sem_slug == "add_produto"){
 //////////////////////////////////////////////////////
-//Esconder e mostrar "TAMANHO" tela de Cadastro de Produtos
-    function funcao(valor) {
-        valor = valor.toLowerCase();
-        if (valor.includes("camisa")) {
-            document.getElementById("tamanho1").removeAttribute("hidden");
-            document.getElementById("tamanho2").removeAttribute("hidden");
-            document.getElementById("tamanho3").removeAttribute("hidden");
-            atualizarConteudo(); // Chamando a função atualizarConteudo, definida anteriormente, pra ser executada sozinha assim que trocar o produto
-        }
-        else{
-            document.getElementById("tamanho1").hidden = "true";
-            document.getElementById("tamanho3").hidden = "true";
-            document.getElementById("tamanho2").hidden = "true";       
-            atualizarConteudo(); // Chamando a função atualizarConteudo, definida anteriormente, pra ser executada sozinha assim que trocar o produto      
-        }
-    }
-
   // Extrai os valores da query string e preenche os campos #Teste pra preencher os campos após POST
   //Adicionar value="{{quantidade}}" por exemplo no campo.
     var params = new URLSearchParams(window.location.search);
     document.getElementsByName('quantidade')[0].value = params.get('quantidade') || '';
     document.getElementsByName('preco_compra')[0].value = params.get('preco_compra') || '';
-    document.getElementsByName('preco_venda')[0].value = params.get('preco_venda') || '';
+    document.getElementsByName('peso')[0].value = params.get('peso') || '';
 //////////////////////////////////////////////////////
 //Modal Excluir Produto tela de Cadastro de Produtos
 function excluirProduto(slugproduto){

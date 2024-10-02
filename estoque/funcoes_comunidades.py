@@ -14,6 +14,14 @@ def Capturar_Ano_Atual():
     return  ano_atual_str
 
 
+def Capturar_Ano_E_Hora_Atual():
+    data_modelo_update = timezone.localtime(timezone.now())
+    data_modelo_update_1 = data_modelo_update.strftime("%d/%m/%Y %H:%M:%S") 
+    data_alteracao = data_modelo_update_1
+
+    return  data_alteracao
+
+
 def Consultar_Uma_Comunidade(valor, opcao):
     if opcao == "nome":
         nome_comunidade = valor[0]
