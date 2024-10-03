@@ -14,6 +14,14 @@ def Capturar_Ano_Atual():
     return  ano_atual_str
 
 
+def Capturar_Ano_Completo_Atual():
+    data_modelo_update = timezone.localtime(timezone.now())
+    data_modelo_update_1 = data_modelo_update.strftime("%d/%m/%Y") 
+    data_criacao = data_modelo_update_1
+
+    return  data_criacao
+
+
 def Capturar_Ano_E_Hora_Atual():
     data_modelo_update = timezone.localtime(timezone.now())
     data_modelo_update_1 = data_modelo_update.strftime("%d/%m/%Y %H:%M:%S") 

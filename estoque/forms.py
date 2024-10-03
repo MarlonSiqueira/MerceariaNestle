@@ -5,14 +5,13 @@ from .models import Produto, Comunidade
 class ProdutoForm(forms.ModelForm):
     class Meta:
         model = Produto
-        exclude = ['label', 'tamanho_produto', 'nome_produto', 'slug', 'ano_festa', 'img', 'alterando_produto', 'ultimo_acesso', 'cor']
+        exclude = ['label', 'nome_produto', 'slug', 'preco_venda', 'nome_comunidade', 'alterando_produto', 'ultimo_acesso']
         widgets = {
-            'preco_venda': forms.TextInput(attrs={'type': 'text'}),
             'preco_compra': forms.TextInput(attrs={'type': 'text'}),
             'quantidade': forms.TextInput(attrs={'disabled': True}),
         }
 
-class FestaForm(forms.ModelForm):
+class ComunidadeForm(forms.ModelForm):
     class Meta:
         model = Comunidade
         exclude = ['nome_comunidade', 'slug']

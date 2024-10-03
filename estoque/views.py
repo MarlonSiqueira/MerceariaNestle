@@ -1,7 +1,8 @@
 from .funcoes_comunidades import *
 from .funcoes_produtos import *
+from .funcoes_vendas import *
 from django.shortcuts import render
-from .forms import ProdutoForm, FestaForm
+from .forms import ProdutoForm, ComunidadeForm
 from .models import Produto, NomeProduto, Vendas, LogsItens, P_Excel, VendasControle, Excel_T_E
 from django.http import HttpResponse
 from datetime import datetime, timedelta
@@ -134,7 +135,7 @@ def add_produto(request, slug):
 
             Validacao_Alterando_Produto()
 
-            validacao_produtos_filtrados = Validacao_Produtos_Filtrados(request, slug, produtos, nome, preco_min, preco_max)
+            validacao_produtos_filtrados, produtos = Validacao_Produtos_Filtrados(request, slug, produtos, nome, preco_min, preco_max)
 
             if validacao_produtos_filtrados:
                 return validacao_produtos_filtrados
@@ -159,6 +160,8 @@ def add_produto(request, slug):
         preco_compra = preco_compra.replace(',', '.') # Substitui a vírgula pelo ponto
         preco_venda = 1.00
         nome_produto_original = nome
+        acao = "adicionar"
+        tabela = "produto"
 
         resultado = Consultar_Uma_Comunidade(slug, opcao)
         if resultado[0] != 0:
@@ -172,11 +175,11 @@ def add_produto(request, slug):
 
             nome = Capturar_Id_Do_Nome_Do_Produto(nome)
 
-            num_sequencial = Gerando_Numero_Sequencial()
+            num_sequencial = Gerando_Numero_Sequencial(tabela)
 
             Cadastro_Estoque(request, nome, label, quantidade, preco_compra, preco_venda, slugp, resultado[0], num_sequencial, peso)
 
-            Cadastro_Planilhas_Estoque_E_Validacoes_Post_Cadastro_Estoque(request, slugp, quantidade, preco_compra, preco_venda)
+            Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantidade, preco_compra, preco_venda, acao)
 
             messages.add_message(request, messages.SUCCESS, f'Produto {nome_produto_original} Cadastrado com sucesso')
             return redirect(reverse('add_produto', kwargs={"slug":slug}))
@@ -227,7 +230,6 @@ def excluir_novonome_produto(request, slug):
     try :#Tente Excluir
         opcao = "id"
         produto = get_object_or_404(NomeProduto, slug=slug)
-        produto = NomeProduto.objects.get(slug=slug)
 
         id_comunidade_vendedor = produto.nome_comunidade_id #Pegando o ID da comunidade do vendedor
         resultado = Consultar_Uma_Comunidade(id_comunidade_vendedor, opcao)
@@ -244,85 +246,19 @@ def excluir_novonome_produto(request, slug):
         messages.add_message(request, messages.ERROR, 'Esse Nome de Produto não pode ser excluído pois possui produtos vinculados')
         return redirect(reverse('add_novonome_produto', kwargs={"slug":resultado[1]}))
 
-#Função para a tela de adicionar Novo nome de Produtos
-@has_permission_decorator('cadastrar_tamanho')
-def add_tamanho(request):
-    if request.method == "GET":
-        ano_atual = Capturar_Ano_Atual()
-        id_festa_ano_escolhido = Capturar_Id_Festa_Ano_Atual(ano_atual)
-
-        tamanhos = TamanhoProduto.objects.filter(ano_festa_id=id_festa_ano_escolhido)
-
-        return render(request, 'add_tamanho.html', {'tamanhos': tamanhos})
-    elif request.method == "POST":
-        tamanho_produto = request.POST.get('tamanho_produto')
-        secao_tamanho_produto = request.POST.get('secao_tamanho_produto')
-
-        ano_atual = Capturar_Ano_Atual()
-        id_festa_ano_escolhido = Capturar_Id_Festa_Ano_Atual(ano_atual)
-        tamanho_produto = tamanho_produto.upper()
-        BuscaTamanhos = Q(
-                Q(tamanho_produto=tamanho_produto) & Q(ano_festa_id=id_festa_ano_escolhido)     
-        )
-
-        if not tamanho_produto:
-            messages.add_message(request, messages.ERROR, 'Tamanho da Camisa não pode ser vazia')#Verificando se está vazio
-            return redirect(reverse('add_tamanho'))   
-        if tamanho_produto.isdigit():
-            messages.add_message(request, messages.ERROR, 'Tamanho da Camisa não pode conter números')#verificando se é númerico
-            return redirect(reverse('add_tamanho'))   
-        if tamanho_produto.isspace():
-            messages.add_message(request, messages.ERROR, 'Tamanho da Camisa não pode conter apenas espaços vazios')#Verificando se contém apenas espaço vazio
-            return redirect(reverse('add_tamanho'))
-        if secao_tamanho_produto == "" or not secao_tamanho_produto:
-            messages.add_message(request, messages.ERROR, 'Selecione uma seção')#Verificando se foi selecionado uma seção
-            return redirect(reverse('add_tamanho'))
-
-        tamanhos = TamanhoProduto.objects.filter(BuscaTamanhos)#Verificando se existem tamanhos com o nome escolhido
-        
-        if tamanhos:
-            messages.add_message(request, messages.ERROR, 'Esse Tamanho já existe')
-            return redirect(reverse('add_tamanho'))
-        elif not tamanhos:
-            messages.add_message(request, messages.SUCCESS, f'Tamanho da Camisa {tamanho_produto} cadastrado com sucesso')
-            tamanho = TamanhoProduto(tamanho_produto = tamanho_produto,
-                                    secao = secao_tamanho_produto,
-                                    criado_por = request.user, ano_festa_id=id_festa_ano_escolhido)
-            tamanho.save() 
-            return redirect(reverse('add_tamanho')) 
-
-#Função para a tela de excluir nome dos Produtos
-@has_permission_decorator('excluir_tamanho')
-def excluir_tamanho(request, slug):
-    try :#Tente Excluir
-        tamanho = get_object_or_404(TamanhoProduto, slug=slug)
-        tamanho = TamanhoProduto.objects.get(slug=slug)
-        if hasattr(produto, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
-            # se a flag _excluido já está setada, não chama o sinal
-            pass
-        else:#Caso não tenha sido excluído ele chama o registro.
-            tamanho_deleted(instance=tamanho, user=request.user)
-        tamanho.delete()
-        messages.add_message(request, messages.SUCCESS, 'Tamanho excluído com sucesso')
-        return redirect(reverse('add_tamanho'))    
-    except ProtectedError:#Caso não consiga, entre aqui
-        messages.add_message(request, messages.ERROR, 'Esse Tamanho não pode ser excluído pois possui produtos vinculados')
-        return redirect(reverse('add_tamanho'))
 
 #Função para a tela de alterar produto
 @has_permission_decorator('editar_produtos')
 def produto (request, slug):
     if request.method == "GET":
+        opcao = "id"
         produto = Produto.objects.get(slug=slug)
         data = produto.__dict__
-        data['categoria'] = produto.categoria.id
         data['nome_produto'] = produto.nome_produto_id
-        data['tamanho_produto'] = produto.tamanho_produto_id
-        cor_produto = produto.cor
-        cor_produto_str = str(cor_produto)
-
-        ano_atual_str = produto.ano_festa
         form = ProdutoForm(initial=data)
+        
+        id_comunidade_produto = produto.nome_comunidade_id #Pegando o ID da comunidade do produto
+        resultado = Consultar_Uma_Comunidade(id_comunidade_produto, opcao)
 
         alterando_produto = produto.alterando_produto
         label = produto.label
@@ -338,225 +274,84 @@ def produto (request, slug):
             pass
         else:
             messages.add_message(request, messages.ERROR, f'O Produto {label} está sendo editado pelo usuário {alterando_produto}')
-            return redirect(reverse('add_produto', kwargs={"slug":ano_atual_str}))
+            return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
 
         nome_produto = ""
-        tamanho_produto = ""
 
-        nomes = NomeProduto.objects.all()#Pegando todos os nomes de produtos
-        tamanhos = TamanhoProduto.objects.all()#Pegando todos os tamanhos de produtos
-        if nomes and tamanhos and produto.tamanho_produto_id:
-            nomes = nomes.filter(id__contains=produto.nome_produto_id)#Verificando se existem nomes de produto com o nome escolhido
-            tamanhos = tamanhos.filter(id__contains=produto.tamanho_produto_id)#Verificando se existem tamanhos com o nome escolhido  
-            nomes = NomeProduto.objects.get(id=produto.nome_produto_id)
-            tamanhos = TamanhoProduto.objects.get(id=produto.tamanho_produto_id)
-            nome_produto = nomes.nome_produto
-            tamanho_produto = tamanhos.tamanho_produto
-        if nomes and not produto.tamanho_produto_id:
+        nomes = NomeProduto.objects.all()#Pegando todos os nomes de produtoso
+        if nomes:
             nomes = nomes.filter(id__contains=produto.nome_produto_id)#Verificando se existem nomes de produto com o nome escolhido
             nomes = NomeProduto.objects.get(id=produto.nome_produto_id)
             nome_produto = nomes.nome_produto
         
-        return render(request, 'produto.html', {'form': form, 'ano_atual_str':ano_atual_str, 'nome_produto':nome_produto, 'tamanho_produto':tamanho_produto, 'cor_produto':cor_produto, 'cor_produto_str':cor_produto_str})
+        context = {
+            'form': form,
+            'slug': resultado[1],
+            'nome_produto': nome_produto
+        }
+
+        return render(request, 'produto.html', context)
 
     elif request.method == "POST":
-        # try:
-        # nome = request.POST.get('nome_produto')
-        categoria = request.POST.get('categoria')
-        # tamanho = request.POST.get('tamanho_produto')
         abastecer_quantidade = request.POST.get('abastecer_quantidade')
         preco_compra = request.POST.get('preco_compra')
-        preco_venda = request.POST.get('preco_venda')
-
-        quantidade_atual = 0
+        cod_produto = request.POST.get('cod_produto')
+        cod_barras = request.POST.get('cod_barras')
+        peso = request.POST.get('peso')
+        opcao = "id"
 
         if abastecer_quantidade == None or not abastecer_quantidade:
             abastecer_quantidade = 0
 
         nome_produto_antigo = Produto.objects.get(slug=slug)
         id_produto_antigo = nome_produto_antigo.id
-        produtoall = Produto.objects.filter(slug=slug)
-        produto = get_object_or_404(Produto, slug=slug) #pegando o slug do produto
-        for p in produtoall: #procurando todos os produtos
-            if p == produto: #Quando o slug do produto for igual ao da tela, entra aqui
-                festaall = Festa.objects.all() #procurando todas as festas cadastradas
-                anofesta = p.ano_festa_id #pegando o ID da festa
-                anofestaimg = p.ano_festa_id
-                quantidade_atual = p.quantidade
-                for g in festaall: #procurando todas as festas
-                    if g.id == anofesta: #quando o ID da festa for igual ao id do produto, entre aqui
-                        anofesta = g.ano_festa #quando for igual, achou... Eai pegue o ano do produto.          
+
+        id_comunidade_produto = nome_produto_antigo.nome_comunidade_id #Pegando o ID da comunidade do produto
+        resultado = Consultar_Uma_Comunidade(id_comunidade_produto, opcao)
+
         nome_produto_antigo1 = nome_produto_antigo.__dict__
         nome_produto_antigo1['nome_produto'] = nome_produto_antigo.nome_produto
         nome_produto_antigo1 = nome_produto_antigo1['nome_produto']
 
+        produto = get_object_or_404(Produto, slug=slug) #pegando o slug do produto
+        quantidade_atual = produto.quantidade
+
         alterado_por_ = auth.get_user(request)
         alterado_por = alterado_por_.username
 
-        data_modelo_update = timezone.localtime(timezone.now())
-        data_modelo_update_1 = data_modelo_update.strftime("%d/%m/%Y %H:%M:%S") 
-        data_alteracao = data_modelo_update_1
+        data_alteracao = Capturar_Ano_E_Hora_Atual()
 
         preco_compra = preco_compra.replace(',', '.') # Substitui a vírgula pelo ponto
-        preco_venda = preco_venda.replace(',', '.') # Substitui a vírgula pelo ponto
-
         preco_compra = float(preco_compra)#transformando em float
-        preco_venda = float(preco_venda)#transformando em float
 
-        if categoria or abastecer_quantidade or preco_compra or preco_venda:
-            if not categoria:
-                messages.add_message(request, messages.ERROR, 'Categoria não pode ser vazia')
-                return redirect(reverse('produto', kwargs={"slug":slug}))
-            # if quantidade_p < quantidade_atual:
-            #     messages.add_message(request, messages.ERROR, 'Quantidade não pode ser diminuída manualmente')
-            #     return redirect(reverse('produto', kwargs={"slug":slug}))
+        if abastecer_quantidade or preco_compra or cod_produto or cod_barras or peso:
             if preco_compra == 0 or not preco_compra:
                 messages.add_message(request, messages.ERROR, 'Preço de Compra não pode ser vazio')
-                return redirect(reverse('produto', kwargs={"slug":slug}))
-            if preco_venda == 0 or not preco_venda:
-                messages.add_message(request, messages.ERROR, 'Preço de Venda não pode ser vazio')
-                return redirect(reverse('produto', kwargs={"slug":slug}))
-            if preco_compra >= preco_venda:
-                messages.add_message(request, messages.ERROR, 'Preço de Compra deve ser menor do que Preço de Venda')
-                return redirect(reverse('produto', kwargs={"slug":slug}))
+                return redirect(reverse('produto', kwargs={"slug":resultado[1]}))
 
-            with transaction.atomic(): #Só será executado quando não houver erro
-                produto_antigo = None
-                produto_antigo = Produto.objects.get(id=id_produto_antigo)
-                contem_img = produto_antigo.img
-                img_final = ""
-                remove_imagem_produto = ""
-                consulta_venda = ""
-                img_antes = 0
-                last_number = ImagemVenda.objects.aggregate(max_id=Max('verificador'))['max_id'] #Pegando o valor mais alto de verificador
-                if last_number is not None:
-                    last_number = int(last_number)  # Converter para inteiro
-                    num_aleatorio = str(last_number + 1).zfill(8) #Criando um com 8 digitos e somando +1 ao numero
-                else:
-                    num_aleatorio = '00000001' #caso seja o primeiro será o 00000001
+            validacao = Registrar_Log_Alteracao_Produto_E_Alterar_Produto(request, resultado[1], slug, id_produto_antigo,abastecer_quantidade, preco_compra, cod_produto, cod_barras, peso, nome_produto_antigo1, data_alteracao, alterado_por)
+            
+            if validacao:
+                return validacao
 
-                data_modelo = timezone.localtime(timezone.now())
-                data_modelo_1 = data_modelo.strftime("%d-%m-%Y") 
-                data_criacao = data_modelo_1
+            messages.add_message(request, messages.SUCCESS, (f'Produto {nome_produto_antigo1} atualizado com sucesso'))
+            return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
 
-                contador_alteracao = 0
-                contador_alteracao_qtd = 0
-                produto_anterior = None
-                produto_anterior = Produto.objects.get(id=id_produto_antigo)
-                campos_alteracao = []
-                if produto_anterior:
-                    produto_anterior.quantidade = str(produto_anterior.quantidade)
-                    produto_anterior.categoria_id = str(produto_anterior.categoria_id)
-                    produto_anterior.preco_compra = str(produto_anterior.preco_compra)
-                    produto_anterior.preco_venda = str(produto_anterior.preco_venda)
-                    produto_anterior.img = str(produto_anterior.img)
-
-                    nova_quantidade =  int(abastecer_quantidade) + int(produto_anterior.quantidade)
-                    preco_compra_str = str(preco_compra)
-                    preco_venda_str = str(preco_venda)
-                    verifica_compra = preco_compra_str[-2:] #pegando últimos 2 caracteres da string
-                    verifica_venda = preco_venda_str[-2:] #pegando últimos 2 caracteres da string
-                    if verifica_compra == ".0":
-                        preco_compra_str = str(preco_compra) + "0"
-                    if verifica_venda == ".0":
-                        preco_venda_str = str(preco_venda) + "0"
-
-                    if produto_anterior.img != contem_img:
-                        campos_alteracao.append('img')
-                        #contador_alteracao += 1
-                    if produto_anterior.quantidade != str(nova_quantidade):
-                        campos_alteracao.append('quantidade')
-                        contador_alteracao += 1   
-                        contador_alteracao_qtd += 1            
-                    if produto_anterior.categoria_id != categoria:
-                        campos_alteracao.append('categoria')
-                        #contador_alteracao += 1
-                    if produto_anterior.preco_compra != preco_compra_str:
-                        campos_alteracao.append('preco_compra')
-                        contador_alteracao += 1
-                    if produto_anterior.preco_venda != preco_venda_str:
-                        campos_alteracao.append('preco_venda')
-                        contador_alteracao += 1
-
-                    if campos_alteracao == []:
-                        produto_anterior.alterando_produto = "0" #Voltando pra Zero
-                        produto_anterior.ultimo_acesso = "0" #Voltando pra Zero
-                        produto_anterior.save()
-                        messages.add_message(request, messages.ERROR, (f'Produto {nome_produto_antigo1} não teve nada alterado'))
-                        return redirect(reverse('add_produto', kwargs={"slug":anofesta}))
-                    else:
-                        produto_alterado = None
-                        produto_alterado = Produto.objects.get(id=id_produto_antigo)
-                        produto_alterado.quantidade = nova_quantidade
-                        produto_alterado.categoria_id = categoria
-                        produto_alterado.preco_compra = preco_compra
-                        produto_alterado.preco_venda = preco_venda
-                        produto_alterado.alterado_por = alterado_por
-                        produto_alterado.data_alteracao = data_alteracao
-                        produto_alterado.img = contem_img
-                        produto_alterado.save()
-                        
-                        produto_novo = None
-                        produto_novo = Produto.objects.get(id=id_produto_antigo)
-                        if campos_alteracao:
-                            valores_antigos = []
-                            valores_novos = []
-                            for campo in campos_alteracao:
-                                valor_antigo = getattr(produto_anterior, campo)
-                                valor_novo = getattr(produto_novo, campo)
-                                valores_antigos.append(f'{campo}: {valor_antigo}')
-                                valores_novos.append(f'{campo}: {valor_novo}')
-                        if contador_alteracao > 0:        
-                            id_user = Users.objects.get(username=request.user)
-                            id_user = id_user.id
-                            LogsItens.objects.create(
-                                id_user = id_user,
-                                nome_user=request.user,
-                                nome_objeto=str(slug),
-                                acao='Alteração',
-                                model = "Produto",
-                                campos_alteracao=', '.join(campos_alteracao),
-                                valores_antigos=', '.join(valores_antigos),
-                                valores_novos=', '.join(valores_novos)
-                            )
-                
-                produto = Produto.objects.get(id=id_produto_antigo) #Pegando o produto alterado
-                tamanho_p_excel = ""
-                if produto.tamanho_produto is not None and produto.tamanho_produto != "":
-                    tamanho_p_excel = produto.tamanho_produto
-                
-                categoria_p_excel = produto.categoria
-                nome_produto_p_excel = str(produto.nome_produto) + " (" + str(produto.cor) + ")"
-                ano_festa_p_excel = produto.ano_festa
-
-                if contador_alteracao_qtd > 0:
-                    p_excel = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Entrada", tamanho_produto=tamanho_p_excel) #Pegando o produto alterado
-                    p_excel.quantidade += int(abastecer_quantidade)
-                    p_excel.ultima_alteracao = data_alteracao
-                    p_excel.alterado_por = request.user.username
-                    p_excel.save()
-
-                produto_alterado.alterando_produto = "0" #Voltando pra Zero
-                produto_alterado.ultimo_acesso = "0" #Voltando pra Zero
-                produto_alterado.save()
-
-                messages.add_message(request, messages.SUCCESS, (f'Produto {nome_produto_antigo1} atualizado com sucesso'))
-                return redirect(reverse('add_produto', kwargs={"slug":anofesta}))
-        # except Exception as e:
-        #     produto_anterior = Produto.objects.get(slug=slug)
-        #     produto_anterior.alterando_produto = "0" #Voltando pra Zero
-        #     produto_anterior.ultimo_acesso = "0" #Voltando pra Zero
-        #     produto_anterior.save()
-        #     messages.error(request, 'Erro ao atualizar o produto: {}'.format(str(e)))
-        #     return redirect(reverse('add_produto', kwargs={"slug":anofesta}))
 
 #Função para a tela de excluir produto
 @has_permission_decorator('excluir_produtos')
 def excluir_produto(request, slug):
+    opcao = "id"
+    acao = "excluir"
     produto = get_object_or_404(Produto, slug=slug) #pegando o slug do produto
-    produtoall = Produto.objects.all()
-    produto = Produto.objects.get(slug=slug)
-    
+
+    id_comunidade_produto = produto.nome_comunidade_id #Pegando o ID da comunidade do produto
+    id_produto = produto.id
+    nome_produto_p_excel = str(produto.nome_produto)
+
+    resultado = Consultar_Uma_Comunidade(id_comunidade_produto, opcao)
+
+    opcao = "produto_id"
     with transaction.atomic():
         if hasattr(produto, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
             # se a flag _excluido já está setada, não chama o sinal
@@ -564,189 +359,30 @@ def excluir_produto(request, slug):
         else:#Caso não tenha sido excluído ele chama o registro.
             produto_deleted(instance=produto, user=request.user)
         produto_ja_foi_vendido = 0
-        for p in produtoall: #procurando todos os produtos
-            if p == produto: #Quando o slug do produto for igual ao da tela, entra aqui
-                festaall = Festa.objects.all() #procurando todas as festas cadastradas
-                anofesta = p.ano_festa_id #pegando o ID da festa
-                vendas = Vendas.objects.filter(produto_id=p.id)
-                for i in vendas:
-                    if i.produto_id == p.id:
-                        produto_ja_foi_vendido = 1
-                for g in festaall: #procurando todas as festas
-                    if g.id == anofesta: #quando o ID da festa for igual ao id do produto, entre aqui
-                        anofesta = g.ano_festa #quando for igual, achou... Eai pegue o ano do produto.
-                #se não tiver venda
-                if produto_ja_foi_vendido == 0:
-                    produto = Produto.objects.get(slug=slug) #Pegando o produto
-                    tamanho_p_excel = ""
-                    if produto.tamanho_produto is not None and produto.tamanho_produto != "":
-                        tamanho_p_excel = produto.tamanho_produto
-                    categoria_p_excel = produto.categoria
-                    nome_produto_p_excel = str(produto.nome_produto) + " (" + str(produto.cor) + ")"
-                    ano_festa_p_excel = produto.ano_festa
 
-                    id_user = Users.objects.get(username=request.user)
-                    id_user = id_user.id
-                    
-                    data_modelo_update = timezone.localtime(timezone.now())
-                    data_modelo_update_1 = data_modelo_update.strftime("%d/%m/%Y %H:%M:%S") 
-                    data_alteracao = data_modelo_update_1
+        vendas = Consultar_Uma_Venda(id_produto, opcao)
 
-                    existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Entrada", tamanho_produto=tamanho_p_excel)
-                    existe_saida_venda.quantidade = 0
-                    existe_saida_venda.ultima_alteracao = data_alteracao
-                    existe_saida_venda.alterado_por = request.user.username
-                    existe_saida_venda.save()
+        if vendas[1] == id_produto:
+            produto_ja_foi_vendido = 1
 
-                    produto.delete()
+        #se não tiver venda
+        if produto_ja_foi_vendido == 0:
+            Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao)
+
+            messages.add_message(request, messages.SUCCESS, 'Produto excluído com sucesso')
+            return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
+        else:  #Se tiver venda entra aqui
+            if vendas[0] != 0: #caso tenha venda
+                existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída")
+                if existe_saida_venda.quantidade == 0:
+                    Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao)
+
                     messages.add_message(request, messages.SUCCESS, 'Produto excluído com sucesso')
-                    return redirect(reverse('add_produto', kwargs={"slug":anofesta}))
-                else:  #Se tiver venda entra aqui
-                    produto = Produto.objects.get(slug=slug) #Pegando o produto
-                    tamanho_p_excel = ""
-                    if produto.tamanho_produto is not None and produto.tamanho_produto != "":
-                        tamanho_p_excel = produto.tamanho_produto
-                    categoria_p_excel = produto.categoria
-                    nome_produto_p_excel = str(produto.nome_produto) + " (" + str(produto.cor) + ")"
-                    ano_festa_p_excel = produto.ano_festa
+                    return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
+                transaction.set_rollback(True)
+                messages.add_message(request, messages.ERROR, 'Já existem vendas vinculadas à este produto, contate a administração para a exclusão')
+                return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
 
-                    id_user = Users.objects.get(username=request.user)
-                    id_user = id_user.id
-                    
-                    data_modelo_update = timezone.localtime(timezone.now())
-                    data_modelo_update_1 = data_modelo_update.strftime("%d/%m/%Y %H:%M:%S") 
-                    data_alteracao = data_modelo_update_1
-                    if vendas: #caso tenha venda
-                        existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída", tamanho_produto=tamanho_p_excel)
-                        if existe_saida_venda.quantidade == 0:
-                            existe_entrada_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Entrada", tamanho_produto=tamanho_p_excel)
-                            existe_entrada_venda.quantidade = 0
-                            existe_entrada_venda.ultima_alteracao = data_alteracao
-                            existe_entrada_venda.alterado_por = request.user.username
-                            existe_entrada_venda.save()
-                            produto.delete()
-                            messages.add_message(request, messages.SUCCESS, 'Produto excluído com sucesso')
-                            return redirect(reverse('add_produto', kwargs={"slug":anofesta}))
-                        transaction.set_rollback(True)
-                        messages.add_message(request, messages.ERROR, 'Já existem vendas vinculadas à este produto, contate a administração para a exclusão')
-                        return redirect(reverse('add_produto', kwargs={"slug":anofesta}))
-
-#Função para a tela de adicionar categoria
-@has_permission_decorator('cadastrar_categoria')
-def add_categoria(request):
-    if request.method == "GET":
-        categorias = Categoria.objects.all()
-        return render(request, 'add_categoria.html', {'categorias': categorias})
-    elif request.method == "POST":
-        titulo = request.POST.get('titulo')
-        categorias = Categoria.objects.all()
-
-        if not titulo:
-            messages.add_message(request, messages.ERROR, 'Categoria não pode ser vazia')#Verificando se está vazio
-            return redirect(reverse('add_categoria'))   
-        if titulo.isdigit():
-            messages.add_message(request, messages.ERROR, 'Categoria não pode conter números')#verificando se é númerico
-            return redirect(reverse('add_categoria')) 
-        if any(char.isdigit() for char in titulo):
-            messages.add_message(request, messages.ERROR, 'Categoria não pode conter números')#Verificando se contém números
-            return redirect(reverse('add_categoria'))   
-        if titulo.isspace():
-            messages.add_message(request, messages.ERROR, 'Categoria não pode conter apenas espaços vazios')#Verificando se contém apenas espaço vazio
-            return redirect(reverse('add_categoria'))        
-        categorias = categorias.filter(titulo__contains=titulo)#Verificando se existem categorias com o nome escolhido
-        if categorias:
-            messages.add_message(request, messages.ERROR, 'Essa categoria já existe')
-            return redirect(reverse('add_categoria'))
-        elif not categorias:
-            messages.add_message(request, messages.SUCCESS, f'Categoria {titulo} cadastrada com sucesso')
-            categoria = Categoria(titulo = titulo,
-                        criado_por = request.user)
-            categoria.save()      
-            return redirect(reverse('add_categoria'))  
-
-#Função para a tela de excluir categoria
-@has_permission_decorator('excluir_categoria')
-def excluir_categoria(request, slug):
-    try :#Tente Excluir
-        categoria = get_object_or_404(Categoria, slug=slug)
-        categoria = Categoria.objects.get(slug=slug)
-        if hasattr(produto, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
-            # se a flag _excluido já está setada, não chama o sinal
-            pass
-        else:#Caso não tenha sido excluído ele chama o registro.
-            categoria_deleted(instance=categoria, user=request.user)
-        categoria.delete()
-        messages.add_message(request, messages.SUCCESS, 'Categoria excluída com sucesso')
-        return redirect(reverse('add_categoria'))
-    except ProtectedError:#Caso não consiga, entre aqui
-        messages.add_message(request, messages.ERROR, 'Essa Categoria não pode ser excluída pois possui produtos vinculados')
-        return redirect(reverse('add_categoria'))
-
-#Função para a tela de adicionar cor
-@has_permission_decorator('cadastrar_cor')
-def add_cor(request):
-    if request.method == "GET":
-        ano_atual = Capturar_Ano_Atual()
-        id_festa_ano_escolhido = Capturar_Id_Festa_Ano_Atual(ano_atual)
-
-        cores = Cor.objects.filter(ano_festa_id=id_festa_ano_escolhido)
-
-        return render(request, 'add_cor.html', {'cores': cores})
-    elif request.method == "POST":
-        titulo = request.POST.get('titulo')
-        secao_cor_produto = request.POST.get('secao_cor_produto')
-
-        ano_atual = Capturar_Ano_Atual()
-        id_festa_ano_escolhido = Capturar_Id_Festa_Ano_Atual(ano_atual)
-        
-        cores = Cor.objects.filter(ano_festa_id=id_festa_ano_escolhido)
-
-        if not titulo:
-            messages.add_message(request, messages.ERROR, 'Cor não pode ser vazia')#Verificando se está vazio
-            return redirect(reverse('add_cor'))   
-        if titulo.isdigit():
-            messages.add_message(request, messages.ERROR, 'Cor não pode conter números')#verificando se é númerico
-            return redirect(reverse('add_cor')) 
-        if any(char.isdigit() for char in titulo):
-            messages.add_message(request, messages.ERROR, 'Cor não pode conter números')#Verificando se contém números
-            return redirect(reverse('add_cor'))   
-        if titulo.isspace():
-            messages.add_message(request, messages.ERROR, 'Cor não pode conter apenas espaços vazios')#Verificando se contém apenas espaço vazio
-            return redirect(reverse('add_cor'))        
-
-        cores = cores.filter(titulo__icontains=titulo)#Verificando se existem cores com o nome escolhido
-
-        if cores:
-            messages.add_message(request, messages.ERROR, 'Essa cor já existe')
-            return redirect(reverse('add_cor'))
-        elif not cores:
-            if secao_cor_produto == "" or not secao_cor_produto:
-                messages.add_message(request, messages.ERROR, 'Selecione uma seção')#Verificando se foi selecionado uma seção
-                return redirect(reverse('add_cor'))
-            messages.add_message(request, messages.SUCCESS, f'Cor {titulo} cadastrada com sucesso')
-            cor = Cor(  titulo = titulo,
-                        secao = secao_cor_produto,
-                        criado_por = request.user, ano_festa_id=id_festa_ano_escolhido)
-            cor.save()      
-            return redirect(reverse('add_cor'))  
-
-#Função para a tela de excluir cor
-@has_permission_decorator('excluir_cor')
-def excluir_cor(request, slug):
-    try :#Tente Excluir
-        cor = get_object_or_404(Cor, slug=slug)
-        cor = Cor.objects.get(slug=slug)
-        if hasattr(produto, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
-            # se a flag _excluido já está setada, não chama o sinal
-            pass
-        else:#Caso não tenha sido excluído ele chama o registro.
-            cor_deleted(instance=cor, user=request.user)
-        cor.delete()
-        messages.add_message(request, messages.SUCCESS, 'Cor excluída com sucesso')
-        return redirect(reverse('add_cor'))
-    except ProtectedError:#Caso não consiga, entre aqui
-        messages.add_message(request, messages.ERROR, 'Essa Cor não pode ser excluída pois possui produtos vinculados')
-        return redirect(reverse('add_cor'))
 
 #Função para a tela de cadastrar comunidade
 @has_permission_decorator('cadastrar_comunidade')
@@ -4438,108 +4074,6 @@ def estornar_venda_geral_pos(request, slug):
             messages.add_message(request, messages.ERROR, 'Houve um erro no estorno dessa venda, caso persista contate o administrador')
             return redirect(reverse('editar_vendas', kwargs={"slug":ano_festa}))
 
-#Função para a tela de adicionar produto
-@has_permission_decorator('editar_produtos')
-def alterar_preco_produto(request, slug):
-    if request.method == "GET":
-        ano_atual = Capturar_Ano_Atual()
-        id_festa_ano_escolhido = Capturar_Id_Festa_Ano_Atual(ano_atual)
-        nome_dos_produtos = NomeProduto.objects.filter(ano_festa_id=id_festa_ano_escolhido)
-
-        nome_produtos_html = []
-        if nome_dos_produtos:
-            for nome_do_produto in nome_dos_produtos:
-                produtos_relacionados = Produto.objects.filter(nome_produto=nome_do_produto)
-                if produtos_relacionados:
-                    for produto in produtos_relacionados:
-                        nome_produto = produto.nome_produto  # Acessar o nome do produto
-                        if nome_produtos_html != "":
-                            if nome_produto not in nome_produtos_html:
-                                nome_produtos_html.append(nome_produto)
-        else:
-            messages.add_message(request, messages.ERROR, 'Não há produtos cadastrados')
-            return redirect(reverse('cadastrogeral_festa', kwargs={"slug":slug}))
-        
-        #Inicio Verificando se o ano da URL e a festa existe.
-        festa = Festa.objects.filter(ano_festa=slug)
-        ano_atual_str = 0
-        data_modelo = timezone.localtime(timezone.now())
-        data_modelo_1 = data_modelo.strftime("%Y") 
-        data_modelo_1 = int(data_modelo_1)
-        data_modelo_2 = data_modelo_1
-
-        id_ano_produto = 0
-        id_ano_festa = 0
-        festa = get_object_or_404(Festa, slug=slug)#pegando o slug da festa
-        festaall = Festa.objects.filter(slug=slug)
-        for p in festaall: #procurando todas as festas
-            if p == festa: #Quando o slug da festa for igual ao da tela, entra aqui
-                id_ano_festa = p.id #pegando o ID da festa
-                ano_atual_str = int(p.ano_festa)
-                produtoall = Produto.objects.all()#procurando todas os produtos
-                for g in produtoall: #procurando todas os produtos
-                    if g.ano_festa_id == id_ano_festa: #quando o ID da festa for igual ao id do produto, entre aqui
-                        id_ano_produto = g.ano_festa_id #quando for igual, achou... Eai pegue o ano do produto.
-
-        context = {
-            'ano_atual_str': ano_atual_str,
-            'data_modelo_2': data_modelo_2,
-            'nome_produtos_html': nome_produtos_html
-        }
-
-        return render(request, 'alterar_preco_produto.html', context)
-    if request.method == "POST":
-        id_produto = request.POST.get('nome_produto')
-        preco_venda = request.POST.get('preco_venda')
-        
-        preco_venda = str(preco_venda).replace(',', '.') # Substitui a vírgula pelo ponto
-        preco_venda = float(preco_venda)#Transformando em float
-        preco_venda = Decimal(preco_venda)#Transformando em Decimal
-
-        # Arredonda o valor para duas casas decimais
-        preco_venda = preco_venda.quantize(Decimal('0.00'), rounding=ROUND_DOWN)
-
-        produto = Produto.objects.filter(nome_produto_id=id_produto).first()
-        if produto:
-            # Acesse o preço de compra do produto
-            preco_compra = produto.preco_compra
-            nome_produto = produto.nome_produto
-            preco_venda_antigo = Decimal(produto.preco_venda)
-            if preco_venda == preco_venda_antigo:
-                messages.add_message(request, messages.ERROR, f'Nada foi alterado, o preço digitado é igual ao anterior do produto {nome_produto}')
-                return redirect(reverse('alterar_preco_produto', kwargs={"slug":slug}))
-            elif preco_venda > preco_compra:
-                Busca_P_Excel = Q(
-                        Q(nome_produto__icontains=nome_produto) & Q(ano_festa=slug)
-                ) 
-                # Atualize todos os produtos com o mesmo ID de produto para o novo preço
-                Produto.objects.filter(nome_produto_id=id_produto).update(preco_venda=preco_venda)
-                P_Excel.objects.filter(Busca_P_Excel).update(preco_venda=preco_venda)
-            else:
-                messages.add_message(request, messages.ERROR, 'Você está tentando colocar um preço de venda muito baixo para esse produto, contate a administração')
-                return redirect(reverse('alterar_preco_produto', kwargs={"slug":slug}))
-        else:
-            messages.add_message(request, messages.ERROR, 'Esse produto que você tentou alterar o preço, não existe')
-            return redirect(reverse('alterar_preco_produto', kwargs={"slug":slug}))
-
-
-        id_user = Users.objects.get(username=request.user)
-        id_user = id_user.id
-
-        nome_produto_log = str(nome_produto) + " - Geral"
-        LogsItens.objects.create(
-            id_user=id_user,
-            nome_user=request.user,
-            acao="Troca_Geral",
-            model="Produto",
-            nome_objeto=nome_produto_log,
-            campos_alteracao="preco_venda",
-            valores_antigos=preco_venda_antigo,
-            valores_novos=preco_venda,
-        )
-
-        messages.add_message(request, messages.SUCCESS, f'Preço de venda do produto {nome_produto} alterado com sucesso')
-        return redirect(reverse('alterar_preco_produto', kwargs={"slug":slug}))
 
 # Pegando a última palavra de qualquer string
 def palavra_final(string):

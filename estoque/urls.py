@@ -4,7 +4,7 @@ from . import views
 urlpatterns = [
     path('add_produto/<slug:slug>', views.add_produto, name="add_produto"),#Adicionar Produto
     path('add_produto_redirect/<slug:slug>', views.add_produto_redirect, name="add_produto_redirect"),#Adicionar Produto Redirect
-    path('alterar_preco_produto/<slug:slug>', views.alterar_preco_produto, name="alterar_preco_produto"),#Alterar Preço de todos os produtos com mesmo nome
+
     path('excluir_produto/<slug:slug>/', views.excluir_produto, name="excluir_produto"),#Excluir Produto
     path('produto/<slug:slug>', views.produto, name="produto"),#Editar Produto
 
