@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.contrib import messages
 from django.db import transaction
 from urllib.parse import urlencode
+from django.core.paginator import Paginator
 
 
 # def Consultar_Valores_Dos_Produtos(valor, opcao):
@@ -223,11 +224,11 @@ def Cadastro_Estoque(request, nome, label, quantidade, preco_compra, preco_venda
     produto.save()
 
 
-def Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantidade, preco_compra, preco_venda, acao):
+def Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantidade, preco_compra, preco_venda, acao, slug_comunidade):
     with transaction.atomic():
         produto = Produto.objects.get(slug=slugp) #Pegando o produto recem-criado
         nome_produto_p_excel = str(produto.nome_produto)
-        nome_comunidade_p_excel = produto.nome_comunidade
+        nome_comunidade_p_excel = slug_comunidade
 
         id_user = Users.objects.get(username=request.user) #Adicionando na tabela de entrada para exportar
         id_user = id_user.id
@@ -360,3 +361,46 @@ def Registrar_Log_Alteracao_Produto_E_Alterar_Produto(request, slug_comunidade, 
         produto_alterado.save()
         
     return None
+
+
+def Get_Paginacao(request, nome_produto, dia, acao, slug, paginacao):
+    paginacao = paginacao.order_by('dia')
+    paginacao_paginator = Paginator(paginacao, 10) #Pegando a VAR Logs com todos os Logs e colocando dentro do Paginator pra trazer 10 por página
+    page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
+    page = paginacao_paginator.get_page(page_num) #Passando os 10 logs para page
+
+    if nome_produto or dia or acao:
+        if nome_produto:
+            paginacao = paginacao.filter(nome_produto__icontains=nome_produto)#Verificando se existem Logs com o nome preenchido
+            if paginacao:
+                paginacao = paginacao.order_by('dia')
+                paginacao_paginator = Paginator(paginacao, 10) #Pegando a VAR Logs com todos os Logs e colocando dentro do Paginator pra trazer 10 por página
+                page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
+                page = paginacao_paginator.get_page(page_num) #Passando os 10 logs para page
+            if not paginacao:
+                messages.add_message(request, messages.ERROR, f'Não há registro de Logs do usuário {nome_produto}')
+                return redirect(reverse('export_entrada_produtos', kwargs={"slug":slug})), page
+        if dia:
+            paginacao = paginacao.filter(dia__contains=dia)#Verificando se existem Logs no dia escolhido
+            data = datetime.strptime(dia, "%Y-%m-%d").date()#Pega dia da tela e manda pra var data
+            dataFormatada = data.strftime('%d/%m/%Y')#pega var data e formata em str e manda pra var dataformatada
+            if paginacao:
+                paginacao = paginacao.order_by('dia')
+                paginacao_paginator = Paginator(paginacao, 10) 
+                page_num = request.GET.get('page')
+                page = paginacao_paginator.get_page(page_num) 
+            if not paginacao:
+                messages.add_message(request, messages.ERROR, f'Não há registro de Logs do dia {dataFormatada}')
+                return redirect(reverse('export_entrada_produtos', kwargs={"slug":slug})), page    
+        if acao:
+            paginacao = paginacao.filter(acao__icontains=acao)#Verificando se existem Logs da ação preenchida
+            if paginacao:
+                paginacao = paginacao.order_by('dia')
+                paginacao_paginator = Paginator(paginacao, 10) 
+                page_num = request.GET.get('page')
+                page = paginacao_paginator.get_page(page_num) 
+            if not paginacao:
+                messages.add_message(request, messages.ERROR, f'Não há registro de Logs da ação {acao}')
+                return redirect(reverse('export_entrada_produtos', kwargs={"slug":slug})), page
+    
+    return None, page

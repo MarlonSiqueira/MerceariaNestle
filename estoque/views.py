@@ -179,7 +179,7 @@ def add_produto(request, slug):
 
             Cadastro_Estoque(request, nome, label, quantidade, preco_compra, preco_venda, slugp, resultado[0], num_sequencial, peso)
 
-            Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantidade, preco_compra, preco_venda, acao)
+            Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantidade, preco_compra, preco_venda, acao, resultado[1])
 
             messages.add_message(request, messages.SUCCESS, f'Produto {nome_produto_original} Cadastrado com sucesso')
             return redirect(reverse('add_produto', kwargs={"slug":slug}))
@@ -367,7 +367,7 @@ def excluir_produto(request, slug):
 
         #se não tiver venda
         if produto_ja_foi_vendido == 0:
-            Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao)
+            Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao, resultado[1])
 
             messages.add_message(request, messages.SUCCESS, 'Produto excluído com sucesso')
             return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
@@ -375,7 +375,7 @@ def excluir_produto(request, slug):
             if vendas[0] != 0: #caso tenha venda
                 existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída")
                 if existe_saida_venda.quantidade == 0:
-                    Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao)
+                    Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao, resultado[1])
 
                     messages.add_message(request, messages.SUCCESS, 'Produto excluído com sucesso')
                     return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
@@ -3567,21 +3567,18 @@ def export_csv_finalizadas(request):
 
 #Função para exportar produtos
 @has_permission_decorator('exportar_csv_p')
-def export_csv_produto(request):
-    data_modelo = timezone.localtime(timezone.now())
-    data_modelo_1 = data_modelo.strftime("%Y")
-    data_modelo_1 = int(data_modelo_1)
-    anofesta = data_modelo_1
+def export_csv_produto(request, slug):
+    opcao = "slug"
+    resultado = Consultar_Uma_Comunidade(slug, opcao)
 
-    festa = Festa.objects.filter(slug=data_modelo_1)
-    if festa:
-        festa = Festa.objects.get(slug=data_modelo_1)
-        ano_festa = festa.id
+    if resultado[0] != 0:
+        pass
     else:
-        messages.add_message(request, messages.ERROR, 'Houve um problema ao consultar o ano da festa')
-        return redirect(reverse('add_produto', kwargs={"slug":anofesta})) 
+        messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+        return redirect(reverse('export_entrada_produtos', kwargs={"slug":slug})) 
+
     Busca = Q(
-            Q(ano_festa=data_modelo_1)     
+            Q(nome_comunidade=resultado[1])     
     ) 
 
     p_excel = P_Excel.objects.filter(Busca) #Buscando todas os produtos do dia à exportar
@@ -3595,10 +3592,10 @@ def export_csv_produto(request):
     ws = wb.active
     
     if p_excel:
-        if request.user.cargo == "A" or request.user.cargo == "P" or request.user.cargo == "CF" or request.user.cargo == "CL":
-            ws.append(['Acao','Nome_Produto','Tamanho_Produto','Categoria','Quantidade','Lucro','Data Criação','Criado Por','Última Alteração','Alterado Por','Ano_Festa']) # Colunas
+        if request.user.cargo == "A" or request.user.cargo == "R":
+            ws.append(['Acao','Nome_Produto','Quantidade','Lucro','Data Criação','Criado Por','Última Alteração','Alterado Por','Nome_Comunidde']) # Colunas
         else:
-            ws.append(['Acao','Nome_Produto','Tamanho_Produto','Categoria','Quantidade','Data','Ano_Festa']) # Colunas
+            ws.append(['Acao','Nome_Produto','Quantidade','Data','Nome_Comunidade']) # Colunas
 
         nome_produto = request.GET.get('nome_produto')
         acao = request.GET.get('acao')
@@ -3615,10 +3612,10 @@ def export_csv_produto(request):
             pass
 
         for itens in p_excel:
-            if request.user.cargo == "A" or request.user.cargo == "P" or request.user.cargo == "CF" or request.user.cargo == "CL":
-                row = [itens.acao, itens.nome_produto, itens.tamanho_produto, itens.categoria, itens.quantidade, itens.lucro, itens.data, itens.nome_user, itens.ultima_alteracao, itens.alterado_por, itens.ano_festa]
+            if request.user.cargo == "A" or request.user.cargo == "R":
+                row = [itens.acao, itens.nome_produto, itens.quantidade, itens.lucro, itens.data, itens.nome_user, itens.ultima_alteracao, itens.alterado_por, itens.nome_comunidade]
             else:
-                row = [itens.acao, itens.nome_produto, itens.tamanho_produto, itens.categoria, itens.quantidade, itens.data, itens.ano_festa]
+                row = [itens.acao, itens.nome_produto, itens.quantidade, itens.data, itens.nome_comunidade]
             ws.append(row)
 
         #Inicio formatação da planilha
@@ -3651,7 +3648,7 @@ def export_csv_produto(request):
         return response
     else:
         messages.add_message(request, messages.ERROR, 'Nenhuma ação de produto foi encontrado para ser exportada')
-        return redirect(reverse('add_produto', kwargs={"slug":anofesta})) 
+        return redirect(reverse('add_produto', kwargs={"slug":slug})) 
 
 #Função para exportar histórico de vendas trocadas e estornadas
 @has_permission_decorator('realizar_troca_estorno')
@@ -3759,48 +3756,18 @@ def export_entrada_produtos(request, slug):
         nome_produto = request.GET.get('nome_produto')
         dia = request.GET.get('dia')
         acao = request.GET.get('acao')
-        logs = P_Excel.objects.filter(ano_festa=slug)
-        if logs:
-            logs = logs.order_by('dia')
-            logs_paginator = Paginator(logs, 10) #Pegando a VAR Logs com todos os Logs e colocando dentro do Paginator pra trazer 10 por página
-            page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
-            page = logs_paginator.get_page(page_num) #Passando os 10 logs para page
-
-            if nome_produto or dia or acao:
-                if nome_produto:
-                    logs = logs.filter(nome_produto__icontains=nome_produto)#Verificando se existem Logs com o nome preenchido
-                    if logs:
-                        logs = logs.order_by('dia')
-                        logs_paginator = Paginator(logs, 10) #Pegando a VAR Logs com todos os Logs e colocando dentro do Paginator pra trazer 10 por página
-                        page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
-                        page = logs_paginator.get_page(page_num) #Passando os 10 logs para page
-                    if not logs:
-                        messages.add_message(request, messages.ERROR, f'Não há registro de Logs do usuário {nome_produto}')
-                        return redirect(reverse('export_entrada_produtos', kwargs={"slug":slug}))  
-                if dia:
-                    logs = logs.filter(dia__contains=dia)#Verificando se existem Logs no dia escolhido
-                    data = datetime.strptime(dia, "%Y-%m-%d").date()#Pega dia da tela e manda pra var data
-                    dataFormatada = data.strftime('%d/%m/%Y')#pega var data e formata em str e manda pra var dataformatada
-                    if logs:
-                        logs = logs.order_by('dia')
-                        logs_paginator = Paginator(logs, 10) 
-                        page_num = request.GET.get('page')
-                        page = logs_paginator.get_page(page_num) 
-                    if not logs:
-                        messages.add_message(request, messages.ERROR, f'Não há registro de Logs do dia {dataFormatada}')
-                        return redirect(reverse('export_entrada_produtos', kwargs={"slug":slug}))    
-                if acao:
-                    logs = logs.filter(acao__icontains=acao)#Verificando se existem Logs da ação preenchida
-                    if logs:
-                        logs = logs.order_by('dia')
-                        logs_paginator = Paginator(logs, 10) 
-                        page_num = request.GET.get('page')
-                        page = logs_paginator.get_page(page_num) 
-                    if not logs:
-                        messages.add_message(request, messages.ERROR, f'Não há registro de Logs da ação {acao}')
-                        return redirect(reverse('export_entrada_produtos', kwargs={"slug":slug}))                    
-
-            return render(request, 'export_entrada_produtos.html', {'page': page, 'slug':slug})
+        
+        paginacao = P_Excel.objects.filter(nome_comunidade=slug)
+        if paginacao:
+            validacao, page = Get_Paginacao(request, nome_produto, dia, acao, slug, paginacao)        
+            if validacao:
+                return validacao
+                
+            context = {
+                'page': page,
+                'slug': slug,
+            }
+            return render(request, 'export_entrada_produtos.html', context)
         else:
             messages.add_message(request, messages.ERROR, f'Não há registro de Logs à serem exportados')
             return redirect(reverse('add_produto', kwargs={"slug":slug})) 

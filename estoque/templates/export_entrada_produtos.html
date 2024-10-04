@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load filters %}
 
 {% block 'body' %}
 <h1>Relatório Produtos</h1>
@@ -12,7 +11,7 @@
         <label for="dia">Data:</label>
         <input type="date" name="dia" id="dia">
     </div>
-    <label for="acao">Qual ação deseja filtrar ?</label>
+    &nbsp;&nbsp; <label for="acao">Qual ação deseja filtrar ?</label>
     <select name="acao" id="acao">
         <option value="" selected disabled>Selecione</option>
         <option value="Entrada">Entrada</option>
@@ -21,7 +20,7 @@
 
     <a class="btn btn-info" style="color: white;" href="{% url 'add_produto' slug %}" class="btnbtn-primary">Voltar</a>
     <button id="btn-submit" type="submit" class="btn btn-success">Pesquisar</button>&nbsp;&nbsp;
-    <a class="btn btn-info" href="{% url 'export_csv_produto' %}?nome_produto={{request.GET.nome_produto}}&dia={{request.GET.dia}}&acao={{request.GET.acao}}">Exportar Planilha</a>
+    <a class="btn btn-info" href="{% url 'export_csv_produto' slug %}?nome_produto={{request.GET.nome_produto}}&dia={{request.GET.dia}}&acao={{request.GET.acao}}">Exportar Planilha</a>
 </form>
 <br>
 {% if page.has_other_pages %}
@@ -71,16 +70,13 @@
         <tr>
             <th>Ação</th>
             <th>Nome do Produto</th>
-            <th>Tamanho do Produto</th>
-            <th>Categoria</th>
             <th>Quantidade</th>
-            <th>Lucro</th>
-            <!-- <th>Preço Venda</th> -->
+            <!-- <th>Lucro</th> -->
             <th>Data Criação</th>
             <th>Criado Por</th>
             <th>Última Alteração</th>
             <th>Alterado Por</th>
-            <th>Ano Festa</th>
+            <th>Nome da Comunidade</th>
         </tr>
     </thead>
     <tbody>
@@ -88,19 +84,12 @@
         <tr>
             <td>{{ log.acao }}</td>
             <td>{{ log.nome_produto }}</td>
-            {% if log.tamanho_produto == None %}
-                <td> </td>
-            {% else %}
-                <td>{{ log.tamanho_produto }}</td>
-            {% endif %}
-            <td>{{ log.categoria }}</td>
             <td>{{ log.quantidade }}</td>
-            {% if log.acao == "Saída" %}
+            <!-- {% if log.acao == "Saída" %}
                 <td>{{ log.lucro }}</td>
             {% else %}
                 <td> </td>
-            {% endif %}
-            <!-- <td>{{ log.preco_venda }}</td> -->
+            {% endif %} -->
             <td>{{ log.data }}</td>
             <td>{{ log.nome_user }}</td>
             {% if log.ultima_alteracao == None %}
@@ -110,7 +99,7 @@
                 <td>{{ log.ultima_alteracao }}</td>
                 <td>{{ log.alterado_por }}</td>
             {% endif %}
-            <td>{{ log.ano_festa }}</td>
+            <td>{{ log.nome_comunidade }}</td>
         </tr>
     {% endfor %}
     </tbody>

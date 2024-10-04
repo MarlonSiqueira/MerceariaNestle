@@ -40,6 +40,6 @@ urlpatterns = [
 
     path('export-csv/', views.export_csv, name='export-csv'),#Exportar CSV Vendas
     path('export_csv_finalizadas/', views.export_csv_finalizadas, name='export_csv_finalizadas'),#Exportar CSV Vendas Finalizadas
-    path('export_csv_produto/', views.export_csv_produto, name='export_csv_produto'),#Exportar CSV Produtos
+    path('export_csv_produto/<slug:slug>', views.export_csv_produto, name='export_csv_produto'),#Exportar CSV Produtos
     path('export_csv_troca_estorno/', views.export_csv_troca_estorno, name='export_csv_troca_estorno'),#Exportar CSV Troca/Estorno
 ]
