@@ -1,5 +1,6 @@
 from estoque.funcoes_comunidades import *
 from .funcoes_usuarios import *
+from .funcoes_familias import *
 from django.shortcuts import render, redirect
 from rolepermissions.decorators import has_permission_decorator
 from .models import Users

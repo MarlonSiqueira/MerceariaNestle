@@ -2,6 +2,7 @@ from .models import *
 from usuarios.models import *
 from .funcoes_comunidades import *
 from django.utils import timezone
+from datetime import datetime, timedelta
 from django.db.models import Q, Max
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -31,6 +32,13 @@ from django.core.paginator import Paginator
 #         resultado = [0] * 4  # 4 elementos correspondendo aos campos (zeros ou valores padrões)
 
 #     return resultado  # Retorna a lista de resultados
+
+
+def Gerar_Token_Com_Tempo_Minutos(tempo):
+    expiration_time = timezone.localtime(timezone.now()) + timedelta(minutes=tempo)#alteração do produto, válido por X minutos
+    token_expiracao = expiration_time.strftime("%d/%m/%Y %H:%M:%S") #Passando pra string
+
+    return token_expiracao
 
 
 def Validacoes_Post_Cadastro_Produtos_Campos_Preenchidos(request, slug, nome_produto):

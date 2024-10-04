@@ -1,6 +1,8 @@
 from .funcoes_comunidades import *
 from .funcoes_produtos import *
 from .funcoes_vendas import *
+from usuarios.funcoes_usuarios import *
+from usuarios.funcoes_familias import *
 from django.shortcuts import render
 from .forms import ProdutoForm, ComunidadeForm
 from .models import Produto, NomeProduto, Vendas, LogsItens, P_Excel, VendasControle, Excel_T_E
@@ -264,8 +266,7 @@ def produto (request, slug):
         label = produto.label
         usuario = str(request.user) #Pegando o nome do usuario em formato de string.
         if alterando_produto == "0":
-            expiration_time = timezone.localtime(timezone.now()) + timedelta(minutes=5)#alteração do produto, válido por 5 minutos
-            ultimo_acesso = expiration_time.strftime("%d/%m/%Y %H:%M:%S") #Passando pra string
+            ultimo_acesso = Gerar_Token_Com_Tempo_Minutos(5)
 
             produto.alterando_produto = usuario #adicionando o nome do usuario à coluna
             produto.ultimo_acesso = ultimo_acesso #adicionando o contador à coluna
@@ -568,167 +569,206 @@ def editar_festa (request, slug):
             messages.error(request, 'Erro ao atualizar a Festa {}'.format(str(e)))
             return redirect(reverse('cadastrogeral_festa', kwargs={"ano_festa":anofesta}))
 
+
+#Função para a tela de antes de vender produto
+@has_permission_decorator('realizar_venda')
+def pre_vendas(request, slug):
+    opcao = "slug"
+    resultado = Consultar_Uma_Comunidade(slug, opcao)
+    if request.method == "GET":
+        if resultado[0] != 0:
+            context = {
+                'slug': slug,
+                'nome_e_cidade_comunidade': slug,
+            }
+            return render(request, 'pre_vendas.html', context)
+        else:
+            messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+            return redirect(reverse('home'))
+    elif request.method == "POST":
+        cpf = request.POST.get('cpf')
+
+        validacao = validar_cpf(request, cpf, slug)
+        if validacao:
+            return validacao
+        
+        opcao = "cpf"
+        valor = [resultado[0], cpf]
+
+        resultado_familia = Consultar_Familia(valor, opcao)
+
+        if resultado_familia[0] != 0:
+            if resultado_familia[4]:
+                ultima_compra = resultado_familia[4]
+
+                # Data de hoje
+                hoje = datetime.today().date()
+
+                # Verificar se já passaram mais de 7 dias
+                diferenca = hoje - ultima_compra
+                if diferenca.days >= 7:
+                    token_venda = Gerar_Token()
+                    Salvando_Novo_Token_Venda_Familia(cpf, token_venda)
+                    
+                    messages.add_message(request, messages.SUCCESS, (f'Esse CPF está autorizado a realizar compra'))
+                    return redirect(reverse('vendas', kwargs={"slug":token_venda}))
+                else:
+                    messages.add_message(request, messages.ERROR, (f'Esse CPF realizou compra nos últimos 7 dias'))
+                    return redirect(reverse('pre_vendas', kwargs={"slug":slug}))
+            else:
+                token_venda = Gerar_Token()
+                Salvando_Novo_Token_Venda_Familia(cpf, token_venda)
+
+                messages.add_message(request, messages.SUCCESS, (f'Esse CPF está autorizado a realizar compra'))
+                return redirect(reverse('vendas', kwargs={"slug":token_venda}))
+        else:
+            messages.add_message(request, messages.ERROR, (f'CPF não encontrado nessa comunidade'))
+            return redirect(reverse('pre_vendas', kwargs={"slug":slug}))
+
+
 #Função para a tela de vender produto
-@has_permission_decorator('realizar_venda', 'liberar_descontos')
+@has_permission_decorator('realizar_venda')
 def vendas(request, slug):
     if request.method == "GET":
         nome_cliente = request.GET.get('nome_cliente')
         nome = request.GET.get('nome_produto')
-        categoria = request.GET.get('categoria')
         forma_venda = request.GET.get('forma_venda')
         preco_min = request.GET.get('preco_min')
         preco_max = request.GET.get('preco_max')
         vendedor = request.GET.get('vendedor')
-        ano_atual = Capturar_Ano_Atual()
-
-        if slug == ano_atual:
-            id_festa_ano_escolhido = Capturar_Id_Festa_Ano_Atual(ano_atual)
-        else:
-            id_festa_ano_selecionado = Capturar_Id_Festa_Ano_Selecionado(slug)
-            id_festa_ano_escolhido = id_festa_ano_selecionado
-
         get_dt_start = request.GET.get('dt_start')
         get_dt_end = request.GET.get('dt_end')
-        BuscaVendas = Q(
-                Q(venda_finalizada=0) & Q(ano_festa_id=id_festa_ano_escolhido)     
-        )
 
-        vendas = Vendas.objects.filter(BuscaVendas)
-        festa = Festa.objects.filter(ano_festa=slug)
-        ano_atual_str = 0
-        data_modelo = timezone.localtime(timezone.now())
-        data_modelo_1 = data_modelo.strftime("%Y") 
-        data_modelo_1 = int(data_modelo_1)
-        data_modelo_2 = data_modelo_1 #Data do ano ATUAL
+        opcao = "token_venda"
+        resultado_familia = Consultar_Familia(slug, opcao)
+        if resultado_familia[0] != 0:
+            id_familia = resultado_familia[0]
+            slug_token_venda_familia = resultado_familia[9]
 
-        id_ano_produto = 0
-        id_ano_festa = 0
-        festa = get_object_or_404(Festa, slug=slug)#pegando o slug da festa
-        festaall = Festa.objects.filter(slug=slug)
-        for p in festaall: #procurando todas as festas
-            if p == festa: #Quando o slug da festa for igual ao da tela, entra aqui
-                id_ano_festa = p.id #pegando o ID da festa
-                ano_atual_str = int(p.ano_festa)
-                produtoall = Vendas.objects.filter(BuscaVendas)#procurando todos os produtos vendidos neste ano
-                for g in produtoall: #procurando todos os produtos
-                    if g.ano_festa_id == id_ano_festa: #quando o ID da festa for igual ao id do produto, entre aqui
-                        id_ano_produto = g.ano_festa_id #quando for igual, achou... Eai pegue o ano do produto.  
-        slug = slug
+            opcao = "id"
+            resultado = Consultar_Uma_Comunidade(resultado_familia[1], opcao)
+            if resultado[0] != 0:
+                id_comunidade = resultado[0]
+                slug_comunidade = resultado[1]
+                BuscaVendas = Q(
+                        Q(venda_finalizada=0) & Q(nome_comunidade_id=id_comunidade)     
+                )
 
-        #Aqui está removendo os acentos do nome do cliente
-        nome_cliente_novo = unidecode.unidecode(f'{nome_cliente}')
-        nome_cliente_novo = str(nome_cliente_novo)
+                vendas = Vendas.objects.filter(BuscaVendas)
 
-        vendas = vendas.order_by('-data_criacao')
-        logs_paginator = Paginator(vendas, 80) #Pegando a VAR Logs com todas as vendas e colocando dentro do Paginator pra trazer 80 por página
-        page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
-        page = logs_paginator.get_page(page_num) #Passando as 80 vendas para page
+                #Aqui está removendo os acentos do nome do cliente
+                nome_cliente_novo = unidecode.unidecode(f'{nome_cliente}')
+                nome_cliente_novo = str(nome_cliente_novo)
 
-        #Parte do Filtro
-        if nome_cliente or nome or categoria or preco_min or preco_max or get_dt_start or get_dt_end or vendedor:
-            if nome_cliente:
-                vendas = vendas.filter(nome_cliente__icontains=nome_cliente_novo)#Verificando se existem vendas com o nome do cliente preenchido
-                if vendas:
-                    vendas = vendas.order_by('dia')
-                    logs_paginator = Paginator(vendas, 18) 
-                    page_num = request.GET.get('page')
-                    page = logs_paginator.get_page(page_num) #Passando os 18 logs para page
-                if not vendas:
-                    messages.add_message(request, messages.ERROR, 'Não há vendas para esse cliente')
-                    return redirect(reverse('vendas', kwargs={"slug":slug}))   
-            if nome:
-                vendas = vendas.filter(label_vendas_get__icontains=nome)#Verificando se existem vendas com o nome do produto preenchido
-                if vendas:
-                    vendas = vendas.order_by('dia')
-                    logs_paginator = Paginator(vendas, 18) 
-                    page_num = request.GET.get('page')
-                    page = logs_paginator.get_page(page_num) 
-                if not vendas:
-                    messages.add_message(request, messages.ERROR, 'Não há vendas desse produto')
-                    return redirect(reverse('vendas', kwargs={"slug":slug}))   
-            if categoria:
-                vendas = vendas.filter(categoria_id=categoria)#Verificando se existem vendas com a categoria preenchida
-                if vendas:
-                    vendas = vendas.order_by('dia')
-                    logs_paginator = Paginator(vendas, 18) 
-                    page_num = request.GET.get('page')
-                    page = logs_paginator.get_page(page_num) 
-                if not vendas:
-                    messages.add_message(request, messages.ERROR, 'Não há vendas com essa categoria')
-                    return redirect(reverse('vendas', kwargs={"slug":slug})) 
-            if vendedor:
-                vendas = vendas.filter(criado_por__icontains=vendedor)#Verificando se existem vendas com o nome do vendedor preenchida
-                if vendas:
-                    vendas = vendas.order_by('dia')
-                    logs_paginator = Paginator(vendas, 18) 
-                    page_num = request.GET.get('page')
-                    page = logs_paginator.get_page(page_num) 
-                if not vendas:
-                    messages.add_message(request, messages.ERROR, 'Não há vendas desse vendedor')
-                    return redirect(reverse('vendas', kwargs={"slug":slug})) 
-            if get_dt_start and not get_dt_end:
-                messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto a data início quanto a data fim')
-                return redirect(reverse('vendas', kwargs={"slug":slug}))
-            if get_dt_end and not get_dt_start:
-                messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto a data início quanto a data fim')
-                return redirect(reverse('vendas', kwargs={"slug":slug}))
-            if get_dt_start and get_dt_end:
-                vendas = vendas.filter(dia__range=[get_dt_start, get_dt_end])
-                if vendas:
-                    vendas = vendas.order_by('dia')
-                    logs_paginator = Paginator(vendas, 18) 
-                    page_num = request.GET.get('page')
-                    page = logs_paginator.get_page(page_num) 
-                if not vendas:
-                    messages.add_message(request, messages.ERROR, 'Não foi encontrado nenhuma venda entre essas datas')
-                    return redirect(reverse('vendas', kwargs={"slug":slug}))
-
-
-            if preco_min and not preco_max or not preco_min and preco_max:
-                messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto o preço mínimo quanto o preço máximo')
-                return redirect(reverse('vendas', kwargs={"slug":slug}))
-
-            if preco_min and preco_max:
-                preco_min = preco_min.replace(',', '.').replace('R$', '').replace(' ', '') # Substitui a vírgula pelo ponto, R$ por vazio e espaço por vazio
-                preco_max = preco_max.replace(',', '.').replace('R$', '').replace(' ', '') # Substitui a vírgula pelo ponto, R$ por vazio e espaço por vazio
-
-            if not preco_min:
-                    preco_min = 0
-            if not preco_max:
-                    preco_max = 9999999
-
-            preco_min = float(preco_min) #transformando em float
-            preco_max = float(preco_max) #transformando em float
-            vendas = vendas.filter(preco_venda__gte=preco_min).filter(preco_venda__lte=preco_max)#Verificando se existem produtos entre os preços preenchidos
-            if vendas:
-                vendas = vendas.order_by('dia')
-                logs_paginator = Paginator(vendas, 18) 
+                vendas = vendas.order_by('-data_criacao')
+                logs_paginator = Paginator(vendas, 80) #Pegando a VAR Logs com todas as vendas e colocando dentro do Paginator pra trazer 80 por página
                 page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
-                page = logs_paginator.get_page(page_num) 
+                page = logs_paginator.get_page(page_num) #Passando as 80 vendas para page
 
-            if not vendas:
-                messages.add_message(request, messages.ERROR, 'Não há vendas entre esses valores')
-                return redirect(reverse('vendas', kwargs={"slug":slug})) 
-            #Fim do Filtro
-        produtos = Produto.objects.filter(ano_festa_id=id_festa_ano_escolhido)
+                #Parte do Filtro
+                if nome_cliente or nome or preco_min or preco_max or get_dt_start or get_dt_end or vendedor:
+                    if nome_cliente:
+                        vendas = vendas.filter(nome_cliente__icontains=nome_cliente_novo)#Verificando se existem vendas com o nome do cliente preenchido
+                        if vendas:
+                            vendas = vendas.order_by('dia')
+                            logs_paginator = Paginator(vendas, 18) 
+                            page_num = request.GET.get('page')
+                            page = logs_paginator.get_page(page_num) #Passando os 18 logs para page
+                        if not vendas:
+                            messages.add_message(request, messages.ERROR, 'Não há vendas para esse cliente')
+                            return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia}))   
+                    if nome:
+                        vendas = vendas.filter(label_vendas_get__icontains=nome)#Verificando se existem vendas com o nome do produto preenchido
+                        if vendas:
+                            vendas = vendas.order_by('dia')
+                            logs_paginator = Paginator(vendas, 18) 
+                            page_num = request.GET.get('page')
+                            page = logs_paginator.get_page(page_num) 
+                        if not vendas:
+                            messages.add_message(request, messages.ERROR, 'Não há vendas desse produto')
+                            return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia}))   
+                    if vendedor:
+                        vendas = vendas.filter(criado_por__icontains=vendedor)#Verificando se existem vendas com o nome do vendedor preenchida
+                        if vendas:
+                            vendas = vendas.order_by('dia')
+                            logs_paginator = Paginator(vendas, 18) 
+                            page_num = request.GET.get('page')
+                            page = logs_paginator.get_page(page_num) 
+                        if not vendas:
+                            messages.add_message(request, messages.ERROR, 'Não há vendas desse vendedor')
+                            return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia})) 
+                    if get_dt_start and not get_dt_end:
+                        messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto a data início quanto a data fim')
+                        return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia}))
+                    if get_dt_end and not get_dt_start:
+                        messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto a data início quanto a data fim')
+                        return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia}))
+                    if get_dt_start and get_dt_end:
+                        vendas = vendas.filter(dia__range=[get_dt_start, get_dt_end])
+                        if vendas:
+                            vendas = vendas.order_by('dia')
+                            logs_paginator = Paginator(vendas, 18) 
+                            page_num = request.GET.get('page')
+                            page = logs_paginator.get_page(page_num) 
+                        if not vendas:
+                            messages.add_message(request, messages.ERROR, 'Não foi encontrado nenhuma venda entre essas datas')
+                            return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia}))
 
-        categorias = Categoria.objects.all()        
-        nome_produtos = NomeProduto.objects.all()
-        tamanho_produtos = TamanhoProduto.objects.all()
-        imagem_venda = ImagemVenda.objects.all()
-        
-        return render(request, 'vendas.html', {'categorias':categorias,'nome_produtos':nome_produtos, 'produtos':produtos, 'tamanho_produtos':tamanho_produtos, 'vendas': vendas, 'id_ano_produto':id_ano_produto, 'id_ano_festa':id_ano_festa, 'ano_atual_str':ano_atual_str, 'data_modelo_2':data_modelo_2, 'page': page, 'imagem_venda':imagem_venda})
+
+                    if preco_min and not preco_max or not preco_min and preco_max:
+                        messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto o preço mínimo quanto o preço máximo')
+                        return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia}))
+
+                    if preco_min and preco_max:
+                        preco_min = preco_min.replace(',', '.').replace('R$', '').replace(' ', '') # Substitui a vírgula pelo ponto, R$ por vazio e espaço por vazio
+                        preco_max = preco_max.replace(',', '.').replace('R$', '').replace(' ', '') # Substitui a vírgula pelo ponto, R$ por vazio e espaço por vazio
+
+                    if not preco_min:
+                            preco_min = 0
+                    if not preco_max:
+                            preco_max = 9999999
+
+                    preco_min = float(preco_min) #transformando em float
+                    preco_max = float(preco_max) #transformando em float
+                    vendas = vendas.filter(preco_venda__gte=preco_min).filter(preco_venda__lte=preco_max)#Verificando se existem produtos entre os preços preenchidos
+                    if vendas:
+                        vendas = vendas.order_by('dia')
+                        logs_paginator = Paginator(vendas, 18) 
+                        page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
+                        page = logs_paginator.get_page(page_num) 
+
+                    if not vendas:
+                        messages.add_message(request, messages.ERROR, 'Não há vendas entre esses valores')
+                        return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia})) 
+                    #Fim do Filtro
+                produtos = Produto.objects.filter(nome_comunidade_id=id_comunidade)
+
+                nome_produtos = NomeProduto.objects.all()
+                
+                context = {
+                    'nome_produtos':nome_produtos, 
+                    'produtos':produtos, 
+                    'vendas': vendas, 
+                    'page': page,
+                    'slug': slug_token_venda_familia,
+                    'slug_voltar_tela': slug_comunidade,
+                }
+
+                return render(request, 'vendas.html', context)
+            else:
+                messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+                return redirect(reverse('home')) 
+        else:
+            messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+            return redirect(reverse('home'))
 
     elif request.method == "POST":
         nome_cliente = request.POST.get('nome_cliente')
         nomes = request.POST.getlist('nome_produto')
         quantidades = request.POST.getlist('quantidade')
-        descontos = request.POST.getlist('desconto')
         forma_venda = request.POST.get('forma_venda')
-        desconto_autorizado = request.POST.get('desconto_autorizado')
         autorizado_por = request.POST.get('autorizado_por')
 
-        desconto_autorizado = desconto_autorizado.replace(',', '.').replace('R$', '').replace(' ', '') # Substitui a vírgula pelo ponto, R$ por vazio e espaço por vazio
         preco_total_controle = 0
         contador_vendas = len(nomes)
 

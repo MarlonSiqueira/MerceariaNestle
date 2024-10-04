@@ -1,95 +1,70 @@
 {% extends 'base.html' %}
-{% load filtersvenda %}
 
 {% block 'body' %}
 <div class="container">
-        {% if data_modelo_2 == ano_atual_str %}
-            <form id="add-aula" action="" method="POST" enctype="multipart/form-data"> {% csrf_token %}
-            <div class="mais-produtos"> <!-- Inicio da Div de repetição -->
-            <div class="form-group"></div>
-            <!-- <label>Preço dos Produtos em Estoque: </label>
-            <br>
+        <form id="add-aula" action="" method="POST" enctype="multipart/form-data"> {% csrf_token %}
+        <div class="mais-produtos"> <!-- Inicio da Div de repetição -->
+        <div class="form-group"></div>
+        <!-- <label>Preço dos Produtos em Estoque: </label>
+        <br>
+        {% for produto in produtos %}
+            <input name="preco_venda" id="preco_venda" disabled value="R$ {{produto.preco_venda}}0: {{produto.label}}">
+        {%endfor%}
+        <br> -->
+        <label>Nome do Cliente:</label>
+        <input class="form-control" required type="text" maxlength="30" name="nome_cliente" id="nome_cliente" placeholder="">
+        <br>
+        <label>Selecione o produto:</label>
+        <select required class="form-control" name="nome_produto" id="nome_produto">
             {% for produto in produtos %}
-                <input name="preco_venda" id="preco_venda" disabled value="R$ {{produto.preco_venda}}0: {{produto.label}}">
-            {%endfor%}
-            <br> -->
-            <label>Nome do Cliente:</label>
-            <input class="form-control" required type="text" maxlength="30" name="nome_cliente" id="nome_cliente" placeholder="">
-            <br>
-            <label>Selecione o produto:</label>
-            <select required class="form-control" name="nome_produto" id="nome_produto">
-                {% for produto in produtos %}
-                    {% if produto.quantidade == 0 %}
-                        pass
-                    {% elif produto.quantidade > 0 %} 
-                        {% if "Sem Cor" in produto.label %}
-                            <option required value="{{ produto.label }}" data-preco="{{ produto.preco_venda }}">{{ produto.nome_produto }} - R$ {{ produto.preco_venda }} - Qtd em Estoque: {{ produto.quantidade}}</option>
-                        {% else %}
-                            <option required value="{{ produto.label }}" data-preco="{{ produto.preco_venda }}">{{ produto.label }} - R$ {{ produto.preco_venda }} - Qtd em Estoque: {{ produto.quantidade}}</option>
-                        {% endif %}
+                {% if produto.quantidade == 0 %}
+                    pass
+                {% elif produto.quantidade > 0 %} 
+                    {% if "Sem Cor" in produto.label %}
+                        <option required value="{{ produto.label }}" data-preco="{{ produto.preco_venda }}">{{ produto.nome_produto }} - R$ {{ produto.preco_venda }} - Qtd em Estoque: {{ produto.quantidade}}</option>
+                    {% else %}
+                        <option required value="{{ produto.label }}" data-preco="{{ produto.preco_venda }}">{{ produto.label }} - R$ {{ produto.preco_venda }} - Qtd em Estoque: {{ produto.quantidade}}</option>
                     {% endif %}
-                {% endfor %}
-            </select>
+                {% endif %}
+            {% endfor %}
+        </select>
 
-            <button type="button" id="add_campo"> + </button>
-            <br> 
+        <button type="button" id="add_campo"> + </button>
+        <br> 
 
-            <label>Quantidade:</label>
-            <input class="form-control" type="number" name="quantidade" placeholder="0">
+        <label>Quantidade:</label>
+        <input class="form-control" type="number" name="quantidade" placeholder="0">
 
-            <br>
+        <br>
 
-            <label class="label_desconto">Desconto:</label>
-            <input class="form-control desconto" type="text" title="só preencher em caso de desconto" name="desconto" placeholder="0">
+        </div> <!-- Fim da Div de repetição -->
+        <br>
+        <br>
+        <label>Preço Total:</label>
+        <span id="preco_total"></span>
+        <div id="produto_invalido" style="display: none;">Selecione um produto válido.</div>
+        <br>
+        <label>Forma de Pagamento:</label>
+        <select required class="form-control" name="forma_venda" id="forma_venda">
+            <option selected value="Dinheiro">Dinheiro</option>
+            <option value="Pix">Pix</option>
+            <option value="Crédito">Crédito</option>
+            <option value="Débito">Débito</option>
+        </select>
+        <br>
+        <a href="{% url 'pre_vendas' slug_voltar_tela %}" class="btn btn-info">Voltar</a>
+        <input type="submit" name="CadAulas" id="CadAulas" disabled="true" value="Vender" class="btn btn-primary">
+        </form>
+        <hr style="background-color: gray;">
 
-            <br>
-            </div> <!-- Fim da Div de repetição -->
-            <br>
-            <br>
-            <label>Preço Total:</label>
-            <span id="preco_total"></span>
-            <div id="produto_invalido" style="display: none;">Selecione um produto válido.</div>
-            <br>
-            <label>Forma de Pagamento:</label>
-            <select required class="form-control" name="forma_venda" id="forma_venda">
-                <option selected value="Dinheiro">Dinheiro</option>
-                <option value="Pix">Pix</option>
-                <option value="Crédito">Crédito</option>
-                <option value="Débito">Débito</option>
-            </select>
-            <input type="hidden" id="desconto_autorizado" name="desconto_autorizado" class="desconto_autorizado" value="">
-            <input type="hidden" id="autorizado_por" name="autorizado_por" value="">
-            <br>
-            <a href="{% url 'cadastrogeral_festa' ano_atual_str %}" class="btn btn-info">Voltar</a>
-            <input type="submit" name="CadAulas" id="CadAulas" disabled="true" value="Vender" class="btn btn-primary">
-
-            <!-- Botão para abrir o pop-up -->
-            <button id="abrirPopup">Autorizar Desconto</button>
-
-            <!-- Pop-up -->
-            <div id="overlay"></div>
-            <div id="meuPopup" class="popup">
-                <button class="close-button">&times;</button>
-                <br>
-                <div class="popup-content">
-                    <input type="text" id="popupdesconto" class="elementos-invisiveis" placeholder="Desconto">
-                    <input type="text" id="popupUsername" class="elementos-invisiveis" placeholder="Username">
-                    <input type="password" id="popupSenha" class="elementos-invisiveis" placeholder="Senha">
-                    <button id="confirmarBtn">Confirmar</button>
-                    <p id="mensagemErro" style="color: red; display: none;">Credenciais incorretas</p>
-                </div>
-            </div>
-            </form>
-            <hr style="background-color: gray;">
-        {% endif %}
         <form action="" method="GET">
             {% if page.has_other_pages %}
                 <div class="btn-group" role="group" aria-label="Item Pagination">
                     {% if page.has_previous %} <!-- Se existe alguma página antes, mostre Anterior-->
                         {% if request.GET.nome_cliente or request.GET.nome_produto or request.categoria%}
-                            <a class="btn btn-info" href="{% url 'vendas' ano_atual_str %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
+                            <a class="btn btn-info" href="{% url 'vendas' slug %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
                         {% else%}
-                            <a class="btn btn-info" href="{% url 'vendas' ano_atual_str %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
+                            <a class="btn btn-info" href="{% url 'vendas' slug %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
                         {% endif %}
                     {% endif %}
 
@@ -100,7 +75,7 @@
                                     <span>{{ page_num }} (Atual)</span>
                                 </button>
                             {% else %}
-                                <a href="{% url 'vendas' ano_atual_str %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
+                                <a href="{% url 'vendas' slug %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
                                     {{ page_num }}</a>
                             {% endif %}
                         {% else %}
@@ -109,7 +84,7 @@
                                     <span>{{ page_num }} (Atual)</span>
                                 </button>
                             {% else %}
-                                <a href="{% url 'vendas' ano_atual_str %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
+                                <a href="{% url 'vendas' slug %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
                                     {{ page_num }}</a>
                             {% endif %}
                         {% endif %}
@@ -117,9 +92,9 @@
                     
                         {% if page.has_next %}<!-- Se existe alguma página depois, mostre Próximo-->
                             {% if request.GET.nome_cliente or request.GET.nome_produto or request.categoria%}
-                                <a class="btn btn-info" href="{% url 'vendas' ano_atual_str %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
+                                <a class="btn btn-info" href="{% url 'vendas' slug %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
                             {% else %}
-                                <a class="btn btn-info" href="{% url 'vendas' ano_atual_str %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
+                                <a class="btn btn-info" href="{% url 'vendas' slug %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
                             {% endif %}          
                         {% endif %}
                 </div>
@@ -170,18 +145,13 @@
             </div>
             <br>
                 <input type="submit" value="Filtrar" class="btn btn-success">&nbsp;
-                {% if data_modelo_2 == ano_atual_str %}
-                    {% if user.cargo == "A" or user.cargo == "P" or user.cargo == "CF" or user.cargo == "CL" %}
-                        <a class="btn btn-info" href="{% url 'export-csv' %}?nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">Exportar Planilha</a>&nbsp;
-                    {% endif %}
-                {% elif data_modelo_2 != ano_atual_str %}
-                    <a href="{% url 'cadastrogeral_festa' ano_atual_str %}" class="btn btn-info">Voltar</a>
+                {% if user.cargo == "A" or user.cargo == "R" %}
+                    <a class="btn btn-info" href="{% url 'export-csv' %}?nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">Exportar Planilha</a>&nbsp;
                 {% endif %}
         </form>
             <br>
             <div class="row">
                 {% for venda in page.object_list %}
-                    {% if id_ano_festa == venda.ano_festa_id %}
                         {% if venda.venda_finalizada == 0 %}
                             <div class="col-md-4">
                                 <div style="background-color: #e0ffff; width: 18rem" class="card" style="width: 18rem;">
@@ -200,7 +170,6 @@
                                 <br>
                             </div>
                         {% endif %}
-                    {% endif %}
                     {% if forloop.counter|divisibleby:3 %}
                         <div class="clearfix"></div>
                     {% endif %}
@@ -214,24 +183,12 @@
     $("#add_campo").click(function () {//Pegando os campos de .mais-produtos e adicionando abaixo ao clicar no "+", tudo dentro dessa chave é ao clicar no "+"
         cont++;
 
-        // Verificar se desconto_autorizado está preenchido
-        const descontoAutorizado = $('input[name="desconto_autorizado"]').val().replace(',', '.');
-        const ocultarDesconto = descontoAutorizado !== ''; // Verifica se o desconto_autorizado está preenchido
-
-        novoCampo = $('<div class="form-group" id="campo'+ cont +'"><!--<br><label>Produto '+ cont +':</label>--><br><label>Selecione o produto:</label><select required class="form-control" name="nome_produto" id="nome_produto">{% for produto in produtos %}{% if produto.quantidade == 0 %}pass{% elif produto.quantidade > 0 %} {% if "Sem Cor" in produto.label %}<option required value="{{ produto.label }}" data-preco="{{ produto.preco_venda }}">{{ produto.nome_produto }} - R$ {{ produto.preco_venda }} - Qtd em Estoque: {{ produto.quantidade}}</option>{% else %}<option required value="{{ produto.label }}" data-preco="{{ produto.preco_venda }}">{{ produto.label }} - R$ {{ produto.preco_venda }} - Qtd em Estoque: {{ produto.quantidade}}</option>{% endif %}{% endif %}{% endfor %}</select><button id="'+ cont +'" class="btn-apagar"> - </button><br><label>Quantidade:</label><input class="form-control" type="number" name="quantidade" placeholder="0"><br><label class="label_desconto">Desconto:</label><input class="form-control desconto" type="text" title="só preencher em caso de desconto" name="desconto" placeholder="0"></div>');
+        novoCampo = $('<div class="form-group" id="campo'+ cont +'"><!--<br><label>Produto '+ cont +':</label>--><br><label>Selecione o produto:</label><select required class="form-control" name="nome_produto" id="nome_produto">{% for produto in produtos %}{% if produto.quantidade == 0 %}pass{% elif produto.quantidade > 0 %} {% if "Sem Cor" in produto.label %}<option required value="{{ produto.label }}" data-preco="{{ produto.preco_venda }}">{{ produto.nome_produto }} - R$ {{ produto.preco_venda }} - Qtd em Estoque: {{ produto.quantidade}}</option>{% else %}<option required value="{{ produto.label }}" data-preco="{{ produto.preco_venda }}">{{ produto.label }} - R$ {{ produto.preco_venda }} - Qtd em Estoque: {{ produto.quantidade}}</option>{% endif %}{% endif %}{% endfor %}</select><button id="'+ cont +'" class="btn-apagar"> - </button><br><label>Quantidade:</label><input class="form-control" type="number" name="quantidade" placeholder="0"><br></div>');
 
         novoCampo.find(".btn-apagar").click(function () { //Função do Botão de "-" para remover os campos adicionados 
             $(this).closest('.form-group').remove();
             atualizarPrecoTotal(); //Chama a função ao apagar novos campos
         });
-
-        novoCampo.find('.desconto').mask('000,00', {reverse: true}); // desconto dos campos filhos
-
-        // Ocultar o campo de desconto se desconto_autorizado estiver preenchido
-        if (ocultarDesconto) {
-            novoCampo.find('input[name="desconto"]').val('').hide();
-            novoCampo.find('.label_desconto').hide();
-        }
 
         $(".mais-produtos").append(novoCampo); //Função do Botão de "+" para adicionar novos campos
             atualizarPrecoTotal(); // Chama a função ao adicionar novos campos
@@ -259,123 +216,54 @@
 // função para atualizar o preço total
 function atualizarPrecoTotal() {
     var precoTotal = 0;
-    var descontoTotal = 0;
     var camposPreenchidos = true;
-    const descontopopup = parseFloat($('input[name="desconto_autorizado"]').val().replace(',', '.'));
     
-    let descontopop;
-    if (descontopopup === '') {
-        // Verifica se é vazio
-        descontopop = 0;
-    } else if (descontopopup === 0) {
-        // Verifica se é igual a zero
-        descontopop = 0;
-    } else {
-        // Caso contrário
-        descontopop = descontopopup;
-    }
-    if (descontopop > 0) { // só caso desconto_autorizado seja preenchido
-        const labeldescontoPai = parseFloat($(".label_desconto").val()); //pegando label desconto pai
-        const descontoPai = parseFloat($("input[name='desconto']").val()); //pegando input desconto pai
-
-        $('.form-group select').each(function(index, element) {
-            const precoProduto = parseFloat($(element).find(':selected').data('preco').replace(',', '.'));
-            const quantidade = parseInt($(element).closest('.form-group').find('input[name="quantidade"]').val());
-            const label = parseFloat($(element).closest('.form-group').find('.label_desconto').val()); //pegando label desconto filhos
-            const desconto = parseFloat($(element).closest('.form-group').find('input[name="desconto"]').val()); //pegando input desconto filhos
-            if (!isNaN(precoProduto) && !isNaN(quantidade)) {
-                precoTotal += precoProduto * quantidade;
-            }
-        });
-        $('input[name="desconto"]').val('').hide(); //ocultando pai e filhos input
-        $('.label_desconto').hide(); //ocultando pai e filhos label
-
-        const precoProdutoPai = parseFloat($("#nome_produto option:selected").data('preco').replace(',', '.'));
-        const quantidadePai = parseInt($("input[name='quantidade']").val());
-        if (!isNaN(precoProdutoPai) && !isNaN(quantidadePai)) {
-            precoTotal += precoProdutoPai * quantidadePai;
-        }
-
-        // Aplica o desconto total no preço total
-        if (!isNaN(descontopop)){
-            precoTotal -= descontopop;
-        }
-
-        // Atualiza o preço total na tela
-        if (precoTotal <= 0) {
-            $('#preco_total').text('R$ 0.00');
-            $('#CadAulas').prop('disabled', true);
-        } else {
-            $('#preco_total').text('R$ ' + precoTotal.toFixed(2));
-            $('#CadAulas').prop('disabled', false);
-        }
-
-    } else { // caso desconto_autorizado não seja preenchido
-        // Loop pelos campos filhos
-        $('.form-group select').each(function(index, element) {
-            const precoProduto = parseFloat($(element).find(':selected').data('preco').replace(',', '.'));
-            const quantidade = parseInt($(element).closest('.form-group').find('input[name="quantidade"]').val());
-            const desconto = parseFloat($(element).closest('.form-group').find('input[name="desconto"]').val().replace(',', '.'));
-            if (isNaN(quantidade) || quantidade === 0) { // Utilizando o loop ".each" verifica se cada um dos campos quantidade está preenchido
-                camposPreenchidos = false;
-            }
-
-            if (!isNaN(precoProduto) && !isNaN(quantidade)) {
-                precoTotal += precoProduto * quantidade;
-                if (!isNaN(desconto)) {
-                    descontoTotal += desconto * quantidade;
-                }
-            }
-        });
-
-        // Adiciona o campo pai ao cálculo do preço total
-        const precoProdutoPai = parseFloat($("#nome_produto option:selected").data('preco').replace(',', '.'));
-        const quantidadePai = parseInt($("input[name='quantidade']").val());
-        const descontoPai = parseFloat($("input[name='desconto']").val().replace(',', '.')); //pegando input desconto pai
-
-        if (isNaN(quantidadePai) || quantidadePai === 0) { //verifica se o campo quantidade original está preenchido
+    // Loop pelos campos filhos
+    $('.form-group select').each(function(index, element) {
+        const precoProduto = parseFloat($(element).find(':selected').data('preco').replace(',', '.'));
+        const quantidade = parseInt($(element).closest('.form-group').find('input[name="quantidade"]').val());
+        if (isNaN(quantidade) || quantidade === 0) { // Utilizando o loop ".each" verifica se cada um dos campos quantidade está preenchido
             camposPreenchidos = false;
         }
 
-        if (!isNaN(precoProdutoPai) && !isNaN(quantidadePai)) {
-            precoTotal += precoProdutoPai * quantidadePai;
-            if (!isNaN(descontoPai)) {
-                descontoTotal += descontoPai * quantidadePai;
-            }
-
+        if (!isNaN(precoProduto) && !isNaN(quantidade)) {
+            precoTotal += precoProduto * quantidade;
         }
+    });
 
-        // Aplica o desconto total no preço total
-        if (!isNaN(descontoTotal)){
-            precoTotal -= descontoTotal;
-        }
+    // Adiciona o campo pai ao cálculo do preço total
+    const precoProdutoPai = parseFloat($("#nome_produto option:selected").data('preco').replace(',', '.'));
+    const quantidadePai = parseInt($("input[name='quantidade']").val());
 
-        // Atualiza o preço total na tela
-        if (precoTotal <= 0) {
-            $('#preco_total').text('R$ 0.00');
-            $('#CadAulas').prop('disabled', true);
-        } else if (camposPreenchidos == false) {
-            $('#preco_total').text('R$ ' + precoTotal.toFixed(2));
-            $('#CadAulas').prop('disabled', true);
-        } else {
-            $('#preco_total').text('R$ ' + precoTotal.toFixed(2));
-            $('#CadAulas').prop('disabled', false);
-        }
+    if (isNaN(quantidadePai) || quantidadePai === 0) { //verifica se o campo quantidade original está preenchido
+        camposPreenchidos = false;
     }
-}
+
+    if (!isNaN(precoProdutoPai) && !isNaN(quantidadePai)) {
+        precoTotal += precoProdutoPai * quantidadePai;
+    }
+
+    // Atualiza o preço total na tela
+    if (precoTotal <= 0) {
+        $('#preco_total').text('R$ 0.00');
+        $('#CadAulas').prop('disabled', true);
+    } else if (camposPreenchidos == false) {
+        $('#preco_total').text('R$ ' + precoTotal.toFixed(2));
+        $('#CadAulas').prop('disabled', true);
+    } else {
+        $('#preco_total').text('R$ ' + precoTotal.toFixed(2));
+        $('#CadAulas').prop('disabled', false);
+    }
+    }
+
 
 // Adiciona o evento de mudança para o campo pai
-$(document).on('change', 'input[name="desconto_autorizado"]', function() {
-    atualizarPrecoTotal();
-});
-
-// Adiciona o evento de mudança para o campo pai
-$(document).on('change', '#nome_produto, input[name="quantidade"], input[name="desconto"]', function() {
+$(document).on('change', '#nome_produto, input[name="quantidade"]', function() {
     atualizarPrecoTotal();
 });
 
 // Adiciona o evento de mudança para os campos filhos
-$(document).on('change', '.form-group select, .form-group input[name="quantidade"], .form-group input[name="desconto"]', function() {
+$(document).on('change', '.form-group select, .form-group input[name="quantidade"]', function() {
     atualizarPrecoTotal();
 });
 
@@ -397,10 +285,6 @@ $('#nome_produto').on('change', function() {
     atualizarPrecoTotal();
 });
 
-// Adiciona um evento de mudança no select de produtos
-$('#desconto_autorizado').on('change', function() {
-    atualizarPrecoTotal();
-});
 </script>
 {% endblock %}
 
@@ -409,10 +293,8 @@ $('#desconto_autorizado').on('change', function() {
 <script>
 
     $(document).ready(function(){
-        $('.desconto').mask('000,00', {reverse: true})// desconto do campo pai
         $('#preco_min').mask('000,00', {reverse: true})
         $('#preco_max').mask('000,00', {reverse: true})
-        $('#popupdesconto').mask('000,00', {reverse: true}) // desconto do popup
         $('#nome_cliente').on('input', function() { // só está sendo permitido letras minusculas e espaços
             var value = $(this).val();
             var newValue = value.toLowerCase().replace(/[^a-z\s]/ig, ''); // Remove caracteres não permitidos
@@ -426,107 +308,6 @@ $('#desconto_autorizado').on('change', function() {
             }
         });
 
-    });
-
-///////////////////////// AUTORIZAR DESCONTO ////////////////////
-    /// Abrir POP UP ///
-    var abrirPopupBtn = document.getElementById('abrirPopup');
-    var meuPopup = document.getElementById('meuPopup');
-    var confirmarBtn = document.getElementById('confirmarBtn');
-    var fecharBtn = document.getElementById('fecharPopup');
-    var overlay = document.getElementById('overlay');
-
-    abrirPopupBtn.addEventListener('click', function(event) {
-        event.preventDefault();
-        meuPopup.style.display = 'block';
-        overlay.style.display = 'block';
-    });
-
-    // Impedir clique fora do popup
-    document.body.addEventListener('click', function(event) {
-        if (!meuPopup.contains(event.target) && event.target !== abrirPopupBtn) {
-            event.stopPropagation();
-        }
-    });
-
-    /// Confirmar POP UP ///
-    confirmarBtn.addEventListener('click', function(event) {
-        event.preventDefault();
-        var username = document.getElementById('popupUsername').value;
-        var senha = document.getElementById('popupSenha').value;
-        var desconto = document.getElementById('popupdesconto').value;
-
-        if (username && senha && desconto) {
-            $.ajax({
-                url: '/autorizar_desconto/', // Substitua pela URL correta da sua view do Django
-                method: 'POST',
-                data: {
-                    username: username,
-                    senha: senha,
-                    csrfmiddlewaretoken: '{{ csrf_token }}'
-                },
-                success: function(response) {
-                    // Sucesso na autenticação, faça o que desejar com a resposta do servidor
-                    var mensagemSucesso = document.createElement('p');
-                    mensagemSucesso.textContent = 'Autenticação bem-sucedida. Aguarde!';
-                    meuPopup.appendChild(mensagemSucesso);
-                    setTimeout(function() {
-                        meuPopup.style.display = 'none';
-                        abrirPopupBtn.style.display = 'none';
-                        overlay.style.display = 'none';
-                        // Armazenar o valor do desconto no elemento oculto do formulário original
-                        document.getElementById('desconto_autorizado').value = desconto;
-                        document.getElementById('autorizado_por').value = username;
-                        atualizarPrecoTotal(); //Chamando a função pra verificar tudo
-                    }, 2000);
-                },
-                error: function(error) {
-                    // Erro na autenticação, exiba a mensagem de erro
-                    var mensagemErro = document.getElementById('mensagemErro');
-                    mensagemErro.style.display = 'block';
-                    
-                    // Esconder a mensagem de erro após 2 segundos
-                    setTimeout(function() {
-                        mensagemErro.style.display = 'none';
-                    }, 2000);
-                }
-            });
-        } else {
-            var mensagemErro = document.getElementById('mensagemErro');
-            mensagemErro.style.display = 'block';
-
-            // Esconder a mensagem de erro após 2 segundos
-            setTimeout(function() {
-                mensagemErro.style.display = 'none';
-            }, 2000);
-        }
-
-        // Limpar o formulário após o envio
-        document.getElementById('popupForm').reset();
-    });
-
-    /// Fechar POP UP ///
-    var fecharBtn = document.getElementsByClassName('close-button')[0];
-
-    fecharBtn.addEventListener('click', function(event) {
-        event.preventDefault();
-        meuPopup.style.display = 'none';
-        overlay.style.display = 'none';
-    });
-
-    // Impedir o fechamento do POP UP ao clicar fora dele
-    window.addEventListener('click', function(event) {
-        if (event.target === meuPopup) {
-            event.stopPropagation();
-        }
-    });
-
-    // Impedir o envio do formulário ao pressionar Enter dentro do POP UP
-    meuPopup.addEventListener('keydown', function(event) {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            confirmarBtn.click(); // Simular o clique no botão de confirmação
-        }
     });
 </script>
 {% endblock %}

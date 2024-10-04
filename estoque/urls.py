@@ -8,6 +8,7 @@ urlpatterns = [
     path('excluir_produto/<slug:slug>/', views.excluir_produto, name="excluir_produto"),#Excluir Produto
     path('produto/<slug:slug>', views.produto, name="produto"),#Editar Produto
 
+    path('pre_vendas/<slug:slug>', views.pre_vendas, name="pre_vendas"),#Antes da Venda
     path('vendas/<slug:slug>', views.vendas, name="vendas"),#Vender Produto
     path('visualizar_vendas/<slug:slug>', views.visualizar_vendas, name="visualizar_vendas"),#Visualizar Vendas
     path('autorizar_desconto/', views.autorizar_desconto, name="autorizar_desconto"),#Autorizar Desconto

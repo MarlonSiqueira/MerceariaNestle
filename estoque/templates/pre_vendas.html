@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load define_action %}
+
+{% block 'body' %}
+    <div class="container">
+        {% if user.is_authenticated %}
+            {% if user.cargo == "A" or user.cargo == "R" %}
+                <form action="" method="POST">{% csrf_token %}
+                    <br>
+                    <label>CPF </label>
+                    <input type="text" id="cpf" placeholder="Digite o CPF do beneficiado" name="cpf" class="form-control">
+                    <br>
+                    <a href="{% url 'cadastrogeral_comunidade' nome_e_cidade_comunidade %}" class="btn btn-info">Voltar</a>
+                    <input type="submit" value="Criar"class="btn btn-primary">
+                </form>
+            {% endif %}
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+
+<style>
+    .valid {
+        background-color: #d4edda !important; /* Fundo verde claro para indicar campo válido */
+    }
+
+    .invalid {
+        background-color: #f8d7da !important; /* Fundo vermelho claro para indicar campo inválido */
+    }
+</style>
+
+<script>
+
+    $(document).ready(function(){
+        $('#cpf').mask('000.000.000-00')
+
+        // Validações do CPF
+        $('#cpf').on('input', function () {
+            let cpf = $(this).val();
+            if (validateCPF(cpf)) {
+                $(this).removeClass('invalid').addClass('valid');
+                $('form input[type="submit"][value="Criar"]').prop('disabled', false);
+            } else {
+                $(this).removeClass('valid').addClass('invalid');
+                $('form input[type="submit"][value="Criar"]').prop('disabled', true);
+            }
+        });
+
+        $('#btn-criar').on('click', function(e) {
+            // Bloqueia o envio se o CPF não for válido
+            if (!validateCPF($('#cpf').val())) {
+                e.preventDefault();
+                alert('CPF inválido. Corrija antes de enviar.');
+            }
+        });
+
+        // Função de validação de CPF
+        function validateCPF(cpf) {
+            cpf = cpf.replace(/[^\d]+/g, ''); // Remove caracteres não numéricos
+
+            if (cpf.length !== 11) return false;
+
+            // Elimina CPFs inválidos conhecidos
+            if (/^(\d)\1+$/.test(cpf)) return false;
+
+            // Valida os dois dígitos verificadores
+            let soma = 0;
+            for (let i = 1; i <= 9; i++) {
+                soma += parseInt(cpf.substring(i - 1, i)) * (11 - i);
+            }
+            let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+            if (resultado != parseInt(cpf.substring(9, 10))) return false;
+
+            soma = 0;
+            for (let i = 1; i <= 10; i++) {
+                soma += parseInt(cpf.substring(i - 1, i)) * (12 - i);
+            }
+            resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+            if (resultado != parseInt(cpf.substring(10, 11))) return false;
+
+            return true;
+        }
+    });
+
+</script>
+{% endblock %}
