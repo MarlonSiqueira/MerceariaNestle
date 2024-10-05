@@ -146,36 +146,37 @@ def add_produto(request, slug):
 def add_novonome_produto(request, slug):
     opcao = "slug"
     if request.user.is_authenticated:
-        if request.method == "GET":
-            resultado = Consultar_Uma_Comunidade(slug, opcao)
-            if resultado[0] != 0:
+        if request.user.cargo == "A" or request.user.cargo == "R":
+            if request.method == "GET":
+                resultado = Consultar_Uma_Comunidade(slug, opcao)
+                if resultado[0] != 0:
+                    produtos = NomeProduto.objects.filter(nome_comunidade_id=resultado[0])
+
+                    context = {
+                        'produtos': produtos,
+                        'slug': slug,
+                    }
+
+                    return render(request, 'add_novonome_produto.html', context)
+                else:
+                    messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+                    return redirect(reverse('home'))
+            elif request.method == "POST":
+                nome_produto = request.POST.get('nome_produto')
+
+                resultado = Consultar_Uma_Comunidade(slug, opcao)
                 produtos = NomeProduto.objects.filter(nome_comunidade_id=resultado[0])
 
-                context = {
-                    'produtos': produtos,
-                    'slug': slug,
-                }
+                validacao_campos = Validacoes_Post_Cadastro_Produtos_Campos_Preenchidos(request, slug, nome_produto)
+                if validacao_campos:
+                    return validacao_campos
 
-                return render(request, 'add_novonome_produto.html', context)
-            else:
-                messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
-                return redirect(reverse('home'))
-        elif request.method == "POST":
-            nome_produto = request.POST.get('nome_produto')
+                validacao_produto = Cadastrar_Nome_Produto(request, slug, nome_produto, produtos, resultado[0], resultado[4], resultado[5])
+                if validacao_produto:
+                    return validacao_produto
 
-            resultado = Consultar_Uma_Comunidade(slug, opcao)
-            produtos = NomeProduto.objects.filter(nome_comunidade_id=resultado[0])
-
-            validacao_campos = Validacoes_Post_Cadastro_Produtos_Campos_Preenchidos(request, slug, nome_produto)
-            if validacao_campos:
-                return validacao_campos
-
-            validacao_produto = Cadastrar_Nome_Produto(request, slug, nome_produto, produtos, resultado[0], resultado[4], resultado[5])
-            if validacao_produto:
-                return validacao_produto
-
-            messages.add_message(request, messages.SUCCESS, f'Produto {nome_produto} cadastrado com sucesso')
-            return redirect(reverse('add_novonome_produto', kwargs={"slug":slug}))
+                messages.add_message(request, messages.SUCCESS, f'Produto {nome_produto} cadastrado com sucesso')
+                return redirect(reverse('add_novonome_produto', kwargs={"slug":slug}))
 
 
 #Função para a tela de excluir nome dos Produtos
@@ -453,25 +454,208 @@ def pre_vendas(request, slug):
 #Função para a tela de vender produto
 @has_permission_decorator('realizar_venda')
 def vendas(request, slug):
-    if request.method == "GET":
-        preco_min = request.GET.get('preco_min')
-        preco_max = request.GET.get('preco_max')
-        vendedor = request.GET.get('vendedor')
-        get_dt_start = request.GET.get('dt_start')
-        get_dt_end = request.GET.get('dt_end')
+    if request.user.cargo == "A" or request.user.cargo == "R":
+        if request.method == "GET":
+            preco_min = request.GET.get('preco_min')
+            preco_max = request.GET.get('preco_max')
+            vendedor = request.GET.get('vendedor')
+            get_dt_start = request.GET.get('dt_start')
+            get_dt_end = request.GET.get('dt_end')
 
-        opcao = "token_venda"
-        resultado_familia = Consultar_Familia(slug, opcao)
-        if resultado_familia[0] != 0:
-            id_familia = resultado_familia[0]
-            slug_token_venda_familia = resultado_familia[9]
-            nome_cliente_familia = resultado_familia[3]
+            opcao = "token_venda"
+            resultado_familia = Consultar_Familia(slug, opcao)
+            if resultado_familia[0] != 0:
+                id_familia = resultado_familia[0]
+                slug_token_venda_familia = resultado_familia[9]
+                nome_cliente_familia = resultado_familia[3]
+
+                opcao = "id"
+                resultado = Consultar_Uma_Comunidade(resultado_familia[1], opcao)
+                if resultado[0] != 0:
+                    id_comunidade = resultado[0]
+                    slug_comunidade = resultado[1]
+
+                    BuscaVendas = Q(
+                            Q(venda_finalizada=0) & Q(nome_comunidade_id=id_comunidade)     
+                    )
+
+                    vendas = Vendas.objects.filter(BuscaVendas)
+
+                    produtos = Produto.objects.filter(nome_comunidade_id=id_comunidade)
+
+                    nome_produtos = NomeProduto.objects.all()
+                    
+                    context = {
+                        'nome_produtos':nome_produtos, 
+                        'produtos':produtos, 
+                        'vendas': vendas, 
+                        'slug': slug_token_venda_familia,
+                        'slug_voltar_tela': slug_comunidade,
+                        'nome_cliente_familia': nome_cliente_familia
+                    }
+
+                    return render(request, 'vendas.html', context)
+                else:
+                    messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+                    return redirect(reverse('home')) 
+            else:
+                messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+                return redirect(reverse('home'))
+
+        elif request.method == "POST":
+            forma_venda = request.POST.get('forma_venda')
+            preco_total = request.POST.get('preco_total')  # Preço total
+            peso_total = request.POST.get('peso_total')    # Peso total
+            produtos_selecionados_json = request.POST.get('produtos_selecionados')  # Produtos selecionados
+
+            opcao = "token_venda"
+            resultado_familia = Consultar_Familia(slug, opcao)
+            nome_cliente = resultado_familia[3]
+            cpf = resultado_familia[2]
 
             opcao = "id"
             resultado = Consultar_Uma_Comunidade(resultado_familia[1], opcao)
+            id_comunidade = resultado[0]
+            slug_comunidade = resultado[1]
+            slug_voltar_tela = slug_comunidade
+
+            # Converte a string JSON de produtos selecionados para um objeto Python
+            produtos_selecionados = json.loads(produtos_selecionados_json)
+            contador_vendas = len(produtos_selecionados)
+            tabela = "venda"
+
+            with transaction.atomic():
+                num_sequencial = Gerando_Numero_Sequencial(tabela)
+
+                # Se passar pelas validações, crie o objeto VendasControle contendo o ID venda e salve no banco
+                vendacontrole = Criando_Vendas_Controle(nome_cliente, num_sequencial, id_comunidade, contador_vendas, forma_venda)
+
+                preco_original_venda = 0
+                cont_num_aleatorio = 0
+                preco_total_controle = 0
+
+                for produto in produtos_selecionados:
+                    nome_produto, preco, peso, peso_item_total, quantidade = Capturar_Valores_Post_Tela_Vendas(produto)
+
+                    try:
+                        if not nome_cliente:
+                            transaction.set_rollback(True)
+                            messages.add_message(request, messages.ERROR, 'Você não preencheu o nome do cliente')
+                            return redirect(reverse('vendas', kwargs={"slug":slug})) 
+
+                        # Inicio Declaração de Variáveis da Venda 
+                        nome = nome_cliente
+                        num_aleatorio = "v" + str(num_sequencial)
+                        cont_num_aleatorio += 1
+                        label = nome_produto
+                        label_vendas_get = nome_produto
+
+                        nome_cliente = nome_cliente
+                        nome_cliente = unidecode.unidecode(f'{nome_cliente}')
+                        nome_cliente = str(nome_cliente)
+                        
+                        quantidade_estoque_produto = 0
+                        id_produto = 0
+                        id_nome_produto = 0
+                        produto = 0
+                        preco_compra_estoque_produto = 0
+                        preco_venda_estoque_produto = 0
+
+                        data_atual = Capturar_Ano_E_Hora_Atual()
+                        
+                        label = slugify(nome_produto + "-" + data_atual)
+                        slugp = slugify(nome_produto + "-" + data_atual + "-" + num_aleatorio)
+
+                        valor = [id_comunidade, nome_produto]
+                        # Fim Declaração de Variáveis da Venda 
+
+                        labelf = Vendas.objects.filter(label_vendas=label)#Verificando se está sendo preenchido produtos duplicados na mesma venda.
+
+                        if labelf:
+                            transaction.set_rollback(True) #Desfazer alterações caso haja erro em alguma.
+                            messages.add_message(request, messages.ERROR, 'Confira os produtos, parecem duplicados')
+                            return redirect(reverse('vendas', kwargs={"slug":slug}))
+
+                        resultado_nome_produto = Consultar_Nome_Dos_Produtos(valor, opcao)
+                        id_nome_produto = resultado_nome_produto[0]
+
+                        if id_nome_produto != 0:
+                            valor = [id_nome_produto, nome_produto, id_comunidade]
+                            resultado_produto = Consultar_Dados_Dos_Produtos(valor, opcao)
+                            id_produto = resultado_produto[0]
+                            slug_produto = resultado_produto[1]
+
+                            if id_produto != 0:
+                                quantidade_estoque_produto = resultado_produto[4]
+                                preco_compra_estoque_produto = resultado_produto[5]
+                                preco_venda_estoque_produto = preco
+                                nome_produto_str_ = resultado_produto[3]
+                                nome_produto_str = str(nome_produto_str_)
+
+                                if quantidade_estoque_produto <= 0:
+                                    transaction.set_rollback(True)
+                                    messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
+                                    return redirect(reverse('vendas', kwargs={"slug":slug}))              
+                            else:
+                                transaction.set_rollback(True)
+                                messages.add_message(request, messages.ERROR, 'Algo de errado aconteceu com sua venda, caso persista, contate a administração.')
+                                return redirect(reverse('vendas', kwargs={"slug":slug}))  
+                        else:
+                            transaction.set_rollback(True)
+                            messages.add_message(request, messages.ERROR, 'Algo de errado aconteceu com sua venda, caso persista, contate a administração.')
+                            return redirect(reverse('vendas', kwargs={"slug":slug}))                  
+                    except Exception as e:
+                        transaction.set_rollback(True)
+                        messages.add_message(request, messages.ERROR, 'Ocorreu um erro ao processar a venda, fale com a administração')
+                        return redirect(reverse('vendas', kwargs={"slug":slug}))
+
+                    validacao_forma_venda_e_qtd, preco_venda_estoque_produto, preco_venda_estoque_produto_real, preco_venda_total = Valida_Forma_Venda_E_Quantidade(request, slug, forma_venda, quantidade, quantidade_estoque_produto, nome_produto, id_produto)
+
+                    if validacao_forma_venda_e_qtd:
+                        return validacao_forma_venda_e_qtd
+
+                    # Inicio Declaração Variaveis
+                    preco_total_controle += float(preco_venda_total)
+                    preco_venda = preco_venda_estoque_produto_real
+                    preco_original_venda += float(preco_venda_total)
+                    # Fim Declaração Variaveis
+
+                    # Se passar pelas validações, crie o objeto Venda e salve no banco
+                    Criando_Vendas(request, id_nome_produto, quantidade, peso, peso_item_total, forma_venda, preco_compra_estoque_produto, preco_venda, preco_venda_total, slugp, id_comunidade, label, label_vendas_get, id_produto, nome_cliente, vendacontrole)
+
+                    id_user = Capturar_Id_Do_Usuario(request)
+
+                    Cadastro_Planilhas_Troca_E_Estorno_Vendas(request, id_user, nome_produto_str, quantidade, vendacontrole, slugp, slug_comunidade)
+
+                    acao = "vender"
+                    Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug_produto, quantidade, preco_compra_estoque_produto, preco_venda_estoque_produto, acao, slug_comunidade, peso, id_produto)
+
+                # Se passar pelas validações, pega o objeto VendasControle contendo o ID venda gerado lá em cima#
+                Atualiza_Venda_Controle(num_sequencial, preco_total_controle)
+
+                Salvando_Novo_Token_Venda_Familia(cpf, "reset")
+
+                messages.add_message(request, messages.SUCCESS, 'Venda Cadastrada com sucesso')
+                return redirect(reverse('pre_vendas', kwargs={"slug":slug_voltar_tela}))
+
+
+#Função para a tela de vender produto
+@has_permission_decorator('consultar_venda')
+def consultar_vendas(request, slug):
+    if request.user.cargo == "A" or request.user.cargo == "R":
+        if request.method == "GET":
+            nome_cliente = request.GET.get('nome_cliente_filtro')
+            nome = request.GET.get('nome_produto_filtro')
+            preco_min = request.GET.get('preco_min')
+            preco_max = request.GET.get('preco_max')
+            vendedor = request.GET.get('vendedor')
+            get_dt_start = request.GET.get('dt_start')
+            get_dt_end = request.GET.get('dt_end')
+
+            opcao = "slug"
+            resultado = Consultar_Uma_Comunidade(slug, opcao)
             if resultado[0] != 0:
                 id_comunidade = resultado[0]
-                slug_comunidade = resultado[1]
 
                 BuscaVendas = Q(
                         Q(venda_finalizada=0) & Q(nome_comunidade_id=id_comunidade)     
@@ -479,7 +663,7 @@ def vendas(request, slug):
 
                 vendas = Vendas.objects.filter(BuscaVendas)
 
-                validacao, page = Get_Paginacao_Vendas(request, slug_token_venda_familia, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, vendedor, vendas)
+                validacao, page = Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, vendedor, vendas)
                 if validacao:
                     return validacao
 
@@ -492,199 +676,13 @@ def vendas(request, slug):
                     'produtos':produtos, 
                     'vendas': vendas, 
                     'page': page,
-                    'slug': slug_token_venda_familia,
-                    'slug_voltar_tela': slug_comunidade,
-                    'nome_cliente_familia': nome_cliente_familia
+                    'slug': slug,
                 }
 
-                return render(request, 'vendas.html', context)
+                return render(request, 'consultar_vendas.html', context)
             else:
                 messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
                 return redirect(reverse('home')) 
-        else:
-            messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
-            return redirect(reverse('home'))
-
-    elif request.method == "POST":
-        forma_venda = request.POST.get('forma_venda')
-        preco_total = request.POST.get('preco_total')  # Preço total
-        peso_total = request.POST.get('peso_total')    # Peso total
-        produtos_selecionados_json = request.POST.get('produtos_selecionados')  # Produtos selecionados
-
-        opcao = "token_venda"
-        resultado_familia = Consultar_Familia(slug, opcao)
-        nome_cliente = resultado_familia[3]
-        cpf = resultado_familia[2]
-
-        opcao = "id"
-        resultado = Consultar_Uma_Comunidade(resultado_familia[1], opcao)
-        id_comunidade = resultado[0]
-        slug_comunidade = resultado[1]
-        slug_voltar_tela = slug_comunidade
-
-        # Converte a string JSON de produtos selecionados para um objeto Python
-        produtos_selecionados = json.loads(produtos_selecionados_json)
-        contador_vendas = len(produtos_selecionados)
-        tabela = "venda"
-
-        with transaction.atomic():
-            num_sequencial = Gerando_Numero_Sequencial(tabela)
-
-            # Se passar pelas validações, crie o objeto VendasControle contendo o ID venda e salve no banco
-            vendacontrole = Criando_Vendas_Controle(nome_cliente, num_sequencial, id_comunidade, contador_vendas, forma_venda)
-
-            preco_original_venda = 0
-            cont_num_aleatorio = 0
-            preco_total_controle = 0
-
-            for produto in produtos_selecionados:
-                nome_produto, preco, peso, peso_item_total, quantidade = Capturar_Valores_Post_Tela_Vendas(produto)
-
-                try:
-                    if not nome_cliente:
-                        transaction.set_rollback(True)
-                        messages.add_message(request, messages.ERROR, 'Você não preencheu o nome do cliente')
-                        return redirect(reverse('vendas', kwargs={"slug":slug})) 
-
-                    # Inicio Declaração de Variáveis da Venda 
-                    nome = nome_cliente
-                    num_aleatorio = "v" + str(num_sequencial)
-                    cont_num_aleatorio += 1
-                    label = nome_produto
-                    label_vendas_get = nome_produto
-
-                    nome_cliente = nome_cliente
-                    nome_cliente = unidecode.unidecode(f'{nome_cliente}')
-                    nome_cliente = str(nome_cliente)
-                    
-                    quantidade_estoque_produto = 0
-                    id_produto = 0
-                    id_nome_produto = 0
-                    produto = 0
-                    preco_compra_estoque_produto = 0
-                    preco_venda_estoque_produto = 0
-
-                    data_atual = Capturar_Ano_E_Hora_Atual()
-                    
-                    label = slugify(nome_produto + "-" + data_atual)
-                    slugp = slugify(nome_produto + "-" + data_atual + "-" + num_aleatorio)
-
-                    valor = [id_comunidade, nome_produto]
-                    # Fim Declaração de Variáveis da Venda 
-
-                    labelf = Vendas.objects.filter(label_vendas=label)#Verificando se está sendo preenchido produtos duplicados na mesma venda.
-
-                    if labelf:
-                        transaction.set_rollback(True) #Desfazer alterações caso haja erro em alguma.
-                        messages.add_message(request, messages.ERROR, 'Confira os produtos, parecem duplicados')
-                        return redirect(reverse('vendas', kwargs={"slug":slug}))
-
-                    resultado_nome_produto = Consultar_Nome_Dos_Produtos(valor, opcao)
-                    id_nome_produto = resultado_nome_produto[0]
-
-                    if id_nome_produto != 0:
-                        valor = [id_nome_produto, nome_produto, id_comunidade]
-                        resultado_produto = Consultar_Dados_Dos_Produtos(valor, opcao)
-                        id_produto = resultado_produto[0]
-                        slug_produto = resultado_produto[1]
-
-                        if id_produto != 0:
-                            quantidade_estoque_produto = resultado_produto[4]
-                            preco_compra_estoque_produto = resultado_produto[5]
-                            preco_venda_estoque_produto = preco
-                            nome_produto_str_ = resultado_produto[3]
-                            nome_produto_str = str(nome_produto_str_)
-
-                            if quantidade_estoque_produto <= 0:
-                                transaction.set_rollback(True)
-                                messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
-                                return redirect(reverse('vendas', kwargs={"slug":slug}))              
-                        else:
-                            transaction.set_rollback(True)
-                            messages.add_message(request, messages.ERROR, 'Algo de errado aconteceu com sua venda, caso persista, contate a administração.')
-                            return redirect(reverse('vendas', kwargs={"slug":slug}))  
-                    else:
-                        transaction.set_rollback(True)
-                        messages.add_message(request, messages.ERROR, 'Algo de errado aconteceu com sua venda, caso persista, contate a administração.')
-                        return redirect(reverse('vendas', kwargs={"slug":slug}))                  
-                except Exception as e:
-                    transaction.set_rollback(True)
-                    messages.add_message(request, messages.ERROR, 'Ocorreu um erro ao processar a venda, fale com a administração')
-                    return redirect(reverse('vendas', kwargs={"slug":slug}))
-
-                validacao_forma_venda_e_qtd, preco_venda_estoque_produto, preco_venda_estoque_produto_real, preco_venda_total = Valida_Forma_Venda_E_Quantidade(request, slug, forma_venda, quantidade, quantidade_estoque_produto, nome_produto, id_produto)
-
-                if validacao_forma_venda_e_qtd:
-                    return validacao_forma_venda_e_qtd
-
-                # Inicio Declaração Variaveis
-                preco_total_controle += float(preco_venda_total)
-                preco_venda = preco_venda_estoque_produto_real
-                preco_original_venda += float(preco_venda_total)
-                # Fim Declaração Variaveis
-
-                # Se passar pelas validações, crie o objeto Venda e salve no banco
-                Criando_Vendas(request, id_nome_produto, quantidade, peso, peso_item_total, forma_venda, preco_compra_estoque_produto, preco_venda, preco_venda_total, slugp, id_comunidade, label, label_vendas_get, id_produto, nome_cliente, vendacontrole)
-
-                id_user = Capturar_Id_Do_Usuario(request)
-
-                Cadastro_Planilhas_Troca_E_Estorno_Vendas(request, id_user, nome_produto_str, quantidade, vendacontrole, slugp, slug_comunidade)
-
-                acao = "vender"
-                Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug_produto, quantidade, preco_compra_estoque_produto, preco_venda_estoque_produto, acao, slug_comunidade, peso, id_produto)
-
-            # Se passar pelas validações, pega o objeto VendasControle contendo o ID venda gerado lá em cima#
-            Atualiza_Venda_Controle(num_sequencial, preco_total_controle)
-
-            Salvando_Novo_Token_Venda_Familia(cpf, "reset")
-
-            messages.add_message(request, messages.SUCCESS, 'Venda Cadastrada com sucesso')
-            return redirect(reverse('pre_vendas', kwargs={"slug":slug_voltar_tela}))
-
-
-#Função para a tela de vender produto
-@has_permission_decorator('consultar_venda')
-def consultar_vendas(request, slug):
-    if request.method == "GET":
-        nome_cliente = request.GET.get('nome_cliente_filtro')
-        nome = request.GET.get('nome_produto_filtro')
-        preco_min = request.GET.get('preco_min')
-        preco_max = request.GET.get('preco_max')
-        vendedor = request.GET.get('vendedor')
-        get_dt_start = request.GET.get('dt_start')
-        get_dt_end = request.GET.get('dt_end')
-
-        opcao = "slug"
-        resultado = Consultar_Uma_Comunidade(slug, opcao)
-        if resultado[0] != 0:
-            id_comunidade = resultado[0]
-
-            BuscaVendas = Q(
-                    Q(venda_finalizada=0) & Q(nome_comunidade_id=id_comunidade)     
-            )
-
-            vendas = Vendas.objects.filter(BuscaVendas)
-
-            validacao, page = Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, vendedor, vendas)
-            if validacao:
-                return validacao
-
-            produtos = Produto.objects.filter(nome_comunidade_id=id_comunidade)
-
-            nome_produtos = NomeProduto.objects.all()
-            
-            context = {
-                'nome_produtos':nome_produtos, 
-                'produtos':produtos, 
-                'vendas': vendas, 
-                'page': page,
-                'slug': slug,
-            }
-
-            return render(request, 'consultar_vendas.html', context)
-        else:
-            messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
-            return redirect(reverse('home')) 
 
 
 #Função para a tela de vender produto
@@ -846,70 +844,71 @@ def vendas_finalizadas(request, slug):
 
 
 #Função para a tela de visualizar vendas
-@has_permission_decorator('realizar_venda', 'liberar_descontos')
+@has_permission_decorator('consultar_venda')
 def visualizar_vendas (request, slug):
-    if request.method == "GET":
-        venda = Vendas.objects.get(slug=slug)
-        if venda:
-            venda_finalizada = venda.venda_finalizada
-            if venda_finalizada == 0:
-                # Inicio Declaração de Variaveis
-                id_comunidade = venda.nome_comunidade_id
-                opcao = "id"
-                resultado = Consultar_Uma_Comunidade(id_comunidade, opcao)
-                slug_comunidade = resultado[1]
+    if request.user.cargo == "A" or request.user.cargo == "R":
+        if request.method == "GET":
+            venda = Vendas.objects.get(slug=slug)
+            if venda:
+                venda_finalizada = venda.venda_finalizada
+                if venda_finalizada == 0:
+                    # Inicio Declaração de Variaveis
+                    id_comunidade = venda.nome_comunidade_id
+                    opcao = "id"
+                    resultado = Consultar_Uma_Comunidade(id_comunidade, opcao)
+                    slug_comunidade = resultado[1]
 
-                id_nome_produto = venda.nome_produto_id
+                    id_nome_produto = venda.nome_produto_id
 
-                BuscaProduto = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
-                    Q(nome_comunidade_id=id_comunidade) & Q(nome_produto_id=id_nome_produto) 
-                )
-                
-                produto = Produto.objects.get(BuscaProduto)
-                cod_produto = produto.cod_produto
+                    BuscaProduto = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
+                        Q(nome_comunidade_id=id_comunidade) & Q(nome_produto_id=id_nome_produto) 
+                    )
 
-                data_criacao = venda.data_criacao
-                quantidade_venda = venda.quantidade
-                vendido_por = venda.criado_por
-                forma_venda = venda.forma_venda
-                nome_cliente = venda.nome_cliente
+                    produto = Produto.objects.get(BuscaProduto)
+                    cod_produto = produto.cod_produto
 
-                preco_compra = venda.preco_compra#Pegando preco_compra
+                    data_criacao = venda.data_criacao
+                    quantidade_venda = venda.quantidade
+                    vendido_por = venda.criado_por
+                    forma_venda = venda.forma_venda
+                    nome_cliente = venda.nome_cliente
 
-                preco_venda = venda.preco_venda#Pegando preco_venda
-                preco_venda_total = venda.preco_venda_total#Pegando preco_venda total
-                nome_produto = ""
-                # Fim Declaração de Variaveis
+                    preco_compra = venda.preco_compra#Pegando preco_compra
 
-                if preco_compra or preco_venda:
-                    preco_compra = "R$ " + str(preco_compra)
-                    preco_venda = "R$ " + str(preco_venda)
-                    preco_venda_total = "R$ " + str(preco_venda_total)
+                    preco_venda = venda.preco_venda#Pegando preco_venda
+                    preco_venda_total = venda.preco_venda_total#Pegando preco_venda total
+                    nome_produto = ""
+                    # Fim Declaração de Variaveis
 
-                nomes = NomeProduto.objects.all()#Pegando todos os nomes de produtos
-                if nomes:
-                    nomes = nomes.filter(id__contains=venda.nome_produto_id)#Verificando se existem nomes de produto com o nome escolhido
-                    nomes = NomeProduto.objects.get(id=venda.nome_produto_id)
-                    nome_produto = nomes.nome_produto
+                    if preco_compra or preco_venda:
+                        preco_compra = "R$ " + str(preco_compra)
+                        preco_venda = "R$ " + str(preco_venda)
+                        preco_venda_total = "R$ " + str(preco_venda_total)
 
-                context = {
-                    'slug_comunidade': slug_comunidade,
-                    'vendido_por':vendido_por,
-                    'preco_venda':preco_venda,
-                    'preco_compra':preco_compra,
-                    'quantidade_venda':quantidade_venda,
-                    'data_criacao':data_criacao,
-                    'nome_produto':nome_produto,
-                    'forma_venda':forma_venda,
-                    'nome_cliente':nome_cliente,
-                    'venda_finalizada':venda_finalizada,
-                    'preco_venda_total':preco_venda_total,
-                    'cod_produto': cod_produto,
-                }
-                return render(request, 'visualizar_vendas.html', context)
-            else:
-                messages.add_message(request, messages.ERROR, 'Essa venda já foi finalizada')
-                return redirect(reverse('vendas', kwargs={"slug":slug_comunidade}))
+                    nomes = NomeProduto.objects.all()#Pegando todos os nomes de produtos
+                    if nomes:
+                        nomes = nomes.filter(id__contains=venda.nome_produto_id)#Verificando se existem nomes de produto com o nome escolhido
+                        nomes = NomeProduto.objects.get(id=venda.nome_produto_id)
+                        nome_produto = nomes.nome_produto
+
+                    context = {
+                        'slug_comunidade': slug_comunidade,
+                        'vendido_por':vendido_por,
+                        'preco_venda':preco_venda,
+                        'preco_compra':preco_compra,
+                        'quantidade_venda':quantidade_venda,
+                        'data_criacao':data_criacao,
+                        'nome_produto':nome_produto,
+                        'forma_venda':forma_venda,
+                        'nome_cliente':nome_cliente,
+                        'venda_finalizada':venda_finalizada,
+                        'preco_venda_total':preco_venda_total,
+                        'cod_produto': cod_produto,
+                    }
+                    return render(request, 'visualizar_vendas.html', context)
+                else:
+                    messages.add_message(request, messages.ERROR, 'Essa venda já foi finalizada')
+                    return redirect(reverse('vendas', kwargs={"slug":slug_comunidade}))
 
 
 #Função para a tela de visualizar vendas finalizadas

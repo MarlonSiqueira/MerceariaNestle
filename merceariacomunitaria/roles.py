@@ -11,6 +11,11 @@ class Vendedor(AbstractUserRole):
         'logado': True,
         'cadastrar_comunidade': True,
         'acessar_comunidade': True,
+        'realizar_venda': True,
+        'cadastrar_produtos': True,
+        'realizar_venda': True,
+        'editar_produtos': True,
+        'excluir_produtos': True,
     }
 
 class ResponsavelGeral(AbstractUserRole):
@@ -24,6 +29,11 @@ class ResponsavelGeral(AbstractUserRole):
         'acessar_logs': True,
         'alterar_usuarios': True,
         'excluir_vendedor': True,
+        'realizar_venda': True,
+        'consultar_venda': True,
+        'cadastrar_produtos': True,
+        'editar_produtos': True,
+        'excluir_produtos': True,
     }
 
 class Admin(AbstractUserRole):
@@ -39,4 +49,9 @@ class Admin(AbstractUserRole):
         'alterar_usuarios': True,
         'excluir_responsavel_geral': True,
         'excluir_vendedor': True,
+        'realizar_venda': True,
+        'consultar_venda': True,
+        'cadastrar_produtos': True,
+        'editar_produtos': True,
+        'excluir_produtos': True,
     }   
