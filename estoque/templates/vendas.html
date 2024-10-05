@@ -51,110 +51,6 @@
         <a href="{% url 'pre_vendas' slug_voltar_tela %}" class="btn btn-info">Voltar</a>
         <input type="submit" name="CadAulas" id="CadAulas" disabled value="Vender" class="btn btn-primary">
     </form>
-    <br>
-    <form action="" method="GET">
-        {% if page.has_other_pages %}
-            <div class="btn-group" role="group" aria-label="Item Pagination">
-                {% if page.has_previous %} <!-- Se existe alguma página antes, mostre Anterior-->
-                    {% if request.GET.nome_cliente or request.GET.nome_produto %}
-                        <a class="btn btn-info" href="{% url 'vendas' slug %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
-                    {% else%}
-                        <a class="btn btn-info" href="{% url 'vendas' slug %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
-                    {% endif %}
-                {% endif %}
-
-                {% for page_num in page.paginator.page_range %}
-                    {% if request.GET.nome_cliente or request.GET.nome_produto %}
-                        {% if page.number == page_num %}
-                            <button class="btn btn-outline-primary active">
-                                <span>{{ page_num }} (Atual)</span>
-                            </button>
-                        {% else %}
-                            <a href="{% url 'vendas' slug %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
-                                {{ page_num }}</a>
-                        {% endif %}
-                    {% else %}
-                        {% if page.number == page_num %}
-                            <button class="btn btn-outline-primary active">
-                                <span>{{ page_num }} (Atual)</span>
-                            </button>
-                        {% else %}
-                            <a href="{% url 'vendas' slug %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
-                                {{ page_num }}</a>
-                        {% endif %}
-                    {% endif %}
-                {% endfor %}
-                
-                    {% if page.has_next %}<!-- Se existe alguma página depois, mostre Próximo-->
-                        {% if request.GET.nome_cliente or request.GET.nome_produto %}
-                            <a class="btn btn-info" href="{% url 'vendas' slug %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
-                        {% else %}
-                            <a class="btn btn-info" href="{% url 'vendas' slug %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
-                        {% endif %}          
-                    {% endif %}
-            </div>
-        {% endif %}
-        <div class="row">
-            <div class="col-md">
-                <label>Nome do Cliente</label>
-                <input class="form-control" type="text" name="nome_cliente" id="nome_cliente_filtro" value="{{request.GET.nome_cliente}}" placeholder="Nome do Cliente">
-            </div>
-
-            <div class="col-md">
-                <label>Nome do Produto</label>
-                <input class="form-control" type="text" name="nome_produto" value="{{request.GET.nome_produto}}" placeholder="Nome do Produto">
-            </div>
-
-            <div class="col-md">
-                <label>Preço Mínimo</label>
-                <input class="form-control" type="text" name="preco_min" id="preco_min" value="{{request.GET.preco_min}}" placeholder="Preço Mínimo">
-            </div>
-            
-            <div class="col-md">
-                <label>Preço Máximo</label>
-                <input class="form-control" type="text" name="preco_max" id="preco_max" value="{{request.GET.preco_max}}" placeholder="Preço Máximo">
-            </div>
-
-        </div>
-        <div class="row">
-            <div class="col-md">
-                <label>Funcionário</label>
-                <input class="form-control" type="text" value="{{request.GET.vendedor}}" name="vendedor" placeholder="Digite o nome do funcionário">
-            </div>
-            <div class="col-md">
-                <label>De</label>
-                <input class="form-control" type="date" value="{{request.GET.dt_start}}" name="dt_start">
-            </div>
-
-            <div class="col-md">
-                <label>Até</label>
-                <input class="form-control" type="date" value="{{request.GET.dt_end}}" name="dt_end">
-            </div>
-        </div>
-        <br>
-            <input type="submit" value="Filtrar" class="btn btn-success">&nbsp;
-                <a class="btn btn-info" href="{% url 'export_csv_finalizadas' %}?nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">Exportar Planilha</a>&nbsp;
-    </form>
-        <br>
-        <div class="row">
-            {% for venda in page.object_list %}
-                {% if venda.venda_finalizada == 0 %}
-                        <div class="col-md-4">
-                            <div style="background-color: #e0ffff; width: 18rem" class="card" style="width: 18rem;">
-                                <div class="card-body">
-                                    <h5 class="card-title">{{venda.label_vendas_get}}</h5>
-                                    <h5 class="card-title">Cliente: {{venda.nome_cliente}}</h5>
-                                    <a href="{% url 'visualizar_vendas' venda.slug %}" class="btn btn-primary">Visualizar</a>
-                                </div>
-                            </div>
-                            <br>
-                        </div>
-                {% endif %}
-                {% if forloop.counter|divisibleby:3 %}
-                    <div class="clearfix"></div>
-                {% endif %}
-            {% endfor %}
-        </div>
 </div>
 
 <style>
@@ -296,20 +192,6 @@
                 $(this).val(newValue);
             }
         });
-
-        $('#nome_cliente_filtro').on('input', function() { // só está sendo permitido letras minusculas e espaços
-            var value = $(this).val();
-            var newValue = value.toLowerCase().replace(/[^a-z\s]/ig, ''); // Remove caracteres não permitidos
-
-            if (newValue.length > 30) {
-                newValue = newValue.substring(0, 30); // Limita o tamanho a 30 caracteres
-            }
-            
-            if (value !== newValue) {
-                $(this).val(newValue);
-            }
-        });
-
     });
 </script>
 {% endblock %}

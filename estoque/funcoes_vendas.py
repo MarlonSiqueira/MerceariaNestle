@@ -47,7 +47,7 @@ def Validacao_Objeto_Vendas(vendas):
     return resultado  # Retorna a lista de resultados
 
 
-def Get_Paginacao_Vendas(request, slug_token_venda_familia, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, vendedor, vendas):
+def Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, vendedor, vendas):
     #Aqui está removendo os acentos do nome do cliente
     nome_cliente_novo = unidecode.unidecode(f'{nome_cliente}')
     nome_cliente_novo = str(nome_cliente_novo)
@@ -68,7 +68,7 @@ def Get_Paginacao_Vendas(request, slug_token_venda_familia, nome_cliente, nome, 
                 page = logs_paginator.get_page(page_num) #Passando os 18 logs para page
             if not vendas:
                 messages.add_message(request, messages.ERROR, 'Não há vendas para esse cliente')
-                return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia})), page
+                return redirect(reverse('vendas', kwargs={"slug":slug})), page
         if nome:
             vendas = vendas.filter(label_vendas_get__icontains=nome)#Verificando se existem vendas com o nome do produto preenchido
             if vendas:
@@ -78,7 +78,7 @@ def Get_Paginacao_Vendas(request, slug_token_venda_familia, nome_cliente, nome, 
                 page = logs_paginator.get_page(page_num) 
             if not vendas:
                 messages.add_message(request, messages.ERROR, 'Não há vendas desse produto')
-                return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia})), page   
+                return redirect(reverse('vendas', kwargs={"slug":slug})), page   
         if vendedor:
             vendas = vendas.filter(criado_por__icontains=vendedor)#Verificando se existem vendas com o nome do vendedor preenchida
             if vendas:
@@ -88,13 +88,13 @@ def Get_Paginacao_Vendas(request, slug_token_venda_familia, nome_cliente, nome, 
                 page = logs_paginator.get_page(page_num) 
             if not vendas:
                 messages.add_message(request, messages.ERROR, 'Não há vendas desse vendedor')
-                return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia})), page 
+                return redirect(reverse('vendas', kwargs={"slug":slug})), page 
         if get_dt_start and not get_dt_end:
             messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto a data início quanto a data fim')
-            return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia})), page
+            return redirect(reverse('vendas', kwargs={"slug":slug})), page
         if get_dt_end and not get_dt_start:
             messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto a data início quanto a data fim')
-            return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia})), page
+            return redirect(reverse('vendas', kwargs={"slug":slug})), page
         if get_dt_start and get_dt_end:
             vendas = vendas.filter(dia__range=[get_dt_start, get_dt_end])
             if vendas:
@@ -104,12 +104,12 @@ def Get_Paginacao_Vendas(request, slug_token_venda_familia, nome_cliente, nome, 
                 page = logs_paginator.get_page(page_num) 
             if not vendas:
                 messages.add_message(request, messages.ERROR, 'Não foi encontrado nenhuma venda entre essas datas')
-                return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia})), page
+                return redirect(reverse('vendas', kwargs={"slug":slug})), page
 
 
         if preco_min and not preco_max or not preco_min and preco_max:
             messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto o preço mínimo quanto o preço máximo')
-            return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia})), page
+            return redirect(reverse('vendas', kwargs={"slug":slug})), page
 
         if preco_min and preco_max:
             preco_min = preco_min.replace(',', '.').replace('R$', '').replace(' ', '') # Substitui a vírgula pelo ponto, R$ por vazio e espaço por vazio
@@ -131,7 +131,7 @@ def Get_Paginacao_Vendas(request, slug_token_venda_familia, nome_cliente, nome, 
 
         if not vendas:
             messages.add_message(request, messages.ERROR, 'Não há vendas entre esses valores')
-            return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia})), page 
+            return redirect(reverse('vendas', kwargs={"slug":slug})), page 
         #Fim do Filtro
     
     return None, page
