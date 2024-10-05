@@ -202,7 +202,7 @@ def Gerando_Numero_Sequencial(tabela):
             last_number = int(last_number)  # Converter para inteiro
             num_sequencial = str(last_number + 1).zfill(9) #Criando um com 9 digitos e somando +1 ao numero
         else:
-            num_sequencial = '000000001' #caso seja o primeiro será o 000000001
+            num_sequencial = '000000110' #caso seja o primeiro será o 000000110
 
         return num_sequencial
     elif tabela == "venda":
@@ -211,7 +211,7 @@ def Gerando_Numero_Sequencial(tabela):
             last_number = int(last_number)  # Converter para inteiro
             num_sequencial = str(last_number + 1).zfill(9) #Criando um com 9 digitos e somando +1 ao numero
         else:
-            num_sequencial = '000000001' #caso seja o primeiro será o 000000001
+            num_sequencial = '000000110' #caso seja o primeiro será o 000000110
 
         return num_sequencial
 
@@ -411,4 +411,57 @@ def Get_Paginacao(request, nome_produto, dia, acao, slug, paginacao):
                 messages.add_message(request, messages.ERROR, f'Não há registro de Logs da ação {acao}')
                 return redirect(reverse('export_entrada_produtos', kwargs={"slug":slug})), page
     
+    return None, page
+
+
+def Get_Paginacao_Logs(request, nome_user, dia, acao, model, paginacao):
+    paginacao = paginacao.order_by('data')
+    paginacao_paginator = Paginator(paginacao, 10) #Pegando a VAR Logs com todos os Logs e colocando dentro do Paginator pra trazer 10 por página
+    page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
+    page = paginacao_paginator.get_page(page_num) #Passando os 10 logs para page
+
+    if nome_user or dia or model or acao:
+        if nome_user:
+            paginacao = paginacao.filter(nome_user__icontains=nome_user)#Verificando se existem Logs com o nome preenchido
+            if paginacao:
+                paginacao = paginacao.order_by('data')
+                logs_paginator = Paginator(paginacao, 10) #Pegando a VAR Logs com todos os Logs e colocando dentro do Paginator pra trazer 10 por página
+                page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
+                page = paginacao_paginator.get_page(page_num) #Passando os 10 logs para page
+            if not paginacao:
+                messages.add_message(request, messages.ERROR, f'Não há registro de Logs do usuário {nome_user}')
+                return redirect(reverse('listar_logs')), page
+        if dia:
+            paginacao = paginacao.filter(dia__contains=dia)#Verificando se existem Logs no dia escolhido
+            data = datetime.strptime(dia, "%Y-%m-%d").date()#Pega dia da tela e manda pra var data
+            dataFormatada = data.strftime('%d/%m/%Y')#pega var data e formata em str e manda pra var dataformatada
+            if paginacao:
+                paginacao = paginacao.order_by('data')
+                paginacao_paginator = Paginator(paginacao, 10) 
+                page_num = request.GET.get('page')
+                page = paginacao_paginator.get_page(page_num) 
+            if not paginacao:
+                messages.add_message(request, messages.ERROR, f'Não há registro de Logs do dia {dataFormatada}')
+                return redirect(reverse('listar_logs')), page  
+        if model:
+            paginacao = paginacao.filter(model__icontains=model)#Verificando se existem Logs da model preenchida
+            if paginacao:
+                paginacao = paginacao.order_by('data')
+                paginacao_paginator = Paginator(paginacao, 10) 
+                page_num = request.GET.get('page')
+                page = paginacao_paginator.get_page(page_num) 
+            if not paginacao:
+                messages.add_message(request, messages.ERROR, f'Não há registro de Logs do Modelo {model}')
+                return redirect(reverse('listar_logs')), page    
+        if acao:
+            paginacao = paginacao.filter(acao__icontains=acao)#Verificando se existem Logs da ação preenchida
+            if paginacao:
+                paginacao = paginacao.order_by('data')
+                paginacao_paginator = Paginator(paginacao, 10) 
+                page_num = request.GET.get('page')
+                page = paginacao_paginator.get_page(page_num) 
+            if not paginacao:
+                messages.add_message(request, messages.ERROR, f'Não há registro de Logs da ação {acao}')
+                return redirect(reverse('listar_logs')), page 
+
     return None, page

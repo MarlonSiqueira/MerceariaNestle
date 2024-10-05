@@ -16,6 +16,7 @@ from django.template.defaultfilters import slugify
 from django.http import JsonResponse
 import os
 import re
+import json
 import itertools
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
@@ -40,12 +41,6 @@ from decimal import Decimal, ROUND_DOWN, ROUND_UP
 #Venda_finalizada = 2 "estorno"
 # #Não apagar
 
-if os.environ.get('DJANGO_ENV') == 'production':
-    imagem_produto = os.environ.get('imagem_produto')
-    imagem_produto_venda = os.environ.get('imagem_produto_venda')
-else:
-    imagem_produto = os.environ.get('imagem_produto_dev')
-    imagem_produto_venda = os.environ.get('imagem_produto_venda_dev')
 
 #Função para a tela de logs
 @has_permission_decorator('acessar_logs')#Apenas o ADMIN e o Padre tem acesso.
@@ -55,58 +50,14 @@ def listar_logs(request):
         dia = request.GET.get('dia')
         model = request.GET.get('model')
         acao = request.GET.get('acao')
-        logs = LogsItens.objects.all()
-
-        logs = logs.order_by('data')
-        logs_paginator = Paginator(logs, 10) #Pegando a VAR Logs com todos os Logs e colocando dentro do Paginator pra trazer 10 por página
-        page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
-        page = logs_paginator.get_page(page_num) #Passando os 10 logs para page
-
-        if nome_user or dia or model or acao:
-            if nome_user:
-                logs = logs.filter(nome_user__icontains=nome_user)#Verificando se existem Logs com o nome preenchido
-                if logs:
-                    logs = logs.order_by('data')
-                    logs_paginator = Paginator(logs, 10) #Pegando a VAR Logs com todos os Logs e colocando dentro do Paginator pra trazer 10 por página
-                    page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
-                    page = logs_paginator.get_page(page_num) #Passando os 10 logs para page
-                if not logs:
-                    messages.add_message(request, messages.ERROR, f'Não há registro de Logs do usuário {nome_user}')
-                    return redirect(reverse('listar_logs'))  
-            if dia:
-                logs = logs.filter(dia__contains=dia)#Verificando se existem Logs no dia escolhido
-                data = datetime.strptime(dia, "%Y-%m-%d").date()#Pega dia da tela e manda pra var data
-                dataFormatada = data.strftime('%d/%m/%Y')#pega var data e formata em str e manda pra var dataformatada
-                if logs:
-                    logs = logs.order_by('data')
-                    logs_paginator = Paginator(logs, 10) 
-                    page_num = request.GET.get('page')
-                    page = logs_paginator.get_page(page_num) 
-                if not logs:
-                    messages.add_message(request, messages.ERROR, f'Não há registro de Logs do dia {dataFormatada}')
-                    return redirect(reverse('listar_logs'))  
-            if model:
-                logs = logs.filter(model__icontains=model)#Verificando se existem Logs da model preenchida
-                if logs:
-                    logs = logs.order_by('data')
-                    logs_paginator = Paginator(logs, 10) 
-                    page_num = request.GET.get('page')
-                    page = logs_paginator.get_page(page_num) 
-                if not logs:
-                    messages.add_message(request, messages.ERROR, f'Não há registro de Logs do Modelo {model}')
-                    return redirect(reverse('listar_logs'))    
-            if acao:
-                logs = logs.filter(acao__icontains=acao)#Verificando se existem Logs da ação preenchida
-                if logs:
-                    logs = logs.order_by('data')
-                    logs_paginator = Paginator(logs, 10) 
-                    page_num = request.GET.get('page')
-                    page = logs_paginator.get_page(page_num) 
-                if not logs:
-                    messages.add_message(request, messages.ERROR, f'Não há registro de Logs da ação {acao}')
-                    return redirect(reverse('listar_logs'))                    
+        paginacao = LogsItens.objects.all()
+        
+        validacao, page = Get_Paginacao_Logs(request, nome_user, dia, acao, model, paginacao)
+        if validacao:
+            return validacao
 
         return render(request, 'listar_logs.html', {'page': page})
+
 
 #Função de redirect para tela de adicionar produto liberando o produto pra ser alterado novamente ao clicar em "Voltar"
 @has_permission_decorator('cadastrar_produtos')
@@ -122,6 +73,7 @@ def add_produto_redirect(request, slug):
                     alterando.save()
                     return redirect(reverse('add_produto', kwargs={"slug":slug})) 
                     
+
 #Função para a tela de adicionar produto
 @has_permission_decorator('cadastrar_produtos')
 def add_produto(request, slug):
@@ -433,142 +385,6 @@ def cadastrar_comunidade (request):
         messages.add_message(request, messages.SUCCESS, (f'Comunidade: {nome} da cidade: {cidade} cadastrada com sucesso'))
         return redirect(reverse('home'))
 
-#Função para a tela de alterar produto
-@has_permission_decorator('editar_festa')
-def editar_festa (request, slug):
-    if request.method == "GET":
-        festa = Festa.objects.get(slug=slug)
-        data = festa.__dict__
-        data['slug'] = festa.slug
-        form = FestaForm(initial=data)
-
-        festa = Festa.objects.filter(ano_festa=slug)
-        if festa:
-            festa_atual = Festa.objects.get(ano_festa=slug)
-            ano_atual = festa_atual.__dict__
-            ano_atual['ano_festa'] = festa_atual.ano_festa
-            ano_atual_str = ano_atual['ano_festa']
-            data_modelo = timezone.localtime(timezone.now())
-            data_modelo_1 = data_modelo.strftime("%Y")
-        if request.user.cargo == "A" or request.user.cargo == "P" or request.user.cargo == "CF": 
-            if ano_atual_str == data_modelo_1:
-                return render(request, 'editar_festa.html', {'form': form, 'ano_atual_str':ano_atual_str,'data_modelo_1':data_modelo_1})
-            else:
-                messages.add_message(request, messages.ERROR, (f'Você não tem permissão para editar a festa do ano: {slug}.'))             
-                return redirect(reverse('cadastrogeral_festa', kwargs={"ano_festa":slug}))  
-        else:
-            messages.add_message(request, messages.ERROR, (f'Você não tem permissão para editar a festa do ano: {slug}.'))             
-            return redirect(reverse('cadastrogeral_festa', kwargs={"ano_festa":slug}))
-
-    elif request.method == "POST":
-        try:
-            edicao_festa = request.POST.get('edicao_festa')
-            casal_festa = request.POST.get('casal_festa')
-            casal_lojinha = request.POST.get('casal_lojinha')
-            fornecedor_camisas = request.POST.get('fornecedor_camisas')
-            fornecedor_produtos = request.POST.get('fornecedor_produtos')
-            
-            ano_festa_antiga = Festa.objects.get(slug=slug)
-            festaall = Festa.objects.all()
-            festa = get_object_or_404(Festa, slug=slug) #pegando o slug da festa
-            for p in festaall: #procurando todos as festas
-                if p == festa: #Quando o slug da festa for igual ao da tela, entra aqui
-                    festaall = Festa.objects.all() #procurando todas as festas cadastradas
-                    anofesta = p.ano_festa #pegando o ano da festa da tela atual
-
-            ano_festa_antiga1 = ano_festa_antiga.__dict__
-            ano_festa_antiga1['ano_festa'] = ano_festa_antiga.ano_festa
-            ano_festa_antiga1 = ano_festa_antiga1['ano_festa']
-
-            alterado_por_ = auth.get_user(request)
-            alterado_por = alterado_por_.username
-
-            data_modelo_update = timezone.localtime(timezone.now())
-            data_modelo_update_1 = data_modelo_update.strftime("%d/%m/%Y %H:%M:%S") 
-            data_alteracao = data_modelo_update_1
-
-            if edicao_festa or casal_festa or casal_lojinha or fornecedor_camisas or fornecedor_produtos:
-                if not edicao_festa:
-                    messages.add_message(request, messages.ERROR, 'Edição da Festa não pode ser vazio')
-                    return redirect(reverse('cadastrogeral_festa', kwargs={"ano_festa":anofesta}))
-                if not casal_festa:
-                    messages.add_message(request, messages.ERROR, 'Casal Festa não pode ser vazio')
-                    return redirect(reverse('cadastrogeral_festa', kwargs={"ano_festa":anofesta}))
-                if not casal_lojinha:
-                    messages.add_message(request, messages.ERROR, 'Casal Lojinha não pode ser vazio')
-                    return redirect(reverse('cadastrogeral_festa', kwargs={"ano_festa":anofesta}))
-                if not fornecedor_camisas:
-                    messages.add_message(request, messages.ERROR, 'Fornecedor Camisas não pode ser vazio')
-                    return redirect(reverse('cadastrogeral_festa', kwargs={"ano_festa":anofesta}))
-                if not fornecedor_produtos:
-                    messages.add_message(request, messages.ERROR, 'Fornecedor Produtos não pode ser vazio')
-                    return redirect(reverse('cadastrogeral_festa', kwargs={"ano_festa":anofesta}))
-
-                festa_antiga = None
-                festa_antiga = Festa.objects.get(slug=slug)
-                campos_alteracao = []
-                if festa_antiga:
-                    festa_antiga.edicao_festa = str(festa_antiga.edicao_festa)
-                    festa_antiga.casal_festa = str(festa_antiga.casal_festa)
-                    festa_antiga.casal_lojinha = str(festa_antiga.casal_lojinha)
-                    festa_antiga.fornecedor_camisas = str(festa_antiga.fornecedor_camisas)
-                    festa_antiga.fornecedor_produtos = str(festa_antiga.fornecedor_produtos)
-
-                    if festa_antiga.edicao_festa != edicao_festa:
-                        campos_alteracao.append('edicao_festa')                  
-                    if festa_antiga.casal_festa != casal_festa:
-                        campos_alteracao.append('casal_festa')  
-                    if festa_antiga.casal_lojinha != casal_lojinha:
-                        campos_alteracao.append('casal_lojinha')
-                    if festa_antiga.fornecedor_camisas != fornecedor_camisas:
-                        campos_alteracao.append('fornecedor_camisas')
-                    if festa_antiga.fornecedor_produtos != fornecedor_produtos:
-                        campos_alteracao.append('fornecedor_produtos')
-
-                    if campos_alteracao == []:
-                        messages.add_message(request, messages.ERROR, (f'Festa {anofesta} não teve nada alterado'))
-                        return redirect(reverse('cadastrogeral_festa', kwargs={"ano_festa":anofesta}))
-
-                    festa = Festa.objects.get(slug=slug)
-                    festa.edicao_festa = edicao_festa
-                    festa.casal_festa = casal_festa
-                    festa.casal_lojinha = casal_lojinha
-                    festa.fornecedor_camisas = fornecedor_camisas
-                    festa.fornecedor_produtos = fornecedor_produtos
-                    festa.alterado_por = alterado_por
-                    festa.data_alteracao = data_alteracao
-                    festa.save()
-
-                    festa_nova = None
-                    festa_nova = Festa.objects.get(slug=slug)
-                    if campos_alteracao:
-                        valores_antigos = []
-                        valores_novos = []
-                        for campo in campos_alteracao:
-                            valor_antigo = getattr(festa_antiga, campo)
-                            valor_novo = getattr(festa_nova, campo)
-                            valores_antigos.append(f'{campo}: {valor_antigo}')
-                            valores_novos.append(f'{campo}: {valor_novo}')
-                            
-                    id_user = Users.objects.get(username=request.user)
-                    id_user = id_user.id
-                    LogsItens.objects.create(
-                        id_user = id_user,
-                        nome_user=request.user,
-                        nome_objeto=str(slug),
-                        acao='Alteração',
-                        model = "Festa",
-                        campos_alteracao=', '.join(campos_alteracao),
-                        valores_antigos=', '.join(valores_antigos),
-                        valores_novos=', '.join(valores_novos)
-                    )
-
-                messages.add_message(request, messages.SUCCESS, (f'Festa {anofesta} atualizada com sucesso'))
-                return redirect(reverse('cadastrogeral_festa', kwargs={"ano_festa":anofesta}))
-        except Exception as e:
-            messages.error(request, 'Erro ao atualizar a Festa {}'.format(str(e)))
-            return redirect(reverse('cadastrogeral_festa', kwargs={"ano_festa":anofesta}))
-
 
 #Função para a tela de antes de vender produto
 @has_permission_decorator('realizar_venda')
@@ -596,31 +412,40 @@ def pre_vendas(request, slug):
         valor = [resultado[0], cpf]
 
         resultado_familia = Consultar_Familia(valor, opcao)
-
+        ativo = resultado_familia[6]
+        ultima_compra = resultado_familia[4]
         if resultado_familia[0] != 0:
-            if resultado_familia[4]:
-                ultima_compra = resultado_familia[4]
+            if ativo != 0:
+                if ativo == "sim":
+                    if ultima_compra != 0:
+                        
 
-                # Data de hoje
-                hoje = datetime.today().date()
+                        # Data de hoje
+                        hoje = datetime.today().date()
 
-                # Verificar se já passaram mais de 7 dias
-                diferenca = hoje - ultima_compra
-                if diferenca.days >= 7:
-                    token_venda = Gerar_Token()
-                    Salvando_Novo_Token_Venda_Familia(cpf, token_venda)
-                    
-                    messages.add_message(request, messages.SUCCESS, (f'Esse CPF está autorizado a realizar compra'))
-                    return redirect(reverse('vendas', kwargs={"slug":token_venda}))
-                else:
-                    messages.add_message(request, messages.ERROR, (f'Esse CPF realizou compra nos últimos 7 dias'))
+                        # Verificar se já passaram mais de 7 dias
+                        diferenca = hoje - ultima_compra
+                        if diferenca.days >= 7:
+                            token_venda = Gerar_Token()
+                            Salvando_Novo_Token_Venda_Familia(cpf, token_venda)
+                            
+                            messages.add_message(request, messages.SUCCESS, (f'Esse CPF está autorizado a realizar compra'))
+                            return redirect(reverse('vendas', kwargs={"slug":token_venda}))
+                        else:
+                            messages.add_message(request, messages.ERROR, (f'Esse CPF realizou compra nos últimos 7 dias'))
+                            return redirect(reverse('pre_vendas', kwargs={"slug":slug}))
+                    else:
+                        token_venda = Gerar_Token()
+                        Salvando_Novo_Token_Venda_Familia(cpf, token_venda)
+
+                        messages.add_message(request, messages.SUCCESS, (f'Esse CPF está autorizado a realizar compra'))
+                        return redirect(reverse('vendas', kwargs={"slug":token_venda}))
+                elif ativo == "nao":
+                    messages.add_message(request, messages.ERROR, (f'Esse CPF não está ativo na comunidade, caso isso seja um problema, favor contatar a administração'))
                     return redirect(reverse('pre_vendas', kwargs={"slug":slug}))
             else:
-                token_venda = Gerar_Token()
-                Salvando_Novo_Token_Venda_Familia(cpf, token_venda)
-
-                messages.add_message(request, messages.SUCCESS, (f'Esse CPF está autorizado a realizar compra'))
-                return redirect(reverse('vendas', kwargs={"slug":token_venda}))
+                messages.add_message(request, messages.ERROR, (f'CPF não encontrado nessa comunidade'))
+                return redirect(reverse('pre_vendas', kwargs={"slug":slug}))
         else:
             messages.add_message(request, messages.ERROR, (f'CPF não encontrado nessa comunidade'))
             return redirect(reverse('pre_vendas', kwargs={"slug":slug}))
@@ -656,91 +481,10 @@ def vendas(request, slug):
 
                 vendas = Vendas.objects.filter(BuscaVendas)
 
-                #Aqui está removendo os acentos do nome do cliente
-                nome_cliente_novo = unidecode.unidecode(f'{nome_cliente}')
-                nome_cliente_novo = str(nome_cliente_novo)
+                validacao, page = Get_Paginacao_Vendas(request, slug_token_venda_familia, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, vendedor, vendas)
+                if validacao:
+                    return validacao
 
-                vendas = vendas.order_by('-data_criacao')
-                logs_paginator = Paginator(vendas, 80) #Pegando a VAR Logs com todas as vendas e colocando dentro do Paginator pra trazer 80 por página
-                page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
-                page = logs_paginator.get_page(page_num) #Passando as 80 vendas para page
-
-                #Parte do Filtro
-                if nome_cliente or nome or preco_min or preco_max or get_dt_start or get_dt_end or vendedor:
-                    if nome_cliente:
-                        vendas = vendas.filter(nome_cliente__icontains=nome_cliente_novo)#Verificando se existem vendas com o nome do cliente preenchido
-                        if vendas:
-                            vendas = vendas.order_by('dia')
-                            logs_paginator = Paginator(vendas, 18) 
-                            page_num = request.GET.get('page')
-                            page = logs_paginator.get_page(page_num) #Passando os 18 logs para page
-                        if not vendas:
-                            messages.add_message(request, messages.ERROR, 'Não há vendas para esse cliente')
-                            return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia}))   
-                    if nome:
-                        vendas = vendas.filter(label_vendas_get__icontains=nome)#Verificando se existem vendas com o nome do produto preenchido
-                        if vendas:
-                            vendas = vendas.order_by('dia')
-                            logs_paginator = Paginator(vendas, 18) 
-                            page_num = request.GET.get('page')
-                            page = logs_paginator.get_page(page_num) 
-                        if not vendas:
-                            messages.add_message(request, messages.ERROR, 'Não há vendas desse produto')
-                            return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia}))   
-                    if vendedor:
-                        vendas = vendas.filter(criado_por__icontains=vendedor)#Verificando se existem vendas com o nome do vendedor preenchida
-                        if vendas:
-                            vendas = vendas.order_by('dia')
-                            logs_paginator = Paginator(vendas, 18) 
-                            page_num = request.GET.get('page')
-                            page = logs_paginator.get_page(page_num) 
-                        if not vendas:
-                            messages.add_message(request, messages.ERROR, 'Não há vendas desse vendedor')
-                            return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia})) 
-                    if get_dt_start and not get_dt_end:
-                        messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto a data início quanto a data fim')
-                        return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia}))
-                    if get_dt_end and not get_dt_start:
-                        messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto a data início quanto a data fim')
-                        return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia}))
-                    if get_dt_start and get_dt_end:
-                        vendas = vendas.filter(dia__range=[get_dt_start, get_dt_end])
-                        if vendas:
-                            vendas = vendas.order_by('dia')
-                            logs_paginator = Paginator(vendas, 18) 
-                            page_num = request.GET.get('page')
-                            page = logs_paginator.get_page(page_num) 
-                        if not vendas:
-                            messages.add_message(request, messages.ERROR, 'Não foi encontrado nenhuma venda entre essas datas')
-                            return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia}))
-
-
-                    if preco_min and not preco_max or not preco_min and preco_max:
-                        messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto o preço mínimo quanto o preço máximo')
-                        return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia}))
-
-                    if preco_min and preco_max:
-                        preco_min = preco_min.replace(',', '.').replace('R$', '').replace(' ', '') # Substitui a vírgula pelo ponto, R$ por vazio e espaço por vazio
-                        preco_max = preco_max.replace(',', '.').replace('R$', '').replace(' ', '') # Substitui a vírgula pelo ponto, R$ por vazio e espaço por vazio
-
-                    if not preco_min:
-                            preco_min = 0
-                    if not preco_max:
-                            preco_max = 9999999
-
-                    preco_min = float(preco_min) #transformando em float
-                    preco_max = float(preco_max) #transformando em float
-                    vendas = vendas.filter(preco_venda__gte=preco_min).filter(preco_venda__lte=preco_max)#Verificando se existem produtos entre os preços preenchidos
-                    if vendas:
-                        vendas = vendas.order_by('dia')
-                        logs_paginator = Paginator(vendas, 18) 
-                        page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
-                        page = logs_paginator.get_page(page_num) 
-
-                    if not vendas:
-                        messages.add_message(request, messages.ERROR, 'Não há vendas entre esses valores')
-                        return redirect(reverse('vendas', kwargs={"slug":slug_token_venda_familia})) 
-                    #Fim do Filtro
                 produtos = Produto.objects.filter(nome_comunidade_id=id_comunidade)
 
                 nome_produtos = NomeProduto.objects.all()
@@ -763,452 +507,453 @@ def vendas(request, slug):
             return redirect(reverse('home'))
 
     elif request.method == "POST":
-        nome_cliente = request.POST.get('nome_cliente')
-        nomes = request.POST.getlist('nome_produto')
-        quantidades = request.POST.getlist('quantidade')
         forma_venda = request.POST.get('forma_venda')
-        autorizado_por = request.POST.get('autorizado_por')
+        nome_cliente = request.POST.get('nome_cliente')
+        preco_total = request.POST.get('preco_total')  # Preço total
+        peso_total = request.POST.get('peso_total')      # Peso total
+        produtos_selecionados_json = request.POST.get('produtos_selecionados')  # Produtos selecionados
 
-        preco_total_controle = 0
-        contador_vendas = len(nomes)
+        # Converte a string JSON de produtos selecionados para um objeto Python
+        produtos_selecionados = json.loads(produtos_selecionados_json)
+        print("esses são os produtos selecionados: ", produtos_selecionados)
+        # Agora você pode usar os dados conforme necessário, por exemplo, salvar no banco de dados
+        for produto in produtos_selecionados:
+            label = produto['label']
+            preco = produto['preco']
+            peso = produto['peso']
+            quantidade = produto['quantidade']
 
-        with transaction.atomic():
-            if not nome_cliente:
-                transaction.set_rollback(True)
-                messages.add_message(request, messages.ERROR, 'Nome do Cliente não pode ser vazio')
-                return redirect(reverse('vendas', kwargs={"slug":slug}))
 
-            ano_festa = slug
-            if ano_festa:
-                festa = Festa.objects.all()
-                for festa in festa:
-                    if festa.ano_festa == ano_festa:
-                        ano_festa = festa.id
+            print("esse é o label: ", label)
+            print("esse é o preco: ", preco)
+            print("esse é o peso: ", peso)
+            print("esse é a quantidade: ", quantidade)
+            print("----------------------------------------")
 
-            last_number = Vendas.objects.aggregate(max_id=Max('id_venda'))['max_id'] #Pegando o valor mais alto de ID_VENDA
-            if last_number is not None:
-                last_number = int(last_number)  # Converter para inteiro
-                number = str(last_number + 1).zfill(8) #Criando um com 8 digitos e somando +1 ao numero
-            else:
-                number = '00000001' #caso seja o primeiro será o 00000001
 
-            #Pegando os últimos 8 digitos da coluna slug na tabela Vendas
-            # last_number_slug = Vendas.objects.annotate(venda_slug=Right('slug', 8)).aggregate(max_slug=Max('venda_slug'))['max_slug']
-            # if last_number_slug is not None:
-            #     last_number_slug = int(last_number_slug)  # Converter para inteiro
-            #     number_slug = str(last_number_slug + 1).zfill(8) #Criando um com 8 digitos e somando +1 ao numero
-            # else:
-            #     number_slug = '00000001' #caso seja o primeiro será o 00000001
+        
+            preco_total_controle = 0
+            contador_vendas = len(nomes)
 
-            # Se passar pelas validações, crie o objeto VendasControle contendo o ID venda e salve no banco
-            vendacontrole = VendasControle.objects.create(
-                nome_cliente = nome_cliente,
-                id_venda = number,
-                slug = number,
-                venda_finalizada = 0,
-                ano_festa_id = ano_festa,
-                alteracoes_finalizadas = False,
-                novo_preco_venda_total = 0,
-                valor_cancelado = 0,
-                valor_pago = 0,
-                falta_editar = contador_vendas,
-                falta_c_ou_e = contador_vendas,
-                preco_original = 0,
-                forma_venda = forma_venda,
-                entrega_realizada = "N"
-            )
-            vendacontrole.save()
-            preco_original_venda = 0
-            desconto_venda = 0
-            autorizado_por_venda = ""
-            validator_autorizado_por = 0
-            cont_num_aleatorio = 0
-            # venda_number = number_slug
-            cont_venda_number = 0
-
-            if not autorizado_por: #Verificando se teve algum desconto autorizado
-                autorizado_por = 0
-                desconto_venda_item = 0
-            else:
-                validator_autorizado_por = 1
-                desconto_venda = float(desconto_autorizado)
-                autorizado_por_venda = autorizado_por
-
-            for i in range(len(nomes)): #Percorrendo a lista toda, a quantidade de vezes é baseada no tamanho do array, se tem 2 itens, percorre 2x
-                try:
-                    if not nome_cliente:
-                        transaction.set_rollback(True)
-                        messages.add_message(request, messages.ERROR, 'Você não preencheu o nome do cliente')
-                        return redirect(reverse('vendas', kwargs={"slug":slug}))  
-                    nome = nomes[i]
-                    quantidade = quantidades[i]
-                    desconto = descontos[i].replace(',', '.').replace('R$', '').replace(' ', '') # Substitui a vírgula pelo ponto, R$ por vazio e espaço por vazio
-                    tam_desconto = len(desconto)
-                    if desconto: #Conferindo se tem desconto
-                        desconto = float(desconto)#transformando em float
-                    tamanhoc = "camisa"
-                    camisa = nome.lower()
-                    slug = slug
-                    anofesta = slug
-                    data_str = str(anofesta)
-                    tamanho_str = "-"
-                    lucro = 0
-                    num_aleatorio = "v" + str(number)
-                    
-                    # if cont_venda_number != 0: #Terceira vez em diante
-                    #     venda_number = str(int(venda_number) + 1).zfill(8) #Transformando em inteiro para somar
-                    #     num_aleatorio = "v" + str(venda_number) #Transformando em string para concatenar
-                    # elif cont_num_aleatorio > 0: #Segunda vez
-                    #     venda_number = str(int(number_slug) + 1).zfill(8) #Transformando em inteiro para somar
-                    #     num_aleatorio = "v" + str(venda_number) #Transformando em string para concatenar
-                    #     cont_venda_number += 1
-                    # else: #Primeira vez
-                    #     num_aleatorio = "v" + str(venda_number) #Transformando em string para concatenar
-                    cont_num_aleatorio += 1
-
-                    label = nome
-                    label_vendas_get = nome
-                    data_modelo = timezone.localtime(timezone.now())
-                    data_modelo_1 = data_modelo.strftime("%d-%m-%Y %H:%M:%S") 
-                    data_criacao = data_modelo_1
-                    nome_cliente = nome_cliente
-                    nome_cliente = unidecode.unidecode(f'{nome_cliente}')
-                    nome_cliente = str(nome_cliente)
-
-                    ano_atual = Capturar_Ano_Atual()
-                    id_festa_ano_escolhido = Capturar_Id_Festa_Ano_Atual(ano_atual)
-
-                    BuscaCamisa = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
-                            Q(ano_festa_id=id_festa_ano_escolhido) & Q(label=nome) 
-                    )
-
-                    if tamanhoc in camisa: #Se for "camisa" altere o tamanho, label e label_vendas
-                        produtos = Produto.objects.filter(BuscaCamisa)
-                        for produto in produtos:
-                            if produtos:
-                                tamanho = produto.tamanho_produto
-                                tamanho_str = str(tamanho)
-                                label = nome + " " + data_criacao
-                                slugp = slugify(nome + "-" + data_str + "-" + num_aleatorio) 
-                                #label_vendas_get = nome + " " + tamanho_str (Aqui adiciona o tamanho na camisa caso seja necessário)
-                    else:#Se não for camisa altere a label
-                        label = nome + " " + data_criacao
-                        tamanho = ""
-                        slugp = slugify(nome + "-" + tamanho_str + "-" + data_str + "-" + num_aleatorio) 
-                    labelf = Vendas.objects.filter(label_vendas=label)#Verificando se está sendo preenchido produtos duplicados na mesma venda.
-
-                    if labelf:
-                        transaction.set_rollback(True) #Desfazer alterações caso haja erro em alguma.
-                        messages.add_message(request, messages.ERROR, 'Confira os produtos, parecem duplicados')
-                        return redirect(reverse('vendas', kwargs={"slug":slug}))    
-
-                    quantidade_estoque_produto = 0
-                    id_produto = 0
-                    id_nome_produto = 0
-                    produto = 0
-                    nome_venda_produto = 0
-                    preco_compra_estoque_produto = 0
-                    preco_venda_estoque_produto = 0
-                    categoria_estoque_produto = 0
-
-                    primeira_word = primeira_palavra(nome)
-                    BuscaNomeProduto = Q( #Fazendo o Filtro com Busca Q
-                            Q(ano_festa_id=id_festa_ano_escolhido) & Q(nome_produto=primeira_word) 
-                    )
-                    BuscaTamanhoProduto = Q( #Fazendo o Filtro com Busca Q
-                            Q(ano_festa_id=id_festa_ano_escolhido) & Q(tamanho_produto=tamanho) 
-                    )
-                    if tamanhoc not in camisa: #Caso Produto não seja Camisa entrará aqui
-                        nome_venda_produto = NomeProduto.objects.filter(BuscaNomeProduto) #Acessando tabela de nomes de produto e procurando pelo nome selecionado
-                        for nome_venda_produto in nome_venda_produto:
-                            id_nome_venda_produto = nome_venda_produto.id #Pegando ID da tabela de nomes
-                            if id_nome_venda_produto:
-                                nome_produto = Produto.objects.filter(BuscaCamisa)
-                                if nome_produto:
-                                    Busca = Q( #Fazendo o Filtro com Busca Q
-                                        Q(nome_produto_id=id_nome_venda_produto) & Q(label=nome) & Q(ano_festa_id=id_festa_ano_escolhido)
-                                    )
-
-                                    nome_produto = Produto.objects.get(Busca)#Buscando na tabela de produtos o ID selecionado
-                                    id_produto = nome_produto.id #ID Produto
-                                    id_nome_produto = nome_produto.nome_produto_id #ID Nome Produto
-                                    quantidade_estoque_produto = nome_produto.quantidade
-                                    preco_compra_estoque_produto = nome_produto.preco_compra
-                                    preco_venda_estoque_produto = nome_produto.preco_venda
-                                    categoria_estoque_produto = nome_produto.categoria_id
-                                    cor = nome_produto.cor_id
-                                    cor_produto_str_ = nome_produto.cor
-                                    cor_produto_str = str(cor_produto_str_)
-                                    nome_produto_str_ = nome_produto.nome_produto #Nome Produto
-                                    nome_produto_str = str(nome_produto_str_) + " (" + cor_produto_str + ")"
-                                    categoria_produto_str_ = nome_produto.categoria
-                                    categoria_produto_str = str(categoria_produto_str_)
-                                    tamanho_produto_str = ""
-                                    if quantidade_estoque_produto <= 0:
-                                        transaction.set_rollback(True)
-                                        messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
-                                        return redirect(reverse('vendas', kwargs={"slug":slug}))              
-                                if not nome_produto:
-                                    transaction.set_rollback(True)
-                                    messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
-                                    return redirect(reverse('vendas', kwargs={"slug":slug}))                        
-                    elif tamanho and tamanhoc in camisa: #Caso seja camisa entrará Aqui
-                        tamanho_produto = TamanhoProduto.objects.filter(BuscaTamanhoProduto) #Acessando tabela de Tamanhos do produto e procurando pelo tamanho selecionado
-                        for tamanho_produto in tamanho_produto:
-                            tamanho = tamanho_produto.id #Pegando ID da tabela de tamanho
-                            if tamanho:
-                                BuscaTamanhoDoProduto = Q( #Fazendo o Filtro com Busca Q
-                                        Q(ano_festa_id=id_festa_ano_escolhido) & Q(tamanho_produto_id=tamanho) 
-                                )
-                                nome_produto = Produto.objects.filter(BuscaTamanhoDoProduto)#Buscando na tabela de Produtos o ID selecionado
-                                if nome_produto:
-                                    Busca = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
-                                        Q(tamanho_produto_id=tamanho) & Q(label=nome) & Q(ano_festa_id=id_festa_ano_escolhido)
-                                    )
-                                    nome_produto = Produto.objects.get(Busca)#Buscando na tabela de Produtos o ID selecionado
-                                    id_produto = nome_produto.id #ID Produto
-                                    id_nome_produto = nome_produto.nome_produto_id #ID Nome Produto
-                                    quantidade_estoque_produto = nome_produto.quantidade
-                                    preco_compra_estoque_produto = nome_produto.preco_compra
-                                    preco_venda_estoque_produto = nome_produto.preco_venda
-                                    categoria_estoque_produto = nome_produto.categoria_id 
-                                    cor = nome_produto.cor_id
-                                    cor_produto_str_ = nome_produto.cor
-                                    cor_produto_str = str(cor_produto_str_)
-                                    nome_produto_str_ = nome_produto.nome_produto #Nome Produto
-                                    nome_produto_str = str(nome_produto_str_) + " (" + cor_produto_str + ")"
-                                    categoria_produto_str_ = nome_produto.categoria
-                                    categoria_produto_str = str(categoria_produto_str_)
-                                    tamanho_produto_str_ = nome_produto.tamanho_produto
-                                    tamanho_produto_str = str(tamanho_produto_str_)
-                                    if quantidade_estoque_produto <= 0:
-                                        transaction.set_rollback(True)
-                                        messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
-                                        return redirect(reverse('vendas', kwargs={"slug":slug})) 
-                                if not nome_produto:
-                                    transaction.set_rollback(True)
-                                    messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
-                                    return redirect(reverse('vendas', kwargs={"slug":slug}))   
-                except Exception as e:
+            with transaction.atomic():
+                if not nome_cliente:
                     transaction.set_rollback(True)
-                    messages.add_message(request, messages.ERROR, 'Ocorreu um erro ao processar a venda, fale com a administração')
+                    messages.add_message(request, messages.ERROR, 'Nome do Cliente não pode ser vazio')
                     return redirect(reverse('vendas', kwargs={"slug":slug}))
 
-                if nome_cliente or nome or quantidade or desconto or forma_venda:
-                    if not nome:
-                        transaction.set_rollback(True)
-                        messages.add_message(request, messages.ERROR, 'Nome do Produto não pode ser vazio')
-                        return redirect(reverse('vendas', kwargs={"slug":slug})) 
-                    if quantidade == 0 or not quantidade:
-                        transaction.set_rollback(True)
-                        messages.add_message(request, messages.ERROR, 'Quantidade não pode ser vazia')
-                        return redirect(reverse('vendas', kwargs={"slug":slug})) 
-                    if tam_desconto > 0:
-                        if desconto < 0:
+                ano_festa = slug
+                if ano_festa:
+                    festa = Festa.objects.all()
+                    for festa in festa:
+                        if festa.ano_festa == ano_festa:
+                            ano_festa = festa.id
+
+                last_number = Vendas.objects.aggregate(max_id=Max('id_venda'))['max_id'] #Pegando o valor mais alto de ID_VENDA
+                if last_number is not None:
+                    last_number = int(last_number)  # Converter para inteiro
+                    number = str(last_number + 1).zfill(8) #Criando um com 8 digitos e somando +1 ao numero
+                else:
+                    number = '00000001' #caso seja o primeiro será o 00000001
+
+                #Pegando os últimos 8 digitos da coluna slug na tabela Vendas
+                # last_number_slug = Vendas.objects.annotate(venda_slug=Right('slug', 8)).aggregate(max_slug=Max('venda_slug'))['max_slug']
+                # if last_number_slug is not None:
+                #     last_number_slug = int(last_number_slug)  # Converter para inteiro
+                #     number_slug = str(last_number_slug + 1).zfill(8) #Criando um com 8 digitos e somando +1 ao numero
+                # else:
+                #     number_slug = '00000001' #caso seja o primeiro será o 00000001
+
+                # Se passar pelas validações, crie o objeto VendasControle contendo o ID venda e salve no banco
+                vendacontrole = VendasControle.objects.create(
+                    nome_cliente = nome_cliente,
+                    id_venda = number,
+                    slug = number,
+                    venda_finalizada = 0,
+                    ano_festa_id = ano_festa,
+                    alteracoes_finalizadas = False,
+                    novo_preco_venda_total = 0,
+                    valor_cancelado = 0,
+                    valor_pago = 0,
+                    falta_editar = contador_vendas,
+                    falta_c_ou_e = contador_vendas,
+                    preco_original = 0,
+                    forma_venda = forma_venda,
+                    entrega_realizada = "N"
+                )
+                vendacontrole.save()
+                preco_original_venda = 0
+                desconto_venda = 0
+                autorizado_por_venda = ""
+                validator_autorizado_por = 0
+                cont_num_aleatorio = 0
+                # venda_number = number_slug
+                cont_venda_number = 0
+
+                if not autorizado_por: #Verificando se teve algum desconto autorizado
+                    autorizado_por = 0
+                    desconto_venda_item = 0
+                else:
+                    validator_autorizado_por = 1
+                    desconto_venda = float(desconto_autorizado)
+                    autorizado_por_venda = autorizado_por
+
+                for i in range(len(nomes)): #Percorrendo a lista toda, a quantidade de vezes é baseada no tamanho do array, se tem 2 itens, percorre 2x
+                    try:
+                        if not nome_cliente:
                             transaction.set_rollback(True)
-                            messages.add_message(request, messages.ERROR, 'Desconto não pode ser negativo')
+                            messages.add_message(request, messages.ERROR, 'Você não preencheu o nome do cliente')
+                            return redirect(reverse('vendas', kwargs={"slug":slug}))  
+                        nome = nomes[i]
+                        quantidade = quantidades[i]
+                        desconto = descontos[i].replace(',', '.').replace('R$', '').replace(' ', '') # Substitui a vírgula pelo ponto, R$ por vazio e espaço por vazio
+                        tam_desconto = len(desconto)
+                        if desconto: #Conferindo se tem desconto
+                            desconto = float(desconto)#transformando em float
+                        tamanhoc = "camisa"
+                        camisa = nome.lower()
+                        slug = slug
+                        anofesta = slug
+                        data_str = str(anofesta)
+                        tamanho_str = "-"
+                        lucro = 0
+                        num_aleatorio = "v" + str(number)
+                        
+                        # if cont_venda_number != 0: #Terceira vez em diante
+                        #     venda_number = str(int(venda_number) + 1).zfill(8) #Transformando em inteiro para somar
+                        #     num_aleatorio = "v" + str(venda_number) #Transformando em string para concatenar
+                        # elif cont_num_aleatorio > 0: #Segunda vez
+                        #     venda_number = str(int(number_slug) + 1).zfill(8) #Transformando em inteiro para somar
+                        #     num_aleatorio = "v" + str(venda_number) #Transformando em string para concatenar
+                        #     cont_venda_number += 1
+                        # else: #Primeira vez
+                        #     num_aleatorio = "v" + str(venda_number) #Transformando em string para concatenar
+                        cont_num_aleatorio += 1
+
+                        label = nome
+                        label_vendas_get = nome
+                        data_modelo = timezone.localtime(timezone.now())
+                        data_modelo_1 = data_modelo.strftime("%d-%m-%Y %H:%M:%S") 
+                        data_criacao = data_modelo_1
+                        nome_cliente = nome_cliente
+                        nome_cliente = unidecode.unidecode(f'{nome_cliente}')
+                        nome_cliente = str(nome_cliente)
+
+                        ano_atual = Capturar_Ano_Atual()
+                        id_festa_ano_escolhido = Capturar_Id_Festa_Ano_Atual(ano_atual)
+
+                        BuscaCamisa = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
+                                Q(ano_festa_id=id_festa_ano_escolhido) & Q(label=nome) 
+                        )
+
+                        if tamanhoc in camisa: #Se for "camisa" altere o tamanho, label e label_vendas
+                            produtos = Produto.objects.filter(BuscaCamisa)
+                            for produto in produtos:
+                                if produtos:
+                                    tamanho = produto.tamanho_produto
+                                    tamanho_str = str(tamanho)
+                                    label = nome + " " + data_criacao
+                                    slugp = slugify(nome + "-" + data_str + "-" + num_aleatorio) 
+                                    #label_vendas_get = nome + " " + tamanho_str (Aqui adiciona o tamanho na camisa caso seja necessário)
+                        else:#Se não for camisa altere a label
+                            label = nome + " " + data_criacao
+                            tamanho = ""
+                            slugp = slugify(nome + "-" + tamanho_str + "-" + data_str + "-" + num_aleatorio) 
+                        labelf = Vendas.objects.filter(label_vendas=label)#Verificando se está sendo preenchido produtos duplicados na mesma venda.
+
+                        if labelf:
+                            transaction.set_rollback(True) #Desfazer alterações caso haja erro em alguma.
+                            messages.add_message(request, messages.ERROR, 'Confira os produtos, parecem duplicados')
+                            return redirect(reverse('vendas', kwargs={"slug":slug}))    
+
+                        quantidade_estoque_produto = 0
+                        id_produto = 0
+                        id_nome_produto = 0
+                        produto = 0
+                        nome_venda_produto = 0
+                        preco_compra_estoque_produto = 0
+                        preco_venda_estoque_produto = 0
+                        categoria_estoque_produto = 0
+
+                        primeira_word = primeira_palavra(nome)
+                        BuscaNomeProduto = Q( #Fazendo o Filtro com Busca Q
+                                Q(ano_festa_id=id_festa_ano_escolhido) & Q(nome_produto=primeira_word) 
+                        )
+                        BuscaTamanhoProduto = Q( #Fazendo o Filtro com Busca Q
+                                Q(ano_festa_id=id_festa_ano_escolhido) & Q(tamanho_produto=tamanho) 
+                        )
+                        if tamanhoc not in camisa: #Caso Produto não seja Camisa entrará aqui
+                            nome_venda_produto = NomeProduto.objects.filter(BuscaNomeProduto) #Acessando tabela de nomes de produto e procurando pelo nome selecionado
+                            for nome_venda_produto in nome_venda_produto:
+                                id_nome_venda_produto = nome_venda_produto.id #Pegando ID da tabela de nomes
+                                if id_nome_venda_produto:
+                                    nome_produto = Produto.objects.filter(BuscaCamisa)
+                                    if nome_produto:
+                                        Busca = Q( #Fazendo o Filtro com Busca Q
+                                            Q(nome_produto_id=id_nome_venda_produto) & Q(label=nome) & Q(ano_festa_id=id_festa_ano_escolhido)
+                                        )
+
+                                        nome_produto = Produto.objects.get(Busca)#Buscando na tabela de produtos o ID selecionado
+                                        id_produto = nome_produto.id #ID Produto
+                                        id_nome_produto = nome_produto.nome_produto_id #ID Nome Produto
+                                        quantidade_estoque_produto = nome_produto.quantidade
+                                        preco_compra_estoque_produto = nome_produto.preco_compra
+                                        preco_venda_estoque_produto = nome_produto.preco_venda
+                                        categoria_estoque_produto = nome_produto.categoria_id
+                                        cor = nome_produto.cor_id
+                                        cor_produto_str_ = nome_produto.cor
+                                        cor_produto_str = str(cor_produto_str_)
+                                        nome_produto_str_ = nome_produto.nome_produto #Nome Produto
+                                        nome_produto_str = str(nome_produto_str_) + " (" + cor_produto_str + ")"
+                                        categoria_produto_str_ = nome_produto.categoria
+                                        categoria_produto_str = str(categoria_produto_str_)
+                                        tamanho_produto_str = ""
+                                        if quantidade_estoque_produto <= 0:
+                                            transaction.set_rollback(True)
+                                            messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
+                                            return redirect(reverse('vendas', kwargs={"slug":slug}))              
+                                    if not nome_produto:
+                                        transaction.set_rollback(True)
+                                        messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
+                                        return redirect(reverse('vendas', kwargs={"slug":slug}))                        
+                        elif tamanho and tamanhoc in camisa: #Caso seja camisa entrará Aqui
+                            tamanho_produto = TamanhoProduto.objects.filter(BuscaTamanhoProduto) #Acessando tabela de Tamanhos do produto e procurando pelo tamanho selecionado
+                            for tamanho_produto in tamanho_produto:
+                                tamanho = tamanho_produto.id #Pegando ID da tabela de tamanho
+                                if tamanho:
+                                    BuscaTamanhoDoProduto = Q( #Fazendo o Filtro com Busca Q
+                                            Q(ano_festa_id=id_festa_ano_escolhido) & Q(tamanho_produto_id=tamanho) 
+                                    )
+                                    nome_produto = Produto.objects.filter(BuscaTamanhoDoProduto)#Buscando na tabela de Produtos o ID selecionado
+                                    if nome_produto:
+                                        Busca = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
+                                            Q(tamanho_produto_id=tamanho) & Q(label=nome) & Q(ano_festa_id=id_festa_ano_escolhido)
+                                        )
+                                        nome_produto = Produto.objects.get(Busca)#Buscando na tabela de Produtos o ID selecionado
+                                        id_produto = nome_produto.id #ID Produto
+                                        id_nome_produto = nome_produto.nome_produto_id #ID Nome Produto
+                                        quantidade_estoque_produto = nome_produto.quantidade
+                                        preco_compra_estoque_produto = nome_produto.preco_compra
+                                        preco_venda_estoque_produto = nome_produto.preco_venda
+                                        categoria_estoque_produto = nome_produto.categoria_id 
+                                        cor = nome_produto.cor_id
+                                        cor_produto_str_ = nome_produto.cor
+                                        cor_produto_str = str(cor_produto_str_)
+                                        nome_produto_str_ = nome_produto.nome_produto #Nome Produto
+                                        nome_produto_str = str(nome_produto_str_) + " (" + cor_produto_str + ")"
+                                        categoria_produto_str_ = nome_produto.categoria
+                                        categoria_produto_str = str(categoria_produto_str_)
+                                        tamanho_produto_str_ = nome_produto.tamanho_produto
+                                        tamanho_produto_str = str(tamanho_produto_str_)
+                                        if quantidade_estoque_produto <= 0:
+                                            transaction.set_rollback(True)
+                                            messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
+                                            return redirect(reverse('vendas', kwargs={"slug":slug})) 
+                                    if not nome_produto:
+                                        transaction.set_rollback(True)
+                                        messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
+                                        return redirect(reverse('vendas', kwargs={"slug":slug}))   
+                    except Exception as e:
+                        transaction.set_rollback(True)
+                        messages.add_message(request, messages.ERROR, 'Ocorreu um erro ao processar a venda, fale com a administração')
+                        return redirect(reverse('vendas', kwargs={"slug":slug}))
+
+                    if nome_cliente or nome or quantidade or desconto or forma_venda:
+                        if not nome:
+                            transaction.set_rollback(True)
+                            messages.add_message(request, messages.ERROR, 'Nome do Produto não pode ser vazio')
                             return redirect(reverse('vendas', kwargs={"slug":slug})) 
-                    if forma_venda != "Pix" and forma_venda != "Dinheiro" and forma_venda != "Crédito" and forma_venda != "Débito":
-                        transaction.set_rollback(True)
-                        messages.add_message(request, messages.ERROR, 'Forma de pagamento deve ser uma das quatro cadastradas')
-                        return redirect(reverse('vendas', kwargs={"slug":slug})) 
+                        if quantidade == 0 or not quantidade:
+                            transaction.set_rollback(True)
+                            messages.add_message(request, messages.ERROR, 'Quantidade não pode ser vazia')
+                            return redirect(reverse('vendas', kwargs={"slug":slug})) 
+                        if tam_desconto > 0:
+                            if desconto < 0:
+                                transaction.set_rollback(True)
+                                messages.add_message(request, messages.ERROR, 'Desconto não pode ser negativo')
+                                return redirect(reverse('vendas', kwargs={"slug":slug})) 
+                        if forma_venda != "Pix" and forma_venda != "Dinheiro" and forma_venda != "Crédito" and forma_venda != "Débito":
+                            transaction.set_rollback(True)
+                            messages.add_message(request, messages.ERROR, 'Forma de pagamento deve ser uma das quatro cadastradas')
+                            return redirect(reverse('vendas', kwargs={"slug":slug})) 
 
-                    quantidade = int(quantidade)
-                    quantidade_estoque_produto = int(quantidade_estoque_produto)
+                        quantidade = int(quantidade)
+                        quantidade_estoque_produto = int(quantidade_estoque_produto)
 
-                    if quantidade > quantidade_estoque_produto:
-                        transaction.set_rollback(True)
-                        messages.add_message(request, messages.ERROR, f'O Produto {nome} que você está tentando vender não tem essa quantidade em estoque, quantidade disponível: {quantidade_estoque_produto}')
-                        return redirect(reverse('vendas', kwargs={"slug":slug}))
-                    else:
-                        if autorizado_por == 0: #Se não tiver sido autorizado algum desconto geral entra aqui
-                            quantidade_estoque_produto = quantidade_estoque_produto - quantidade
-                            produto = Produto.objects.filter(id=id_produto) #Buscando produto pelo ID encontrado lá em cima
-                            desconto_autorizado = 0
-                            if produto:
-                                preco_compra_estoque_produto = float(preco_compra_estoque_produto)
-                                preco_venda_estoque_produto = float(preco_venda_estoque_produto)
-                                preco_venda_estoque_produto_real = preco_venda_estoque_produto #Nessa linha calcula o desconto como REAIS
-                                preco_venda_total = preco_venda_estoque_produto * quantidade #caso não tenha desconto, preço venda será esse
-                                desconto_total = 0
-                                if desconto:
-                                    # preco_venda_estoque_produto = preco_venda_estoque_produto - (preco_venda_estoque_produto * desconto / 100) #Nessa linha calcula o desconto como PORCENTAGEM
-                                    desconto_total = desconto * quantidade
-                                    preco_venda_estoque_produto = preco_venda_estoque_produto - desconto #Nessa linha calcula o desconto como REAIS
-                                    preco_venda_total = preco_venda_estoque_produto * quantidade #caso tenha desconto, preço venda será esse
-                                    lucro = ((preco_venda_estoque_produto * quantidade) - (preco_compra_estoque_produto * quantidade))
-                                    desconto_venda_item += desconto_total
-                                else:
+                        if quantidade > quantidade_estoque_produto:
+                            transaction.set_rollback(True)
+                            messages.add_message(request, messages.ERROR, f'O Produto {nome} que você está tentando vender não tem essa quantidade em estoque, quantidade disponível: {quantidade_estoque_produto}')
+                            return redirect(reverse('vendas', kwargs={"slug":slug}))
+                        else:
+                            if autorizado_por == 0: #Se não tiver sido autorizado algum desconto geral entra aqui
+                                quantidade_estoque_produto = quantidade_estoque_produto - quantidade
+                                produto = Produto.objects.filter(id=id_produto) #Buscando produto pelo ID encontrado lá em cima
+                                desconto_autorizado = 0
+                                if produto:
+                                    preco_compra_estoque_produto = float(preco_compra_estoque_produto)
+                                    preco_venda_estoque_produto = float(preco_venda_estoque_produto)
+                                    preco_venda_estoque_produto_real = preco_venda_estoque_produto #Nessa linha calcula o desconto como REAIS
+                                    preco_venda_total = preco_venda_estoque_produto * quantidade #caso não tenha desconto, preço venda será esse
+                                    desconto_total = 0
+                                    if desconto:
+                                        # preco_venda_estoque_produto = preco_venda_estoque_produto - (preco_venda_estoque_produto * desconto / 100) #Nessa linha calcula o desconto como PORCENTAGEM
+                                        desconto_total = desconto * quantidade
+                                        preco_venda_estoque_produto = preco_venda_estoque_produto - desconto #Nessa linha calcula o desconto como REAIS
+                                        preco_venda_total = preco_venda_estoque_produto * quantidade #caso tenha desconto, preço venda será esse
+                                        lucro = ((preco_venda_estoque_produto * quantidade) - (preco_compra_estoque_produto * quantidade))
+                                        desconto_venda_item += desconto_total
+                                    else:
+                                        desconto = 0
+                                        lucro = ((preco_venda_estoque_produto * quantidade) - (preco_compra_estoque_produto * quantidade))
+                                    produto = Produto.objects.get(id=id_produto)#Pegando dados do produto encontrado
+                                    Produto.objects.filter(id=id_produto).update(quantidade=quantidade_estoque_produto)
+                            else:#Se tiver sido autorizado algum desconto geral entra aqui
+                                quantidade_estoque_produto = quantidade_estoque_produto - quantidade
+                                produto = Produto.objects.filter(id=id_produto) #Buscando produto pelo ID encontrado lá em cima
+                                if produto:
+                                    preco_compra_estoque_produto = float(preco_compra_estoque_produto)
+                                    preco_venda_estoque_produto = float(preco_venda_estoque_produto)
+                                    preco_venda_estoque_produto_real = float(preco_venda_estoque_produto)
+                                    preco_venda_total = preco_venda_estoque_produto * quantidade
+                                    desconto_total = desconto_autorizado
                                     desconto = 0
-                                    lucro = ((preco_venda_estoque_produto * quantidade) - (preco_compra_estoque_produto * quantidade))
-                                produto = Produto.objects.get(id=id_produto)#Pegando dados do produto encontrado
-                                Produto.objects.filter(id=id_produto).update(quantidade=quantidade_estoque_produto)
-                        else:#Se tiver sido autorizado algum desconto geral entra aqui
-                            quantidade_estoque_produto = quantidade_estoque_produto - quantidade
-                            produto = Produto.objects.filter(id=id_produto) #Buscando produto pelo ID encontrado lá em cima
-                            if produto:
-                                preco_compra_estoque_produto = float(preco_compra_estoque_produto)
-                                preco_venda_estoque_produto = float(preco_venda_estoque_produto)
-                                preco_venda_estoque_produto_real = float(preco_venda_estoque_produto)
-                                preco_venda_total = preco_venda_estoque_produto * quantidade
-                                desconto_total = desconto_autorizado
-                                desconto = 0
-                                desconto_autorizado = float(desconto_autorizado)
-                                if desconto_autorizado and desconto_autorizado > 0:
-                                    autorizado_por = autorizado_por
-                                    preco_venda_estoque_produto_ = preco_venda_estoque_produto - desconto_autorizado
-                                    # if preco_venda_estoque_produto_ < 0: #Caso o desconto seja tão grande que o preço do produto fique negativo
-                                    #     transaction.set_rollback(True)
-                                    #     messages.add_message(request, messages.ERROR, f'Você está tentando vender o produto {nome} em um preço muito abaixo, converse com a administração da festa')
-                                    #     return redirect(reverse('vendas', kwargs={"slug":slug}))
-                                    preco_venda_total = (preco_venda_estoque_produto * quantidade) - desconto_autorizado
-                                    # lucro = ((preco_venda_estoque_produto * quantidade) - (preco_compra_estoque_produto * quantidade) - desconto_venda)
-                                    #O lucro agora não está sendo contabilizado descontando o desconto_autorizado, pois o desconto está sendo jogado para a venda
-                                    lucro = (preco_venda_estoque_produto * quantidade) - (preco_compra_estoque_produto * quantidade)
-                                    lucro -= desconto_autorizado
-                                produto = Produto.objects.get(id=id_produto)#Pegando dados do produto encontrado
-                                Produto.objects.filter(id=id_produto).update(quantidade=quantidade_estoque_produto)
+                                    desconto_autorizado = float(desconto_autorizado)
+                                    if desconto_autorizado and desconto_autorizado > 0:
+                                        autorizado_por = autorizado_por
+                                        preco_venda_estoque_produto_ = preco_venda_estoque_produto - desconto_autorizado
+                                        # if preco_venda_estoque_produto_ < 0: #Caso o desconto seja tão grande que o preço do produto fique negativo
+                                        #     transaction.set_rollback(True)
+                                        #     messages.add_message(request, messages.ERROR, f'Você está tentando vender o produto {nome} em um preço muito abaixo, converse com a administração da festa')
+                                        #     return redirect(reverse('vendas', kwargs={"slug":slug}))
+                                        preco_venda_total = (preco_venda_estoque_produto * quantidade) - desconto_autorizado
+                                        # lucro = ((preco_venda_estoque_produto * quantidade) - (preco_compra_estoque_produto * quantidade) - desconto_venda)
+                                        #O lucro agora não está sendo contabilizado descontando o desconto_autorizado, pois o desconto está sendo jogado para a venda
+                                        lucro = (preco_venda_estoque_produto * quantidade) - (preco_compra_estoque_produto * quantidade)
+                                        lucro -= desconto_autorizado
+                                    produto = Produto.objects.get(id=id_produto)#Pegando dados do produto encontrado
+                                    Produto.objects.filter(id=id_produto).update(quantidade=quantidade_estoque_produto)
 
-                    preco_total_controle += preco_venda_total
+                        preco_total_controle += preco_venda_total
 
-                    if lucro < 0 and desconto_autorizado <= 0:
-                        transaction.set_rollback(True)
-                        messages.add_message(request, messages.ERROR, f'Você está tentando vender o produto {nome} em um preço muito abaixo, converse com a administração da festa')
-                        return redirect(reverse('vendas', kwargs={"slug":slug}))
-                    if validator_autorizado_por == 1:
-                        preco_original_venda += float(preco_venda_total) + float(desconto_autorizado)
-                        preco_original = float(preco_venda_total) + float(desconto_autorizado)
-                        preco_venda = preco_venda_estoque_produto_real
+                        if lucro < 0 and desconto_autorizado <= 0:
+                            transaction.set_rollback(True)
+                            messages.add_message(request, messages.ERROR, f'Você está tentando vender o produto {nome} em um preço muito abaixo, converse com a administração da festa')
+                            return redirect(reverse('vendas', kwargs={"slug":slug}))
+                        if validator_autorizado_por == 1:
+                            preco_original_venda += float(preco_venda_total) + float(desconto_autorizado)
+                            preco_original = float(preco_venda_total) + float(desconto_autorizado)
+                            preco_venda = preco_venda_estoque_produto_real
 
-                    if validator_autorizado_por == 0:
-                        preco_venda = preco_venda_estoque_produto_real
-                        preco_original = float(preco_venda_total) + float(desconto_total)
-                        preco_original_venda += float(preco_venda_total) + float(desconto_total)
-                    lucro_da_venda = lucro
-                    # Se passar pelas validações, crie o objeto Venda e salve no banco
-                    venda = Vendas.objects.create(
-                        nome_produto_id = id_nome_produto, 
-                        categoria_id = categoria_estoque_produto,
-                        tamanho_produto_id = tamanho,
-                        quantidade = quantidade, 
-                        desconto = desconto, 
-                        forma_venda=forma_venda,
-                        preco_compra = preco_compra_estoque_produto,
-                        preco_venda = preco_venda,
-                        preco_venda_total=preco_venda_total,
-                        desconto_total=desconto_total,
-                        criado_por = request.user.username,
-                        slug = slugp,
-                        ano_festa_id = ano_festa,
-                        lucro = lucro,
-                        cor_id = cor,
-                        label_vendas = label,
-                        label_vendas_get = label_vendas_get,
-                        produto_id = id_produto,
-                        nome_cliente = nome_cliente,
-                        venda_finalizada = 0,
-                        desconto_autorizado = desconto_autorizado,
-                        autorizado_por = autorizado_por,
-                        id_venda = vendacontrole,
-                        modificado = False,
-                        preco_original = preco_original, #Somando os descontos ao preço do item, caso exista.
-                        entrega_realizada = "N"
-                    )
-                    venda.save()
+                        if validator_autorizado_por == 0:
+                            preco_venda = preco_venda_estoque_produto_real
+                            preco_original = float(preco_venda_total) + float(desconto_total)
+                            preco_original_venda += float(preco_venda_total) + float(desconto_total)
+                        lucro_da_venda = lucro
+                        # Se passar pelas validações, crie o objeto Venda e salve no banco
+                        venda = Vendas.objects.create(
+                            nome_produto_id = id_nome_produto, 
+                            categoria_id = categoria_estoque_produto,
+                            tamanho_produto_id = tamanho,
+                            quantidade = quantidade, 
+                            desconto = desconto, 
+                            forma_venda=forma_venda,
+                            preco_compra = preco_compra_estoque_produto,
+                            preco_venda = preco_venda,
+                            preco_venda_total=preco_venda_total,
+                            desconto_total=desconto_total,
+                            criado_por = request.user.username,
+                            slug = slugp,
+                            ano_festa_id = ano_festa,
+                            lucro = lucro,
+                            cor_id = cor,
+                            label_vendas = label,
+                            label_vendas_get = label_vendas_get,
+                            produto_id = id_produto,
+                            nome_cliente = nome_cliente,
+                            venda_finalizada = 0,
+                            desconto_autorizado = desconto_autorizado,
+                            autorizado_por = autorizado_por,
+                            id_venda = vendacontrole,
+                            modificado = False,
+                            preco_original = preco_original, #Somando os descontos ao preço do item, caso exista.
+                            entrega_realizada = "N"
+                        )
+                        venda.save()
 
-                    id_user = Users.objects.get(username=request.user)
-                    id_user = id_user.id
+                        id_user = Users.objects.get(username=request.user)
+                        id_user = id_user.id
 
-                    excel_venda_T_E = Excel_T_E(acao="Venda_Item",
-                                                tipo = "Venda",
-                                                id_user = id_user,
-                                                criado_por=request.user,
-                                                nome_produto = nome_produto_str,
-                                                tamanho_produto = tamanho_produto_str, 
-                                                categoria = categoria_produto_str,
-                                                quantidade_antiga = quantidade,
-                                                quantidade_nova = 0,
-                                                tamanho_produto_novo = 0,
-                                                cor_produto_novo = 0,
-                                                id_venda = vendacontrole,
-                                                slug = slugp,
-                                                ano_festa = slug)
-                    excel_venda_T_E.save()
+                        excel_venda_T_E = Excel_T_E(acao="Venda_Item",
+                                                    tipo = "Venda",
+                                                    id_user = id_user,
+                                                    criado_por=request.user,
+                                                    nome_produto = nome_produto_str,
+                                                    tamanho_produto = tamanho_produto_str, 
+                                                    categoria = categoria_produto_str,
+                                                    quantidade_antiga = quantidade,
+                                                    quantidade_nova = 0,
+                                                    tamanho_produto_novo = 0,
+                                                    cor_produto_novo = 0,
+                                                    id_venda = vendacontrole,
+                                                    slug = slugp,
+                                                    ano_festa = slug)
+                        excel_venda_T_E.save()
 
-                    produto = Produto.objects.get(id=id_produto) #Pegando o produto
-                    tamanho_p_excel = ""
-                    if produto.tamanho_produto is not None and produto.tamanho_produto != "":
-                        tamanho_p_excel = produto.tamanho_produto
-                    categoria_p_excel = produto.categoria
-                    nome_produto_p_excel = str(produto.nome_produto) + " (" + str(produto.cor) + ")"
-                    ano_festa_p_excel = produto.ano_festa
+                        produto = Produto.objects.get(id=id_produto) #Pegando o produto
+                        tamanho_p_excel = ""
+                        if produto.tamanho_produto is not None and produto.tamanho_produto != "":
+                            tamanho_p_excel = produto.tamanho_produto
+                        categoria_p_excel = produto.categoria
+                        nome_produto_p_excel = str(produto.nome_produto) + " (" + str(produto.cor) + ")"
+                        ano_festa_p_excel = produto.ano_festa
 
-                    data_modelo_update = timezone.localtime(timezone.now())
-                    data_modelo_update_1 = data_modelo_update.strftime("%d/%m/%Y %H:%M:%S") 
-                    data_alteracao = data_modelo_update_1
+                        data_modelo_update = timezone.localtime(timezone.now())
+                        data_modelo_update_1 = data_modelo_update.strftime("%d/%m/%Y %H:%M:%S") 
+                        data_alteracao = data_modelo_update_1
 
-                    lucro_decimal = Decimal(lucro_da_venda)
-                    existe_saida_venda = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Saída", tamanho_produto=tamanho_p_excel)
-                    if existe_saida_venda:
-                        existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída", tamanho_produto=tamanho_p_excel)
-                        existe_saida_venda.quantidade += quantidade
-                        existe_saida_venda.ultima_alteracao = data_alteracao
-                        existe_saida_venda.alterado_por = request.user.username
-                        existe_saida_venda.lucro += lucro_decimal
-                        existe_saida_venda.save()
-                    else:
-                        p_excel = P_Excel(acao="Saída",
-                                        id_user = id_user,
-                                        nome_user=request.user,
-                                        nome_produto = nome_produto_p_excel,
-                                        tamanho_produto = tamanho_p_excel, 
-                                        categoria = categoria_p_excel,
-                                        quantidade = quantidade, 
-                                        preco_compra = preco_compra_estoque_produto, 
-                                        preco_venda = preco_venda_estoque_produto,
-                                        ano_festa = ano_festa_p_excel,
-                                        lucro = lucro_decimal)
-                        p_excel.save()
+                        lucro_decimal = Decimal(lucro_da_venda)
+                        existe_saida_venda = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Saída", tamanho_produto=tamanho_p_excel)
+                        if existe_saida_venda:
+                            existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída", tamanho_produto=tamanho_p_excel)
+                            existe_saida_venda.quantidade += quantidade
+                            existe_saida_venda.ultima_alteracao = data_alteracao
+                            existe_saida_venda.alterado_por = request.user.username
+                            existe_saida_venda.lucro += lucro_decimal
+                            existe_saida_venda.save()
+                        else:
+                            p_excel = P_Excel(acao="Saída",
+                                            id_user = id_user,
+                                            nome_user=request.user,
+                                            nome_produto = nome_produto_p_excel,
+                                            tamanho_produto = tamanho_p_excel, 
+                                            categoria = categoria_p_excel,
+                                            quantidade = quantidade, 
+                                            preco_compra = preco_compra_estoque_produto, 
+                                            preco_venda = preco_venda_estoque_produto,
+                                            ano_festa = ano_festa_p_excel,
+                                            lucro = lucro_decimal)
+                            p_excel.save()
 
-                    desconto_autorizado = 0 #Após a primeira venda o desconto_autorizado volta pra zero.
-                    autorizado_por = 0 #Após a primeira venda o autorizado_por volta pra zero.
-                    validator_autorizado_por = 0 #Após a primeira venda o validator_autorizado_por volta pra zero.
-                    ImagemVenda.objects.filter(produto=id_produto).update(venda_id=venda.id)
+                        desconto_autorizado = 0 #Após a primeira venda o desconto_autorizado volta pra zero.
+                        autorizado_por = 0 #Após a primeira venda o autorizado_por volta pra zero.
+                        validator_autorizado_por = 0 #Após a primeira venda o validator_autorizado_por volta pra zero.
+                        ImagemVenda.objects.filter(produto=id_produto).update(venda_id=venda.id)
 
-            # Se passar pelas validações, pega o objeto VendasControle contendo o ID venda gerado lá em cima#
-            vendacontrole1 = VendasControle.objects.get(id_venda=number)        
-            if desconto_venda > 0:
-                vendacontrole1.desconto_autorizado = desconto_venda
-                vendacontrole1.desconto_total = desconto_venda
-            else:
-                vendacontrole1.desconto_total = desconto_venda_item
+                # Se passar pelas validações, pega o objeto VendasControle contendo o ID venda gerado lá em cima#
+                vendacontrole1 = VendasControle.objects.get(id_venda=number)        
+                if desconto_venda > 0:
+                    vendacontrole1.desconto_autorizado = desconto_venda
+                    vendacontrole1.desconto_total = desconto_venda
+                else:
+                    vendacontrole1.desconto_total = desconto_venda_item
 
-            vendacontrole1.preco_venda_total = preco_total_controle
-            vendacontrole1.novo_preco_venda_total = preco_total_controle
-            vendacontrole1.preco_original = preco_original_venda
-            vendacontrole1.autorizado_por = autorizado_por_venda
-            vendacontrole1.save()
-            messages.add_message(request, messages.SUCCESS, 'Venda Cadastrada com sucesso')
-            return redirect(reverse('vendas', kwargs={"slug":anofesta}))
+                vendacontrole1.preco_venda_total = preco_total_controle
+                vendacontrole1.novo_preco_venda_total = preco_total_controle
+                vendacontrole1.preco_original = preco_original_venda
+                vendacontrole1.autorizado_por = autorizado_por_venda
+                vendacontrole1.save()
+                messages.add_message(request, messages.SUCCESS, 'Venda Cadastrada com sucesso')
+                return redirect(reverse('vendas', kwargs={"slug":anofesta}))
 
-#Função para a tela de vender produto
-@has_permission_decorator('realizar_venda', 'liberar_descontos')
-def autorizar_desconto(request):
-    if request.method == "POST":
-        username = request.POST.get('username')
-        senha = request.POST.get('senha')
-
-        user = auth.authenticate(username=username, password=senha)
-        if user:
-            cargo_user = user.cargo
-            if cargo_user == "A" or cargo_user == "P" or cargo_user == "CF" or cargo_user == "CL":
-                cargo_user = "Ok"
-        else:
-            return JsonResponse({'message': 'Credenciais incorretas'}, status=400) #Caso não encontre o usuario e senha
-        if cargo_user == "Ok":
-            return JsonResponse({'message': 'Autenticação bem-sucedida'})
-        else:
-            return JsonResponse({'message': 'Credenciais incorretas1'}, status=400) #Caso o usuario nao tenha um dos cargos mencionados
 
 #Função para a tela de vender produto
 @has_permission_decorator('finalizar_venda', 'cancelar_venda')
@@ -1367,6 +1112,7 @@ def vendas_finalizadas(request, slug):
         
         return render(request, 'vendas_finalizadas.html', {'all_vendas':all_vendas, 'vendas': vendas, 'id_ano_produto':id_ano_produto, 'id_ano_festa':id_ano_festa, 'ano_atual_str':ano_atual_str, 'data_modelo_2':data_modelo_2, 'page': page, 'imagem_venda':imagem_venda, 'categorias':categorias})
 
+
 #Função para a tela de visualizar vendas
 @has_permission_decorator('realizar_venda', 'liberar_descontos')
 def visualizar_vendas (request, slug):
@@ -1455,6 +1201,7 @@ def visualizar_vendas (request, slug):
                 messages.add_message(request, messages.ERROR, 'Essa venda já foi finalizada')
                 return redirect(reverse('vendas', kwargs={"slug":ano_festa}))
 
+
 #Função para a tela de visualizar vendas finalizadas
 @has_permission_decorator('finalizar_venda', 'cancelar_venda')
 def visualizar_vendas_finalizadas (request, slug):
@@ -1539,6 +1286,7 @@ def visualizar_vendas_finalizadas (request, slug):
             else:
                 messages.add_message(request, messages.ERROR, 'Essa venda não foi finalizada')
                 return redirect(reverse('vendas_finalizadas', kwargs={"slug":ano_festa}))
+
 
 #Função para a tela de conferir os itens da venda antes de finalizar
 @has_permission_decorator('finalizar_venda', 'cancelar_venda')
@@ -1849,6 +1597,7 @@ def conferir_vendas_geral (request, slug):
             
             messages.add_message(request, messages.SUCCESS, 'Venda alterada com sucesso')
             return redirect(reverse('vendas_finalizadas', kwargs={"slug":ano_atual}))
+
 
 #Função para a tela de conferir os itens da venda antes de finalizar
 @has_permission_decorator('realizar_troca_estorno')
@@ -3008,6 +2757,7 @@ def acoes_vendas_trocar (request, slug):
                             messages.add_message(request, messages.SUCCESS, 'Produto alterado com sucesso')
                             return redirect(reverse('acoes_vendas', kwargs={"slug":id_da_venda}))
 
+
 #Função para a tela de conferir os itens da venda antes de finalizar
 @has_permission_decorator('realizar_troca_estorno')
 def acoes_vendas (request, slug):
@@ -3055,6 +2805,7 @@ def acoes_vendas (request, slug):
         else:
             messages.add_message(request, messages.ERROR, 'Essa venda ainda está em andamento ou não existe')
             return redirect(reverse('editar_vendas', kwargs={"slug":ano_atual_str}))
+
 
 #Função para a tela de excluir venda antes da finalização
 @has_permission_decorator('finalizar_venda', 'cancelar_venda')
@@ -3125,104 +2876,6 @@ def excluir_venda(request, slug):
             messages.add_message(request, messages.ERROR, 'Houve um erro no cancelamento dessa venda, caso persista contate o administrador')
             return redirect(reverse('vendas_finalizadas', kwargs={"slug":anofesta}))
 
-#Comentado pois não será mais necessário
-# #Função para a tela de confirmar venda
-# @has_permission_decorator('finalizar_venda', 'cancelar_venda')
-# def confirmar_venda(request, slug):
-#     with transaction.atomic():
-#         venda = Vendas.objects.get(slug=slug)
-#         slugconferir_venda = venda.id_venda
-#         conferir_venda = VendasControle.objects.get(slug=slugconferir_venda)
-#         preco_total = venda.preco_venda_total
-#         anofesta = venda.ano_festa
-
-#         data = timezone.localtime(timezone.now())#Data atual
-#         data_alteracao = data.strftime("%d/%m/%Y %H:%M:%S") #Passando pra string
-
-#         if venda:
-#             conferir_venda.novo_preco_venda_total -= preco_total #Retirando o preço do item confirmado, da tabela de venda controle
-#             conferir_venda.falta_editar -= 1
-#             conferir_venda.valor_pago += preco_total #Somando o valor do item confirmado (pago)
-#             conferir_venda.save()
-
-#             confirmar_venda = True
-#             venda_antiga = None
-#             venda_antiga = Vendas.objects.get(slug=slug)
-#             campos_alteracao = []
-#             if venda_antiga:
-#                 venda_antiga.venda_finalizada = str(venda_antiga.venda_finalizada)
-
-#                 if venda_antiga.venda_finalizada != confirmar_venda:
-#                     campos_alteracao.append('venda_finalizada')                  
-
-#                 data_criacao_g = data.strftime("%d/%m/%Y")
-#                 data_criacao_g = datetime.strptime(data_criacao_g, '%d/%m/%Y').date()
-#                 dia = data_criacao_g
-
-#                 venda.venda_finalizada = confirmar_venda #Confirmando a venda
-#                 venda.modificado = True
-#                 venda.alterado_por = request.user.username
-#                 venda.data_criacao = data_alteracao
-#                 venda.dia = dia
-#                 venda.data_alteracao = data_alteracao
-#                 venda.save()
-
-#                 venda_nova = None
-#                 venda_nova = Vendas.objects.get(slug=slug)
-#                 if campos_alteracao:
-#                     valores_antigos = []
-#                     valores_novos = []
-#                     for campo in campos_alteracao:
-#                         valor_antigo = getattr(venda_antiga, campo)
-#                         valor_novo = getattr(venda_nova, campo)
-#                         valores_antigos.append(f'{campo}: {valor_antigo}')
-#                         valores_novos.append(f'{campo}: {valor_novo}')
-                        
-#                 id_user = Users.objects.get(username=request.user)
-#                 id_user = id_user.id
-#                 LogsItens.objects.create(
-#                     id_user = id_user,
-#                     nome_user=request.user,
-#                     nome_objeto=str(venda_nova.slug),
-#                     acao='Alteração',
-#                     model = "Vendas_Item",
-#                     campos_alteracao=', '.join(campos_alteracao),
-#                     valores_antigos=', '.join(valores_antigos),
-#                     valores_novos=', '.join(valores_novos)
-#                 )
-
-#                 Busca = Q( #Fazendo o Filtro com Busca Q
-#                         Q(slug=slugconferir_venda) & Q(falta_editar=0)     
-#                 )
-
-#                 venda_controle_pos_confirm = VendasControle.objects.filter(Busca)
-                
-#                 if venda_controle_pos_confirm:#Se entrar aqui é porque todos os itens já foram editados
-#                     conferir_venda.venda_finalizada = 1 #Alterando venda_finalizada para 1
-#                     conferir_venda.alteracoes_finalizadas = True
-#                     conferir_venda.save()
-
-#                     vendas = Vendas.objects.filter(id_venda_id=slugconferir_venda)
-
-#                     #Atualizando a data da venda para a data que foi finalizada.
-#                     for venda in vendas:
-#                         if venda:
-#                             data_criacao_g = data.strftime("%d/%m/%Y")
-#                             data_criacao_g = datetime.strptime(data_criacao_g, '%d/%m/%Y').date()
-#                             dia = data_criacao_g     
-                            
-#                             venda.data_criacao = data_alteracao
-#                             venda.dia = dia
-#                             venda.save()
-
-#                     messages.add_message(request, messages.SUCCESS, 'Venda Confirmada com sucesso')
-#                     return redirect(reverse('vendas_finalizadas', kwargs={"slug":anofesta}))
-
-#                 messages.add_message(request, messages.SUCCESS, 'Venda Confirmada com sucesso')
-#                 return redirect(reverse('vendas_finalizadas', kwargs={"slug":anofesta}))
-#         else:
-#             messages.add_message(request, messages.ERROR, 'Houve um erro na confirmação dessa venda, caso persista contate o administrador')
-#             return redirect(reverse('vendas_finalizadas', kwargs={"slug":anofesta}))        
 
 #Função para a tela de excluir venda geral antes da finalização
 @has_permission_decorator('finalizar_venda', 'cancelar_venda')
@@ -3276,6 +2929,7 @@ def excluir_venda_geral(request, slug):
         else:
             messages.add_message(request, messages.ERROR, 'Houve um erro no cancelamento dessa venda, caso persista contate o administrador')
             return redirect(reverse('vendas_finalizadas', kwargs={"slug":ano_festa}))
+
 
 #Função para a tela de confirmar venda
 @has_permission_decorator('finalizar_venda', 'cancelar_venda')
@@ -3414,16 +3068,20 @@ def confirmar_venda_geral(request, slug):
             messages.add_message(request, messages.ERROR, 'Houve um erro na confirmação dessa venda, caso persista contate o administrador')
             return redirect(reverse('vendas_finalizadas', kwargs={"slug":anofesta}))        
 
+
 # ======================== ERRORS ========================
 def error_500(request):
     return render(request, '500.html')
 
+
 def error_404(request, exception):
     return render(request, '404.html')
+
 
 def error_403(request, exception):
     messages.add_message(request, messages.ERROR, 'Você não tem permissão para isso ou não está logado')
     return redirect(reverse('home'))    
+
 
 # ======================== EXPORT CSV ========================
 @has_permission_decorator('exportar_csv_v')
@@ -3517,6 +3175,7 @@ def export_csv(request):
         messages.add_message(request, messages.ERROR, 'Nenhuma venda foi encontrada para ser exportada')
         return redirect(reverse('vendas', kwargs={"slug":anofesta})) 
 
+
 @has_permission_decorator('exportar_csv_v_finalizada')
 def export_csv_finalizadas(request):
     data_modelo = timezone.localtime(timezone.now())
@@ -3605,6 +3264,7 @@ def export_csv_finalizadas(request):
         messages.add_message(request, messages.ERROR, 'Nenhuma venda finalizada foi encontrada para ser exportada')
         return redirect(reverse('vendas_finalizadas', kwargs={"slug":anofesta})) 
 
+
 #Função para exportar produtos
 @has_permission_decorator('exportar_csv_p')
 def export_csv_produto(request, slug):
@@ -3689,6 +3349,7 @@ def export_csv_produto(request, slug):
     else:
         messages.add_message(request, messages.ERROR, 'Nenhuma ação de produto foi encontrado para ser exportada')
         return redirect(reverse('add_produto', kwargs={"slug":slug})) 
+
 
 #Função para exportar histórico de vendas trocadas e estornadas
 @has_permission_decorator('realizar_troca_estorno')
@@ -3788,7 +3449,8 @@ def export_csv_troca_estorno(request):
     except Exception as e:
         messages.error(request, 'Erro ao exportar a planilha: {}'.format(str(e)))
         return redirect(reverse('export_troca_estorno', kwargs={"slug":anofesta}))
-    
+
+
 #Função para a tela de export_entrada_produtos
 @has_permission_decorator('exportar_csv_p')#Apenas o Admin, Padre e CF tem acesso
 def export_entrada_produtos(request, slug):
@@ -3811,6 +3473,7 @@ def export_entrada_produtos(request, slug):
         else:
             messages.add_message(request, messages.ERROR, f'Não há registro de Logs à serem exportados')
             return redirect(reverse('add_produto', kwargs={"slug":slug})) 
+
 
 #Função para a tela de export_entrada_produtos
 @has_permission_decorator('exportar_csv_p')#Apenas o Admin, Padre e CF tem acesso
@@ -3875,7 +3538,8 @@ def export_troca_estorno(request, slug):
         else:
             messages.add_message(request, messages.ERROR, f'Não há registro de Logs à serem exportados')
             return redirect(reverse('editar_vendas', kwargs={"slug":slug})) 
-        
+
+
 #Função para a tela de editar vendas
 @has_permission_decorator('realizar_troca_estorno')
 def editar_vendas(request, slug):
@@ -3952,6 +3616,7 @@ def editar_vendas(request, slug):
         page = vendas_paginator.get_page(page_num)
 
         return render(request, 'editar_vendas.html', {'page': page, 'slug': slug})
+
 
 #Função para a tela de estornar venda geral pós finalização
 @has_permission_decorator('editar_vendas')
@@ -4091,6 +3756,7 @@ def palavra_final(string):
     else:
         return ""
 
+
 # Pegando a primeira palavra de qualquer string
 def primeira_palavra(string):
     padrao = r'^\s*([\w()\-]+)'
@@ -4099,6 +3765,7 @@ def primeira_palavra(string):
         return resultado.group(1)
     else:
         return ""
+
 
 # Pegando a segunda palavra de qualquer string após um espaço
 def segunda_palavra(string):

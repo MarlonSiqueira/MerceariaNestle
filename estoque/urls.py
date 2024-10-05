@@ -11,7 +11,6 @@ urlpatterns = [
     path('pre_vendas/<slug:slug>', views.pre_vendas, name="pre_vendas"),#Antes da Venda
     path('vendas/<slug:slug>', views.vendas, name="vendas"),#Vender Produto
     path('visualizar_vendas/<slug:slug>', views.visualizar_vendas, name="visualizar_vendas"),#Visualizar Vendas
-    path('autorizar_desconto/', views.autorizar_desconto, name="autorizar_desconto"),#Autorizar Desconto
 
     path('conferir_vendas_geral/<slug:slug>', views.conferir_vendas_geral, name="conferir_vendas_geral"),#Conferir Vendas Geral (antes de finalizar a venda)
     path('vendas_finalizadas/<slug:slug>', views.vendas_finalizadas, name="vendas_finalizadas"),#Finalizar Venda dos Produtos
@@ -32,7 +31,6 @@ urlpatterns = [
 
 
     path('cadastrar_comunidade/', views.cadastrar_comunidade, name="cadastrar_comunidade"),#Cadastrar Comunidade
-    path('editar_festa/<slug:slug>', views.editar_festa, name="editar_festa"),#Editar Festa
 
     path('listar_logs/', views.listar_logs, name="listar_logs"),#Acessar Logs
 

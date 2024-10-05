@@ -2,47 +2,38 @@
 
 {% block 'body' %}
 <div class="container">
-        <form id="add-aula" action="" method="POST" enctype="multipart/form-data"> {% csrf_token %}
-        <div class="mais-produtos"> <!-- Inicio da Div de repetição -->
-        <div class="form-group"></div>
-        <!-- <label>Preço dos Produtos em Estoque: </label>
-        <br>
-        {% for produto in produtos %}
-            <input name="preco_venda" id="preco_venda" disabled value="R$ {{produto.preco_venda}}0: {{produto.label}}">
-        {%endfor%}
-        <br> -->
+    <form id="add-aula" action="" method="POST" enctype="multipart/form-data"> 
+        {% csrf_token %}
         <label>Nome do Cliente:</label>
         <input class="form-control" required type="text" maxlength="30" name="nome_cliente" id="nome_cliente" placeholder="">
         <br>
+        <label>Filtrar Produtos:</label>
+        <input type="text" id="filter_produtos" class="form-control" placeholder="Comece a digitar...">
+        <br>
         <label>Selecione o produto:</label>
-        <select required class="form-control" name="nome_produto" id="nome_produto">
+        <div class="produtos-container">
+            <!-- Quadrados de produtos gerados dinamicamente -->
             {% for produto in produtos %}
-                {% if produto.quantidade == 0 %}
-                    pass
-                {% elif produto.quantidade > 0 %} 
-                    {% if "Sem Cor" in produto.label %}
-                        <option required value="{{ produto.label }}" data-preco="{{ produto.preco_venda }}">{{ produto.nome_produto }} - R$ {{ produto.preco_venda }} - Qtd em Estoque: {{ produto.quantidade}}</option>
-                    {% else %}
-                        <option required value="{{ produto.label }}" data-preco="{{ produto.preco_venda }}">{{ produto.label }} - R$ {{ produto.preco_venda }} - Qtd em Estoque: {{ produto.quantidade}}</option>
-                    {% endif %}
-                {% endif %}
+                <div class="produto-card" 
+                    data-label="{{ produto.label }}" 
+                    data-preco="{{ produto.preco_venda|floatformat:2 }}" 
+                    data-peso="{{ produto.peso|floatformat:3 }}" 
+                    data-quantidade="{{ produto.quantidade }}">
+                    <!-- <img src=" {{ produto.img_url }} " alt="{{ produto.nome_produto }}" class="produto-imagem"> -->
+                    <h5>{{ produto.label }}</h5>
+                    <p>R$ {{ produto.preco_venda|floatformat:2 }}<br>
+                        Qtd: {{ produto.quantidade }}<br>
+                        Peso: {{ produto.peso|floatformat:3 }} KG {% if produto.peso == 0.5 %} x2{% endif %}
+                    </p>
+                </div>
             {% endfor %}
-        </select>
-
-        <button type="button" id="add_campo"> + </button>
-        <br> 
-
-        <label>Quantidade:</label>
-        <input class="form-control" type="number" name="quantidade" placeholder="0">
-
+        </div>
         <br>
-
-        </div> <!-- Fim da Div de repetição -->
-        <br>
+        <label>Peso Total:</label>
+        <span id="peso_total">0.000 KG</span>
         <br>
         <label>Preço Total:</label>
-        <span id="preco_total"></span>
-        <div id="produto_invalido" style="display: none;">Selecione um produto válido.</div>
+        <span id="preco_total">R$ 0,00</span>
         <br>
         <label>Forma de Pagamento:</label>
         <select required class="form-control" name="forma_venda" id="forma_venda">
@@ -52,241 +43,129 @@
             <option value="Débito">Débito</option>
         </select>
         <br>
+        <input type="hidden" name="preco_total" id="preco_total_input" value="0">
+        <input type="hidden" name="peso_total" id="peso_total_input" value="0">
+        <input type="hidden" name="produtos_selecionados" id="produtos_selecionados_input" value="">
         <a href="{% url 'pre_vendas' slug_voltar_tela %}" class="btn btn-info">Voltar</a>
-        <input type="submit" name="CadAulas" id="CadAulas" disabled="true" value="Vender" class="btn btn-primary">
-        </form>
-        <hr style="background-color: gray;">
-
-        <form action="" method="GET">
-            {% if page.has_other_pages %}
-                <div class="btn-group" role="group" aria-label="Item Pagination">
-                    {% if page.has_previous %} <!-- Se existe alguma página antes, mostre Anterior-->
-                        {% if request.GET.nome_cliente or request.GET.nome_produto or request.categoria%}
-                            <a class="btn btn-info" href="{% url 'vendas' slug %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
-                        {% else%}
-                            <a class="btn btn-info" href="{% url 'vendas' slug %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
-                        {% endif %}
-                    {% endif %}
-
-                    {% for page_num in page.paginator.page_range %}
-                        {% if request.GET.nome_cliente or request.GET.nome_produto or request.categoria%}
-                            {% if page.number == page_num %}
-                                <button class="btn btn-outline-primary active">
-                                    <span>{{ page_num }} (Atual)</span>
-                                </button>
-                            {% else %}
-                                <a href="{% url 'vendas' slug %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
-                                    {{ page_num }}</a>
-                            {% endif %}
-                        {% else %}
-                            {% if page.number == page_num %}
-                                <button class="btn btn-outline-primary active">
-                                    <span>{{ page_num }} (Atual)</span>
-                                </button>
-                            {% else %}
-                                <a href="{% url 'vendas' slug %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
-                                    {{ page_num }}</a>
-                            {% endif %}
-                        {% endif %}
-                    {% endfor %}
-                    
-                        {% if page.has_next %}<!-- Se existe alguma página depois, mostre Próximo-->
-                            {% if request.GET.nome_cliente or request.GET.nome_produto or request.categoria%}
-                                <a class="btn btn-info" href="{% url 'vendas' slug %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
-                            {% else %}
-                                <a class="btn btn-info" href="{% url 'vendas' slug %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
-                            {% endif %}          
-                        {% endif %}
-                </div>
-            {% endif %}
-            <br>
-            <br>
-            <div class="row">
-                <div class="col-md">
-                    <input class="form-control" type="text" name="nome_cliente" value="{{request.GET.nome_cliente}}" placeholder="Nome do Cliente">
-                </div>
-
-                <div class="col-md">
-                    <input class="form-control" type="text" name="nome_produto" value="{{request.GET.nome_produto}}" placeholder="Nome do Produto">
-                </div>
-
-                <div class="col-md">
-                    <select class="form-control" name="categoria">
-                        <option value="">Todas as categorias</option>
-                        {% for categoria in categorias %}
-                        <option value="{{categoria.id}}">{{categoria.titulo}}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-md">
-                    <input class="form-control" type="text" name="preco_min" id="preco_min" value="{{request.GET.preco_min}}" placeholder="Preço Mínimo">
-                </div>
-                
-                <div class="col-md">
-                    <input class="form-control" type="text" name="preco_max" id="preco_max" value="{{request.GET.preco_max}}" placeholder="Preço Máximo">
-                </div>
-
-            </div>
-            <div class="row">
-                <div class="col-md">
-                    <label>Funcionário</label>
-                    <input class="form-control" type="text" value="{{request.GET.vendedor}}" name="vendedor" placeholder="Digite o nome do funcionário">
-                </div>
-                <div class="col-md">
-                    <label>De</label>
-                    <input class="form-control" type="date" value="{{request.GET.dt_start}}" name="dt_start">
-                </div>
-
-                <div class="col-md">
-                    <label>Até</label>
-                    <input class="form-control" type="date" value="{{request.GET.dt_end}}" name="dt_end">
-                </div>
-            </div>
-            <br>
-                <input type="submit" value="Filtrar" class="btn btn-success">&nbsp;
-                {% if user.cargo == "A" or user.cargo == "R" %}
-                    <a class="btn btn-info" href="{% url 'export-csv' %}?nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">Exportar Planilha</a>&nbsp;
-                {% endif %}
-        </form>
-            <br>
-            <div class="row">
-                {% for venda in page.object_list %}
-                        {% if venda.venda_finalizada == 0 %}
-                            <div class="col-md-4">
-                                <div style="background-color: #e0ffff; width: 18rem" class="card" style="width: 18rem;">
-                                    <div class="card-body">
-                                        {% if "Sem Cor" in venda.label_vendas_get %}
-                                            <h5 class="card-title">{{venda.nome_produto}}</h5>  
-                                        {% else %}
-                                            <h5 class="card-title">{{venda.label_vendas_get}}</h5>
-                                        {% endif %}
-                                        <span class="badge badge-info">{{venda.categoria}}</span>
-                                        <br>
-                                        <br>
-                                            <a href="{% url 'visualizar_vendas' venda.slug %}" class="btn btn-primary">Visualizar</a>
-                                    </div>
-                                </div>
-                                <br>
-                            </div>
-                        {% endif %}
-                    {% if forloop.counter|divisibleby:3 %}
-                        <div class="clearfix"></div>
-                    {% endif %}
-                {% endfor %}
-            </div>
-
+        <input type="submit" name="CadAulas" id="CadAulas" disabled value="Vender" class="btn btn-primary">
+    </form>
 </div>
+
+<style>
+    .produtos-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: space-between;
+    }
+    .produto-card {
+        width: 30%;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+    }
+    .produto-card:hover {
+        transform: scale(1.05);
+    }
+    .produto-imagem {
+        max-width: 100px;
+        height: auto;
+    }
+    .produto-selecionado {
+        background-color: #f0f0f0;
+        border: 2px solid #007bff;
+    }
+</style>
+
 <script>
-    var cont = 1;
-    var novoCampo;
-    $("#add_campo").click(function () {//Pegando os campos de .mais-produtos e adicionando abaixo ao clicar no "+", tudo dentro dessa chave é ao clicar no "+"
-        cont++;
+    let pesoTotal = 0;
+    let precoTotal = 0;
+    const maxPeso = 5.0;
 
-        novoCampo = $('<div class="form-group" id="campo'+ cont +'"><!--<br><label>Produto '+ cont +':</label>--><br><label>Selecione o produto:</label><select required class="form-control" name="nome_produto" id="nome_produto">{% for produto in produtos %}{% if produto.quantidade == 0 %}pass{% elif produto.quantidade > 0 %} {% if "Sem Cor" in produto.label %}<option required value="{{ produto.label }}" data-preco="{{ produto.preco_venda }}">{{ produto.nome_produto }} - R$ {{ produto.preco_venda }} - Qtd em Estoque: {{ produto.quantidade}}</option>{% else %}<option required value="{{ produto.label }}" data-preco="{{ produto.preco_venda }}">{{ produto.label }} - R$ {{ produto.preco_venda }} - Qtd em Estoque: {{ produto.quantidade}}</option>{% endif %}{% endif %}{% endfor %}</select><button id="'+ cont +'" class="btn-apagar"> - </button><br><label>Quantidade:</label><input class="form-control" type="number" name="quantidade" placeholder="0"><br></div>');
+    document.querySelectorAll('.produto-card').forEach(function(card) {
+        card.addEventListener('click', function() {
+            const preco = parseFloat(card.getAttribute('data-preco').replace(',', '.')); // Troca a vírgula por ponto
+            const peso = parseFloat(card.getAttribute('data-peso').replace(',', '.')); // Troca a vírgula por ponto
 
-        novoCampo.find(".btn-apagar").click(function () { //Função do Botão de "-" para remover os campos adicionados 
-            $(this).closest('.form-group').remove();
-            atualizarPrecoTotal(); //Chama a função ao apagar novos campos
+            //console.log(`Produto: ${card.getAttribute('data-label')}, Preço: ${preco}, Peso: ${peso}`); // Debugging
+
+            // Se o produto já foi selecionado, remove da seleção
+            if (card.classList.contains('produto-selecionado')) {
+                card.classList.remove('produto-selecionado');
+
+                // Verifica se o peso é 0,500 kg e ajusta o peso a ser subtraído
+                let pesoSubtrair = peso; // Inicializa pesoSubtrair com o peso padrão
+                if (peso === 0.5) { // Verifica se o peso é 0,500 kg
+                    pesoSubtrair *= 2; // Multiplica o peso por 2 para subtrair corretamente
+                }
+
+                pesoTotal -= pesoSubtrair; // Subtrai o peso
+                precoTotal -= preco; // Subtrai o preço
+            } 
+            // Se o produto ainda não foi selecionado, adiciona
+            else {
+                // Verifica se o peso total com o novo produto não excede o máximo permitido
+                let pesoFinal = peso; // inicializa pesoFinal com o peso padrão
+                if (peso === 0.5) { // Verifica se o peso é 0,500 kg
+                    pesoFinal *= 2; // Multiplica o peso por 2
+                }
+                // Verifica se o peso total com o novo produto não excede o máximo permitido
+                if (pesoTotal + pesoFinal <= maxPeso) {
+                    card.classList.add('produto-selecionado');
+                    pesoTotal += pesoFinal; // Adiciona o peso
+                    precoTotal += preco; // Adiciona o preço
+                } else {
+                    alert("Você ultrapassaria o peso máximo de 5.0 KG.");
+                    return;
+                }
+            }
+
+            // Atualiza o display do peso e preço total
+            document.getElementById('peso_total').textContent = pesoTotal.toFixed(3) + ' KG';
+            document.getElementById('preco_total').textContent = 'R$ ' + precoTotal.toFixed(2);
+
+            // Atualiza os campos ocultos
+            document.getElementById('preco_total_input').value = precoTotal.toFixed(2);
+            document.getElementById('peso_total_input').value = pesoTotal.toFixed(2);
+
+            // Adiciona produtos selecionados ao campo oculto
+            const produtosSelecionados = [];
+            document.querySelectorAll('.produto-card.produto-selecionado').forEach(function(selectedCard) {
+                produtosSelecionados.push({
+                    label: selectedCard.getAttribute('data-label'),
+                    preco: selectedCard.getAttribute('data-preco'),
+                    peso: selectedCard.getAttribute('data-peso'),
+                    quantidade: selectedCard.getAttribute('data-quantidade'),
+                });
+            });
+
+            document.getElementById('produtos_selecionados_input').value = JSON.stringify(produtosSelecionados);
+
+            // Habilita ou desabilita o botão de vender
+            document.getElementById('CadAulas').disabled = pesoTotal <= 0;
         });
-
-        $(".mais-produtos").append(novoCampo); //Função do Botão de "+" para adicionar novos campos
-            atualizarPrecoTotal(); // Chama a função ao adicionar novos campos
-            var itensOrdenados = $('#nome_produto_' + cont + ' option').sort(function (a, b) {//Ordenar o nome dos produtos gerados posteriormente
-                return a.text < b.text ? -1 : 1;
-        });
-
-        $('#nome_produto_' + cont).html(itensOrdenados);
     });
 
-    $("#CadAulas").click(function () { //Função para enviar os novos campos preenchidos pro back
-        var dados = $ (' #add-aula ').serialize();
-    });
-    
-    //Ordenar o nome dos produtos ao carregar a tela
-    window.onload = function() {
-        var itensOrdenados = $('#nome_produto option').sort(function (a, b) {
-            return a.text < b.text ? -1 : 1;
+    // Filtragem de produtos
+    document.getElementById('filter_produtos').addEventListener('input', function() {
+        const filterValue = this.value.toLowerCase(); // Converte para minúsculas
+        const produtos = document.querySelectorAll('.produto-card');
+
+        produtos.forEach(function(produto) {
+            const label = produto.getAttribute('data-label').toLowerCase(); // Converte para minúsculas
+            if (label.includes(filterValue)) {
+                produto.style.display = ''; // Mostra o produto se corresponder ao filtro
+            } else {
+                produto.style.display = 'none'; // Esconde o produto se não corresponder
+            }
         });
-    
-        $('#nome_produto').html(itensOrdenados);
-    }
-
-//////////////////////////// Preço Total - Campos Filhos////////////////////////////
-// função para atualizar o preço total
-function atualizarPrecoTotal() {
-    var precoTotal = 0;
-    var camposPreenchidos = true;
-    
-    // Loop pelos campos filhos
-    $('.form-group select').each(function(index, element) {
-        const precoProduto = parseFloat($(element).find(':selected').data('preco').replace(',', '.'));
-        const quantidade = parseInt($(element).closest('.form-group').find('input[name="quantidade"]').val());
-        if (isNaN(quantidade) || quantidade === 0) { // Utilizando o loop ".each" verifica se cada um dos campos quantidade está preenchido
-            camposPreenchidos = false;
-        }
-
-        if (!isNaN(precoProduto) && !isNaN(quantidade)) {
-            precoTotal += precoProduto * quantidade;
-        }
     });
-
-    // Adiciona o campo pai ao cálculo do preço total
-    const precoProdutoPai = parseFloat($("#nome_produto option:selected").data('preco').replace(',', '.'));
-    const quantidadePai = parseInt($("input[name='quantidade']").val());
-
-    if (isNaN(quantidadePai) || quantidadePai === 0) { //verifica se o campo quantidade original está preenchido
-        camposPreenchidos = false;
-    }
-
-    if (!isNaN(precoProdutoPai) && !isNaN(quantidadePai)) {
-        precoTotal += precoProdutoPai * quantidadePai;
-    }
-
-    // Atualiza o preço total na tela
-    if (precoTotal <= 0) {
-        $('#preco_total').text('R$ 0.00');
-        $('#CadAulas').prop('disabled', true);
-    } else if (camposPreenchidos == false) {
-        $('#preco_total').text('R$ ' + precoTotal.toFixed(2));
-        $('#CadAulas').prop('disabled', true);
-    } else {
-        $('#preco_total').text('R$ ' + precoTotal.toFixed(2));
-        $('#CadAulas').prop('disabled', false);
-    }
-    }
-
-
-// Adiciona o evento de mudança para o campo pai
-$(document).on('change', '#nome_produto, input[name="quantidade"]', function() {
-    atualizarPrecoTotal();
-});
-
-// Adiciona o evento de mudança para os campos filhos
-$(document).on('change', '.form-group select, .form-group input[name="quantidade"]', function() {
-    atualizarPrecoTotal();
-});
-
-// Adiciona o evento de clique para remover campos
-$(document).on('click', '.btn-apagar', function() {
-    // Remove o campo
-    $(this).closest('.form-group').remove();
-    // Atualiza o preço total na tela
-    atualizarPrecoTotal();
-});
-
-// Adiciona um evento de mudança na quantidade
-$('input[name="quantidade"]').on('change', function() {
-    atualizarPrecoTotal();
-});
-
-// Adiciona um evento de mudança no select de produtos
-$('#nome_produto').on('change', function() {
-    atualizarPrecoTotal();
-});
-
 </script>
 {% endblock %}
+
 
 
 {% block scripts %}

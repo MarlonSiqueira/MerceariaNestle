@@ -65,8 +65,8 @@ class Produto(models.Model):
     nome_comunidade = models.ForeignKey(Comunidade, on_delete=models.PROTECT, null=True)
     alterando_produto = models.CharField(max_length=128, unique=False, default=0)
     ultimo_acesso = models.CharField(max_length=20, default=0)
-    cod_produto = models.PositiveIntegerField(default=0)
-    cod_barras = models.PositiveIntegerField(default=0)
+    cod_produto = models.CharField(max_length=10, blank=True, null=True)
+    cod_barras = models.CharField(max_length=50, blank=True, null=True)
     peso = models.DecimalField(max_digits=5, decimal_places=3, default=0)
 
     def equals(self, other):
