@@ -133,7 +133,7 @@ def add_produto(request, slug):
 
             Cadastro_Estoque(request, nome, label, quantidade, preco_compra, preco_venda, slugp, resultado[0], num_sequencial, peso)
 
-            Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantidade, preco_compra, preco_venda, acao, resultado[1])
+            Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantidade, preco_compra, preco_venda, acao, resultado[1], peso, 1)
 
             messages.add_message(request, messages.SUCCESS, f'Produto {nome_produto_original} Cadastrado com sucesso')
             return redirect(reverse('add_produto', kwargs={"slug":slug}))
@@ -320,7 +320,7 @@ def excluir_produto(request, slug):
 
         #se não tiver venda
         if produto_ja_foi_vendido == 0:
-            Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao, resultado[1])
+            Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao, resultado[1], 1)
 
             messages.add_message(request, messages.SUCCESS, 'Produto excluído com sucesso')
             return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
@@ -328,7 +328,7 @@ def excluir_produto(request, slug):
             if vendas[0] != 0: #caso tenha venda
                 existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída")
                 if existe_saida_venda.quantidade == 0:
-                    Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao, resultado[1])
+                    Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao, resultado[1], 1)
 
                     messages.add_message(request, messages.SUCCESS, 'Produto excluído com sucesso')
                     return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
@@ -419,7 +419,6 @@ def pre_vendas(request, slug):
                 if ativo == "sim":
                     if ultima_compra != 0:
                         
-
                         # Data de hoje
                         hoje = datetime.today().date()
 
@@ -469,16 +468,19 @@ def vendas(request, slug):
         if resultado_familia[0] != 0:
             id_familia = resultado_familia[0]
             slug_token_venda_familia = resultado_familia[9]
+            nome_cliente_familia = resultado_familia[3]
 
             opcao = "id"
             resultado = Consultar_Uma_Comunidade(resultado_familia[1], opcao)
             if resultado[0] != 0:
                 id_comunidade = resultado[0]
                 slug_comunidade = resultado[1]
+                # BuscaVendas = Q(
+                #         Q(venda_finalizada=0) & Q(nome_comunidade_id=id_comunidade)     
+                # )
                 BuscaVendas = Q(
-                        Q(venda_finalizada=0) & Q(nome_comunidade_id=id_comunidade)     
+                        Q(venda_finalizada=0)     
                 )
-
                 vendas = Vendas.objects.filter(BuscaVendas)
 
                 validacao, page = Get_Paginacao_Vendas(request, slug_token_venda_familia, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, vendedor, vendas)
@@ -496,6 +498,7 @@ def vendas(request, slug):
                     'page': page,
                     'slug': slug_token_venda_familia,
                     'slug_voltar_tela': slug_comunidade,
+                    'nome_cliente_familia': nome_cliente_familia
                 }
 
                 return render(request, 'vendas.html', context)
@@ -508,451 +511,139 @@ def vendas(request, slug):
 
     elif request.method == "POST":
         forma_venda = request.POST.get('forma_venda')
-        nome_cliente = request.POST.get('nome_cliente')
         preco_total = request.POST.get('preco_total')  # Preço total
-        peso_total = request.POST.get('peso_total')      # Peso total
+        peso_total = request.POST.get('peso_total')    # Peso total
         produtos_selecionados_json = request.POST.get('produtos_selecionados')  # Produtos selecionados
+
+        opcao = "token_venda"
+        resultado_familia = Consultar_Familia(slug, opcao)
+        nome_cliente = resultado_familia[3]
+        cpf = resultado_familia[2]
+
+        opcao = "id"
+        resultado = Consultar_Uma_Comunidade(resultado_familia[1], opcao)
+        id_comunidade = resultado[0]
+        slug_comunidade = resultado[1]
+        slug_voltar_tela = slug_comunidade
 
         # Converte a string JSON de produtos selecionados para um objeto Python
         produtos_selecionados = json.loads(produtos_selecionados_json)
-        print("esses são os produtos selecionados: ", produtos_selecionados)
-        # Agora você pode usar os dados conforme necessário, por exemplo, salvar no banco de dados
-        for produto in produtos_selecionados:
-            label = produto['label']
-            preco = produto['preco']
-            peso = produto['peso']
-            quantidade = produto['quantidade']
+        contador_vendas = len(produtos_selecionados)
+        tabela = "venda"
 
+        with transaction.atomic():
+            num_sequencial = Gerando_Numero_Sequencial(tabela)
 
-            print("esse é o label: ", label)
-            print("esse é o preco: ", preco)
-            print("esse é o peso: ", peso)
-            print("esse é a quantidade: ", quantidade)
-            print("----------------------------------------")
+            # Se passar pelas validações, crie o objeto VendasControle contendo o ID venda e salve no banco
+            vendacontrole = Criando_Vendas_Controle(nome_cliente, num_sequencial, id_comunidade, contador_vendas, forma_venda)
 
-
-        
+            preco_original_venda = 0
+            cont_num_aleatorio = 0
             preco_total_controle = 0
-            contador_vendas = len(nomes)
 
-            with transaction.atomic():
-                if not nome_cliente:
-                    transaction.set_rollback(True)
-                    messages.add_message(request, messages.ERROR, 'Nome do Cliente não pode ser vazio')
-                    return redirect(reverse('vendas', kwargs={"slug":slug}))
+            for produto in produtos_selecionados:
+                nome_produto, preco, peso, peso_item_total, quantidade = Capturar_Valores_Post_Tela_Vendas(produto)
 
-                ano_festa = slug
-                if ano_festa:
-                    festa = Festa.objects.all()
-                    for festa in festa:
-                        if festa.ano_festa == ano_festa:
-                            ano_festa = festa.id
-
-                last_number = Vendas.objects.aggregate(max_id=Max('id_venda'))['max_id'] #Pegando o valor mais alto de ID_VENDA
-                if last_number is not None:
-                    last_number = int(last_number)  # Converter para inteiro
-                    number = str(last_number + 1).zfill(8) #Criando um com 8 digitos e somando +1 ao numero
-                else:
-                    number = '00000001' #caso seja o primeiro será o 00000001
-
-                #Pegando os últimos 8 digitos da coluna slug na tabela Vendas
-                # last_number_slug = Vendas.objects.annotate(venda_slug=Right('slug', 8)).aggregate(max_slug=Max('venda_slug'))['max_slug']
-                # if last_number_slug is not None:
-                #     last_number_slug = int(last_number_slug)  # Converter para inteiro
-                #     number_slug = str(last_number_slug + 1).zfill(8) #Criando um com 8 digitos e somando +1 ao numero
-                # else:
-                #     number_slug = '00000001' #caso seja o primeiro será o 00000001
-
-                # Se passar pelas validações, crie o objeto VendasControle contendo o ID venda e salve no banco
-                vendacontrole = VendasControle.objects.create(
-                    nome_cliente = nome_cliente,
-                    id_venda = number,
-                    slug = number,
-                    venda_finalizada = 0,
-                    ano_festa_id = ano_festa,
-                    alteracoes_finalizadas = False,
-                    novo_preco_venda_total = 0,
-                    valor_cancelado = 0,
-                    valor_pago = 0,
-                    falta_editar = contador_vendas,
-                    falta_c_ou_e = contador_vendas,
-                    preco_original = 0,
-                    forma_venda = forma_venda,
-                    entrega_realizada = "N"
-                )
-                vendacontrole.save()
-                preco_original_venda = 0
-                desconto_venda = 0
-                autorizado_por_venda = ""
-                validator_autorizado_por = 0
-                cont_num_aleatorio = 0
-                # venda_number = number_slug
-                cont_venda_number = 0
-
-                if not autorizado_por: #Verificando se teve algum desconto autorizado
-                    autorizado_por = 0
-                    desconto_venda_item = 0
-                else:
-                    validator_autorizado_por = 1
-                    desconto_venda = float(desconto_autorizado)
-                    autorizado_por_venda = autorizado_por
-
-                for i in range(len(nomes)): #Percorrendo a lista toda, a quantidade de vezes é baseada no tamanho do array, se tem 2 itens, percorre 2x
-                    try:
-                        if not nome_cliente:
-                            transaction.set_rollback(True)
-                            messages.add_message(request, messages.ERROR, 'Você não preencheu o nome do cliente')
-                            return redirect(reverse('vendas', kwargs={"slug":slug}))  
-                        nome = nomes[i]
-                        quantidade = quantidades[i]
-                        desconto = descontos[i].replace(',', '.').replace('R$', '').replace(' ', '') # Substitui a vírgula pelo ponto, R$ por vazio e espaço por vazio
-                        tam_desconto = len(desconto)
-                        if desconto: #Conferindo se tem desconto
-                            desconto = float(desconto)#transformando em float
-                        tamanhoc = "camisa"
-                        camisa = nome.lower()
-                        slug = slug
-                        anofesta = slug
-                        data_str = str(anofesta)
-                        tamanho_str = "-"
-                        lucro = 0
-                        num_aleatorio = "v" + str(number)
-                        
-                        # if cont_venda_number != 0: #Terceira vez em diante
-                        #     venda_number = str(int(venda_number) + 1).zfill(8) #Transformando em inteiro para somar
-                        #     num_aleatorio = "v" + str(venda_number) #Transformando em string para concatenar
-                        # elif cont_num_aleatorio > 0: #Segunda vez
-                        #     venda_number = str(int(number_slug) + 1).zfill(8) #Transformando em inteiro para somar
-                        #     num_aleatorio = "v" + str(venda_number) #Transformando em string para concatenar
-                        #     cont_venda_number += 1
-                        # else: #Primeira vez
-                        #     num_aleatorio = "v" + str(venda_number) #Transformando em string para concatenar
-                        cont_num_aleatorio += 1
-
-                        label = nome
-                        label_vendas_get = nome
-                        data_modelo = timezone.localtime(timezone.now())
-                        data_modelo_1 = data_modelo.strftime("%d-%m-%Y %H:%M:%S") 
-                        data_criacao = data_modelo_1
-                        nome_cliente = nome_cliente
-                        nome_cliente = unidecode.unidecode(f'{nome_cliente}')
-                        nome_cliente = str(nome_cliente)
-
-                        ano_atual = Capturar_Ano_Atual()
-                        id_festa_ano_escolhido = Capturar_Id_Festa_Ano_Atual(ano_atual)
-
-                        BuscaCamisa = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
-                                Q(ano_festa_id=id_festa_ano_escolhido) & Q(label=nome) 
-                        )
-
-                        if tamanhoc in camisa: #Se for "camisa" altere o tamanho, label e label_vendas
-                            produtos = Produto.objects.filter(BuscaCamisa)
-                            for produto in produtos:
-                                if produtos:
-                                    tamanho = produto.tamanho_produto
-                                    tamanho_str = str(tamanho)
-                                    label = nome + " " + data_criacao
-                                    slugp = slugify(nome + "-" + data_str + "-" + num_aleatorio) 
-                                    #label_vendas_get = nome + " " + tamanho_str (Aqui adiciona o tamanho na camisa caso seja necessário)
-                        else:#Se não for camisa altere a label
-                            label = nome + " " + data_criacao
-                            tamanho = ""
-                            slugp = slugify(nome + "-" + tamanho_str + "-" + data_str + "-" + num_aleatorio) 
-                        labelf = Vendas.objects.filter(label_vendas=label)#Verificando se está sendo preenchido produtos duplicados na mesma venda.
-
-                        if labelf:
-                            transaction.set_rollback(True) #Desfazer alterações caso haja erro em alguma.
-                            messages.add_message(request, messages.ERROR, 'Confira os produtos, parecem duplicados')
-                            return redirect(reverse('vendas', kwargs={"slug":slug}))    
-
-                        quantidade_estoque_produto = 0
-                        id_produto = 0
-                        id_nome_produto = 0
-                        produto = 0
-                        nome_venda_produto = 0
-                        preco_compra_estoque_produto = 0
-                        preco_venda_estoque_produto = 0
-                        categoria_estoque_produto = 0
-
-                        primeira_word = primeira_palavra(nome)
-                        BuscaNomeProduto = Q( #Fazendo o Filtro com Busca Q
-                                Q(ano_festa_id=id_festa_ano_escolhido) & Q(nome_produto=primeira_word) 
-                        )
-                        BuscaTamanhoProduto = Q( #Fazendo o Filtro com Busca Q
-                                Q(ano_festa_id=id_festa_ano_escolhido) & Q(tamanho_produto=tamanho) 
-                        )
-                        if tamanhoc not in camisa: #Caso Produto não seja Camisa entrará aqui
-                            nome_venda_produto = NomeProduto.objects.filter(BuscaNomeProduto) #Acessando tabela de nomes de produto e procurando pelo nome selecionado
-                            for nome_venda_produto in nome_venda_produto:
-                                id_nome_venda_produto = nome_venda_produto.id #Pegando ID da tabela de nomes
-                                if id_nome_venda_produto:
-                                    nome_produto = Produto.objects.filter(BuscaCamisa)
-                                    if nome_produto:
-                                        Busca = Q( #Fazendo o Filtro com Busca Q
-                                            Q(nome_produto_id=id_nome_venda_produto) & Q(label=nome) & Q(ano_festa_id=id_festa_ano_escolhido)
-                                        )
-
-                                        nome_produto = Produto.objects.get(Busca)#Buscando na tabela de produtos o ID selecionado
-                                        id_produto = nome_produto.id #ID Produto
-                                        id_nome_produto = nome_produto.nome_produto_id #ID Nome Produto
-                                        quantidade_estoque_produto = nome_produto.quantidade
-                                        preco_compra_estoque_produto = nome_produto.preco_compra
-                                        preco_venda_estoque_produto = nome_produto.preco_venda
-                                        categoria_estoque_produto = nome_produto.categoria_id
-                                        cor = nome_produto.cor_id
-                                        cor_produto_str_ = nome_produto.cor
-                                        cor_produto_str = str(cor_produto_str_)
-                                        nome_produto_str_ = nome_produto.nome_produto #Nome Produto
-                                        nome_produto_str = str(nome_produto_str_) + " (" + cor_produto_str + ")"
-                                        categoria_produto_str_ = nome_produto.categoria
-                                        categoria_produto_str = str(categoria_produto_str_)
-                                        tamanho_produto_str = ""
-                                        if quantidade_estoque_produto <= 0:
-                                            transaction.set_rollback(True)
-                                            messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
-                                            return redirect(reverse('vendas', kwargs={"slug":slug}))              
-                                    if not nome_produto:
-                                        transaction.set_rollback(True)
-                                        messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
-                                        return redirect(reverse('vendas', kwargs={"slug":slug}))                        
-                        elif tamanho and tamanhoc in camisa: #Caso seja camisa entrará Aqui
-                            tamanho_produto = TamanhoProduto.objects.filter(BuscaTamanhoProduto) #Acessando tabela de Tamanhos do produto e procurando pelo tamanho selecionado
-                            for tamanho_produto in tamanho_produto:
-                                tamanho = tamanho_produto.id #Pegando ID da tabela de tamanho
-                                if tamanho:
-                                    BuscaTamanhoDoProduto = Q( #Fazendo o Filtro com Busca Q
-                                            Q(ano_festa_id=id_festa_ano_escolhido) & Q(tamanho_produto_id=tamanho) 
-                                    )
-                                    nome_produto = Produto.objects.filter(BuscaTamanhoDoProduto)#Buscando na tabela de Produtos o ID selecionado
-                                    if nome_produto:
-                                        Busca = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
-                                            Q(tamanho_produto_id=tamanho) & Q(label=nome) & Q(ano_festa_id=id_festa_ano_escolhido)
-                                        )
-                                        nome_produto = Produto.objects.get(Busca)#Buscando na tabela de Produtos o ID selecionado
-                                        id_produto = nome_produto.id #ID Produto
-                                        id_nome_produto = nome_produto.nome_produto_id #ID Nome Produto
-                                        quantidade_estoque_produto = nome_produto.quantidade
-                                        preco_compra_estoque_produto = nome_produto.preco_compra
-                                        preco_venda_estoque_produto = nome_produto.preco_venda
-                                        categoria_estoque_produto = nome_produto.categoria_id 
-                                        cor = nome_produto.cor_id
-                                        cor_produto_str_ = nome_produto.cor
-                                        cor_produto_str = str(cor_produto_str_)
-                                        nome_produto_str_ = nome_produto.nome_produto #Nome Produto
-                                        nome_produto_str = str(nome_produto_str_) + " (" + cor_produto_str + ")"
-                                        categoria_produto_str_ = nome_produto.categoria
-                                        categoria_produto_str = str(categoria_produto_str_)
-                                        tamanho_produto_str_ = nome_produto.tamanho_produto
-                                        tamanho_produto_str = str(tamanho_produto_str_)
-                                        if quantidade_estoque_produto <= 0:
-                                            transaction.set_rollback(True)
-                                            messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
-                                            return redirect(reverse('vendas', kwargs={"slug":slug})) 
-                                    if not nome_produto:
-                                        transaction.set_rollback(True)
-                                        messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
-                                        return redirect(reverse('vendas', kwargs={"slug":slug}))   
-                    except Exception as e:
+                try:
+                    if not nome_cliente:
                         transaction.set_rollback(True)
-                        messages.add_message(request, messages.ERROR, 'Ocorreu um erro ao processar a venda, fale com a administração')
+                        messages.add_message(request, messages.ERROR, 'Você não preencheu o nome do cliente')
+                        return redirect(reverse('vendas', kwargs={"slug":slug})) 
+
+                    # Inicio Declaração de Variáveis da Venda 
+                    nome = nome_cliente
+                    num_aleatorio = "v" + str(num_sequencial)
+                    cont_num_aleatorio += 1
+                    label = nome_produto
+                    label_vendas_get = nome_produto
+
+                    nome_cliente = nome_cliente
+                    nome_cliente = unidecode.unidecode(f'{nome_cliente}')
+                    nome_cliente = str(nome_cliente)
+                    
+                    quantidade_estoque_produto = 0
+                    id_produto = 0
+                    id_nome_produto = 0
+                    produto = 0
+                    preco_compra_estoque_produto = 0
+                    preco_venda_estoque_produto = 0
+
+                    data_atual = Capturar_Ano_E_Hora_Atual()
+                    
+                    label = slugify(nome_produto + "-" + data_atual)
+                    slugp = slugify(nome_produto + "-" + data_atual + "-" + num_aleatorio)
+
+                    valor = [id_comunidade, nome_produto]
+                    # Fim Declaração de Variáveis da Venda 
+
+                    labelf = Vendas.objects.filter(label_vendas=label)#Verificando se está sendo preenchido produtos duplicados na mesma venda.
+
+                    if labelf:
+                        transaction.set_rollback(True) #Desfazer alterações caso haja erro em alguma.
+                        messages.add_message(request, messages.ERROR, 'Confira os produtos, parecem duplicados')
                         return redirect(reverse('vendas', kwargs={"slug":slug}))
 
-                    if nome_cliente or nome or quantidade or desconto or forma_venda:
-                        if not nome:
-                            transaction.set_rollback(True)
-                            messages.add_message(request, messages.ERROR, 'Nome do Produto não pode ser vazio')
-                            return redirect(reverse('vendas', kwargs={"slug":slug})) 
-                        if quantidade == 0 or not quantidade:
-                            transaction.set_rollback(True)
-                            messages.add_message(request, messages.ERROR, 'Quantidade não pode ser vazia')
-                            return redirect(reverse('vendas', kwargs={"slug":slug})) 
-                        if tam_desconto > 0:
-                            if desconto < 0:
+                    resultado_nome_produto = Consultar_Nome_Dos_Produtos(valor, opcao)
+                    id_nome_produto = resultado_nome_produto[0]
+
+                    if id_nome_produto != 0:
+                        valor = [id_nome_produto, nome_produto, id_comunidade]
+                        resultado_produto = Consultar_Dados_Dos_Produtos(valor, opcao)
+                        id_produto = resultado_produto[0]
+                        slug_produto = resultado_produto[1]
+
+                        if id_produto != 0:
+                            quantidade_estoque_produto = resultado_produto[4]
+                            preco_compra_estoque_produto = resultado_produto[5]
+                            preco_venda_estoque_produto = preco
+                            nome_produto_str_ = resultado_produto[3]
+                            nome_produto_str = str(nome_produto_str_)
+
+                            if quantidade_estoque_produto <= 0:
                                 transaction.set_rollback(True)
-                                messages.add_message(request, messages.ERROR, 'Desconto não pode ser negativo')
-                                return redirect(reverse('vendas', kwargs={"slug":slug})) 
-                        if forma_venda != "Pix" and forma_venda != "Dinheiro" and forma_venda != "Crédito" and forma_venda != "Débito":
-                            transaction.set_rollback(True)
-                            messages.add_message(request, messages.ERROR, 'Forma de pagamento deve ser uma das quatro cadastradas')
-                            return redirect(reverse('vendas', kwargs={"slug":slug})) 
-
-                        quantidade = int(quantidade)
-                        quantidade_estoque_produto = int(quantidade_estoque_produto)
-
-                        if quantidade > quantidade_estoque_produto:
-                            transaction.set_rollback(True)
-                            messages.add_message(request, messages.ERROR, f'O Produto {nome} que você está tentando vender não tem essa quantidade em estoque, quantidade disponível: {quantidade_estoque_produto}')
-                            return redirect(reverse('vendas', kwargs={"slug":slug}))
+                                messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
+                                return redirect(reverse('vendas', kwargs={"slug":slug}))              
                         else:
-                            if autorizado_por == 0: #Se não tiver sido autorizado algum desconto geral entra aqui
-                                quantidade_estoque_produto = quantidade_estoque_produto - quantidade
-                                produto = Produto.objects.filter(id=id_produto) #Buscando produto pelo ID encontrado lá em cima
-                                desconto_autorizado = 0
-                                if produto:
-                                    preco_compra_estoque_produto = float(preco_compra_estoque_produto)
-                                    preco_venda_estoque_produto = float(preco_venda_estoque_produto)
-                                    preco_venda_estoque_produto_real = preco_venda_estoque_produto #Nessa linha calcula o desconto como REAIS
-                                    preco_venda_total = preco_venda_estoque_produto * quantidade #caso não tenha desconto, preço venda será esse
-                                    desconto_total = 0
-                                    if desconto:
-                                        # preco_venda_estoque_produto = preco_venda_estoque_produto - (preco_venda_estoque_produto * desconto / 100) #Nessa linha calcula o desconto como PORCENTAGEM
-                                        desconto_total = desconto * quantidade
-                                        preco_venda_estoque_produto = preco_venda_estoque_produto - desconto #Nessa linha calcula o desconto como REAIS
-                                        preco_venda_total = preco_venda_estoque_produto * quantidade #caso tenha desconto, preço venda será esse
-                                        lucro = ((preco_venda_estoque_produto * quantidade) - (preco_compra_estoque_produto * quantidade))
-                                        desconto_venda_item += desconto_total
-                                    else:
-                                        desconto = 0
-                                        lucro = ((preco_venda_estoque_produto * quantidade) - (preco_compra_estoque_produto * quantidade))
-                                    produto = Produto.objects.get(id=id_produto)#Pegando dados do produto encontrado
-                                    Produto.objects.filter(id=id_produto).update(quantidade=quantidade_estoque_produto)
-                            else:#Se tiver sido autorizado algum desconto geral entra aqui
-                                quantidade_estoque_produto = quantidade_estoque_produto - quantidade
-                                produto = Produto.objects.filter(id=id_produto) #Buscando produto pelo ID encontrado lá em cima
-                                if produto:
-                                    preco_compra_estoque_produto = float(preco_compra_estoque_produto)
-                                    preco_venda_estoque_produto = float(preco_venda_estoque_produto)
-                                    preco_venda_estoque_produto_real = float(preco_venda_estoque_produto)
-                                    preco_venda_total = preco_venda_estoque_produto * quantidade
-                                    desconto_total = desconto_autorizado
-                                    desconto = 0
-                                    desconto_autorizado = float(desconto_autorizado)
-                                    if desconto_autorizado and desconto_autorizado > 0:
-                                        autorizado_por = autorizado_por
-                                        preco_venda_estoque_produto_ = preco_venda_estoque_produto - desconto_autorizado
-                                        # if preco_venda_estoque_produto_ < 0: #Caso o desconto seja tão grande que o preço do produto fique negativo
-                                        #     transaction.set_rollback(True)
-                                        #     messages.add_message(request, messages.ERROR, f'Você está tentando vender o produto {nome} em um preço muito abaixo, converse com a administração da festa')
-                                        #     return redirect(reverse('vendas', kwargs={"slug":slug}))
-                                        preco_venda_total = (preco_venda_estoque_produto * quantidade) - desconto_autorizado
-                                        # lucro = ((preco_venda_estoque_produto * quantidade) - (preco_compra_estoque_produto * quantidade) - desconto_venda)
-                                        #O lucro agora não está sendo contabilizado descontando o desconto_autorizado, pois o desconto está sendo jogado para a venda
-                                        lucro = (preco_venda_estoque_produto * quantidade) - (preco_compra_estoque_produto * quantidade)
-                                        lucro -= desconto_autorizado
-                                    produto = Produto.objects.get(id=id_produto)#Pegando dados do produto encontrado
-                                    Produto.objects.filter(id=id_produto).update(quantidade=quantidade_estoque_produto)
-
-                        preco_total_controle += preco_venda_total
-
-                        if lucro < 0 and desconto_autorizado <= 0:
                             transaction.set_rollback(True)
-                            messages.add_message(request, messages.ERROR, f'Você está tentando vender o produto {nome} em um preço muito abaixo, converse com a administração da festa')
-                            return redirect(reverse('vendas', kwargs={"slug":slug}))
-                        if validator_autorizado_por == 1:
-                            preco_original_venda += float(preco_venda_total) + float(desconto_autorizado)
-                            preco_original = float(preco_venda_total) + float(desconto_autorizado)
-                            preco_venda = preco_venda_estoque_produto_real
+                            messages.add_message(request, messages.ERROR, 'Algo de errado aconteceu com sua venda, caso persista, contate a administração.')
+                            return redirect(reverse('vendas', kwargs={"slug":slug}))  
+                    else:
+                        transaction.set_rollback(True)
+                        messages.add_message(request, messages.ERROR, 'Algo de errado aconteceu com sua venda, caso persista, contate a administração.')
+                        return redirect(reverse('vendas', kwargs={"slug":slug}))                  
+                except Exception as e:
+                    transaction.set_rollback(True)
+                    messages.add_message(request, messages.ERROR, 'Ocorreu um erro ao processar a venda, fale com a administração')
+                    return redirect(reverse('vendas', kwargs={"slug":slug}))
 
-                        if validator_autorizado_por == 0:
-                            preco_venda = preco_venda_estoque_produto_real
-                            preco_original = float(preco_venda_total) + float(desconto_total)
-                            preco_original_venda += float(preco_venda_total) + float(desconto_total)
-                        lucro_da_venda = lucro
-                        # Se passar pelas validações, crie o objeto Venda e salve no banco
-                        venda = Vendas.objects.create(
-                            nome_produto_id = id_nome_produto, 
-                            categoria_id = categoria_estoque_produto,
-                            tamanho_produto_id = tamanho,
-                            quantidade = quantidade, 
-                            desconto = desconto, 
-                            forma_venda=forma_venda,
-                            preco_compra = preco_compra_estoque_produto,
-                            preco_venda = preco_venda,
-                            preco_venda_total=preco_venda_total,
-                            desconto_total=desconto_total,
-                            criado_por = request.user.username,
-                            slug = slugp,
-                            ano_festa_id = ano_festa,
-                            lucro = lucro,
-                            cor_id = cor,
-                            label_vendas = label,
-                            label_vendas_get = label_vendas_get,
-                            produto_id = id_produto,
-                            nome_cliente = nome_cliente,
-                            venda_finalizada = 0,
-                            desconto_autorizado = desconto_autorizado,
-                            autorizado_por = autorizado_por,
-                            id_venda = vendacontrole,
-                            modificado = False,
-                            preco_original = preco_original, #Somando os descontos ao preço do item, caso exista.
-                            entrega_realizada = "N"
-                        )
-                        venda.save()
+                validacao_forma_venda_e_qtd, preco_venda_estoque_produto, preco_venda_estoque_produto_real, preco_venda_total = Valida_Forma_Venda_E_Quantidade(request, slug, forma_venda, quantidade, quantidade_estoque_produto, nome_produto, id_produto)
 
-                        id_user = Users.objects.get(username=request.user)
-                        id_user = id_user.id
+                if validacao_forma_venda_e_qtd:
+                    return validacao_forma_venda_e_qtd
 
-                        excel_venda_T_E = Excel_T_E(acao="Venda_Item",
-                                                    tipo = "Venda",
-                                                    id_user = id_user,
-                                                    criado_por=request.user,
-                                                    nome_produto = nome_produto_str,
-                                                    tamanho_produto = tamanho_produto_str, 
-                                                    categoria = categoria_produto_str,
-                                                    quantidade_antiga = quantidade,
-                                                    quantidade_nova = 0,
-                                                    tamanho_produto_novo = 0,
-                                                    cor_produto_novo = 0,
-                                                    id_venda = vendacontrole,
-                                                    slug = slugp,
-                                                    ano_festa = slug)
-                        excel_venda_T_E.save()
+                # Inicio Declaração Variaveis
+                preco_total_controle += float(preco_venda_total)
+                preco_venda = preco_venda_estoque_produto_real
+                preco_original_venda += float(preco_venda_total)
+                # Fim Declaração Variaveis
 
-                        produto = Produto.objects.get(id=id_produto) #Pegando o produto
-                        tamanho_p_excel = ""
-                        if produto.tamanho_produto is not None and produto.tamanho_produto != "":
-                            tamanho_p_excel = produto.tamanho_produto
-                        categoria_p_excel = produto.categoria
-                        nome_produto_p_excel = str(produto.nome_produto) + " (" + str(produto.cor) + ")"
-                        ano_festa_p_excel = produto.ano_festa
+                # Se passar pelas validações, crie o objeto Venda e salve no banco
+                Criando_Vendas(request, id_nome_produto, quantidade, peso, peso_item_total, forma_venda, preco_compra_estoque_produto, preco_venda, preco_venda_total, slugp, id_comunidade, label, label_vendas_get, id_produto, nome_cliente, vendacontrole)
 
-                        data_modelo_update = timezone.localtime(timezone.now())
-                        data_modelo_update_1 = data_modelo_update.strftime("%d/%m/%Y %H:%M:%S") 
-                        data_alteracao = data_modelo_update_1
+                id_user = Capturar_Id_Do_Usuario(request)
 
-                        lucro_decimal = Decimal(lucro_da_venda)
-                        existe_saida_venda = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Saída", tamanho_produto=tamanho_p_excel)
-                        if existe_saida_venda:
-                            existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída", tamanho_produto=tamanho_p_excel)
-                            existe_saida_venda.quantidade += quantidade
-                            existe_saida_venda.ultima_alteracao = data_alteracao
-                            existe_saida_venda.alterado_por = request.user.username
-                            existe_saida_venda.lucro += lucro_decimal
-                            existe_saida_venda.save()
-                        else:
-                            p_excel = P_Excel(acao="Saída",
-                                            id_user = id_user,
-                                            nome_user=request.user,
-                                            nome_produto = nome_produto_p_excel,
-                                            tamanho_produto = tamanho_p_excel, 
-                                            categoria = categoria_p_excel,
-                                            quantidade = quantidade, 
-                                            preco_compra = preco_compra_estoque_produto, 
-                                            preco_venda = preco_venda_estoque_produto,
-                                            ano_festa = ano_festa_p_excel,
-                                            lucro = lucro_decimal)
-                            p_excel.save()
+                Cadastro_Planilhas_Troca_E_Estorno_Vendas(request, id_user, nome_produto_str, quantidade, vendacontrole, slugp, slug_comunidade)
 
-                        desconto_autorizado = 0 #Após a primeira venda o desconto_autorizado volta pra zero.
-                        autorizado_por = 0 #Após a primeira venda o autorizado_por volta pra zero.
-                        validator_autorizado_por = 0 #Após a primeira venda o validator_autorizado_por volta pra zero.
-                        ImagemVenda.objects.filter(produto=id_produto).update(venda_id=venda.id)
+                acao = "vender"
+                Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug_produto, quantidade, preco_compra_estoque_produto, preco_venda_estoque_produto, acao, slug_comunidade, peso, id_produto)
 
-                # Se passar pelas validações, pega o objeto VendasControle contendo o ID venda gerado lá em cima#
-                vendacontrole1 = VendasControle.objects.get(id_venda=number)        
-                if desconto_venda > 0:
-                    vendacontrole1.desconto_autorizado = desconto_venda
-                    vendacontrole1.desconto_total = desconto_venda
-                else:
-                    vendacontrole1.desconto_total = desconto_venda_item
+            # Se passar pelas validações, pega o objeto VendasControle contendo o ID venda gerado lá em cima#
+            Atualiza_Venda_Controle(num_sequencial, preco_total_controle)
 
-                vendacontrole1.preco_venda_total = preco_total_controle
-                vendacontrole1.novo_preco_venda_total = preco_total_controle
-                vendacontrole1.preco_original = preco_original_venda
-                vendacontrole1.autorizado_por = autorizado_por_venda
-                vendacontrole1.save()
-                messages.add_message(request, messages.SUCCESS, 'Venda Cadastrada com sucesso')
-                return redirect(reverse('vendas', kwargs={"slug":anofesta}))
+            Salvando_Novo_Token_Venda_Familia(cpf, "reset")
+
+            messages.add_message(request, messages.SUCCESS, 'Venda Cadastrada com sucesso')
+            return redirect(reverse('pre_vendas', kwargs={"slug":slug_voltar_tela}))
 
 
 #Função para a tela de vender produto

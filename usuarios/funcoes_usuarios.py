@@ -12,6 +12,13 @@ from django.utils.html import strip_tags
 from django.shortcuts import get_object_or_404
 
 
+def Capturar_Id_Do_Usuario(request):
+    id_user = Users.objects.get(username=request.user)
+    id_user = id_user.id
+    
+    return id_user
+
+
 def enviar_email(destinatario, cargo, nome_usuario_email, username):
     nome_usuario_email = nome_usuario_email.upper()
     html_content = render_to_string('emails/cadastro_confirmado.html', {'nome_usuario_email': nome_usuario_email, 'cargo':cargo, 'username':username})#Corpo do Email

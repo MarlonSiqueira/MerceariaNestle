@@ -97,12 +97,12 @@ class P_Excel(models.Model):
     nome_user = models.CharField(max_length=128, unique=False, blank=True, null=True, editable=False)
     nome_produto = models.CharField(max_length=128, unique=False)
     quantidade = models.PositiveIntegerField()
-    lucro = models.DecimalField(max_digits=7, decimal_places=2, default=0)
     estorno = models.DecimalField(max_digits=7, decimal_places=2, default=0)
     preco_compra = models.DecimalField(max_digits=7, decimal_places=2)
     preco_venda = models.DecimalField(max_digits=7, decimal_places=2)
+    peso = models.DecimalField(max_digits=5, decimal_places=3, default=0)
     dia = models.CharField(max_length=10, null=True, editable=False)
-    nome_comunidade = models.CharField(max_length=60)
+    nome_e_cidade_comunidade = models.CharField(max_length=128, default=0)
     ultima_alteracao = models.CharField(max_length=20, null=True, editable=False)
     alterado_por = models.CharField(max_length=128, unique=False, blank=True, null=True, editable=False)
 
@@ -136,7 +136,7 @@ class Excel_T_E(models.Model):
     quantidade_antiga = models.IntegerField(blank=True, null=True)
     quantidade_nova = models.IntegerField(blank=True, null=True)
     dia = models.CharField(max_length=10, null=True, editable=False)
-    nome_comunidade = models.CharField(max_length=60)
+    nome_e_cidade_comunidade = models.CharField(max_length=128, default=0)
     slug = models.SlugField(unique=True, blank=True, null=True)
 
     def save(self, *args, **kwargs):
@@ -186,10 +186,9 @@ class LogsItens(models.Model):
         super().save(*args, **kwargs)
 
 class VendasControle(models.Model):
-    nome_cliente = models.TextField(max_length=30, blank=True, null=True)
+    nome_cliente = models.CharField(max_length=128, unique=False, null=True, editable=False)
     id_venda = models.CharField(max_length=10, primary_key=True)
     preco_venda_total = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True, editable=False)
-    autorizado_por = models.CharField(max_length=128, unique=False, null=True, editable=False)
     slug = models.SlugField(unique=True, blank=True, null=True)
     venda_finalizada = models.IntegerField(null=False, blank=False)
     nome_comunidade = models.ForeignKey(Comunidade, on_delete=models.PROTECT, null=True)
@@ -201,7 +200,6 @@ class VendasControle(models.Model):
     troco = models.DecimalField(max_digits=7, decimal_places=2, default=0)
     falta_editar = models.IntegerField(null=False, blank=False)
     falta_c_ou_e = models.IntegerField(null=False, blank=False)
-    preco_original = models.DecimalField(max_digits=7, decimal_places=2)
     forma_venda = models.CharField(max_length=8, null=True, blank=True)
     quantidade_parcelas = models.IntegerField(null=False, blank=False, default=0)
 
@@ -222,7 +220,6 @@ class Vendas(models.Model):
     houve_estorno = models.IntegerField(blank=False, null=False, default=0)
     houve_troca = models.IntegerField(blank=False, null=False, default=0)
     slug = models.SlugField(unique=True, blank=True, null=True)
-    lucro = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
     forma_venda = models.CharField(max_length=8, null=True)
     criado_por = models.CharField(max_length=128, unique=False, null=True, editable=False)
     data_criacao = models.CharField(max_length=20, null=True, editable=False)
@@ -232,7 +229,8 @@ class Vendas(models.Model):
     nome_comunidade = models.ForeignKey(Comunidade, on_delete=models.PROTECT, null=True)
     venda_finalizada = models.IntegerField(null=False, blank=False)
     modificado = models.BooleanField(null=False, blank=False)
-    preco_original = models.DecimalField(max_digits=7, decimal_places=2)
+    peso = models.DecimalField(max_digits=5, decimal_places=3, default=0)
+    peso_total = models.DecimalField(max_digits=5, decimal_places=3, default=0)
 
     def __str__(self):
         return self.nome_produto

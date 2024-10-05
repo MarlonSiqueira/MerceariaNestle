@@ -135,3 +135,119 @@ def Get_Paginacao_Vendas(request, slug_token_venda_familia, nome_cliente, nome, 
         #Fim do Filtro
     
     return None, page
+
+
+def Capturar_Valores_Post_Tela_Vendas(produto):
+    nome_produto = produto['label']
+    preco = produto['preco']
+    peso = produto['peso']
+    quantidade = produto['quantidade']
+
+    peso = float(peso.replace(',', '.')) #Trocando virgula por ponto
+    preco = float(preco.replace(',', '.')) #Trocando virgula por ponto
+    quantidade = int(quantidade)
+    peso_item_total = peso
+
+    if peso <= 0.500:
+        peso_item_total *= 2
+        preco *= 2
+        quantidade = 2
+    else:
+        quantidade = 1
+
+    return nome_produto, preco, peso, peso_item_total, quantidade
+
+
+def Criando_Vendas_Controle(nome_cliente, num_sequencial, id_comunidade, contador_vendas, forma_venda):
+    vendacontrole = VendasControle.objects.create(
+        nome_cliente = nome_cliente,
+        id_venda = num_sequencial,
+        slug = num_sequencial,
+        venda_finalizada = 0,
+        nome_comunidade_id = id_comunidade,
+        alteracoes_finalizadas = False,
+        novo_preco_venda_total = 0,
+        valor_cancelado = 0,
+        valor_pago = 0,
+        falta_editar = contador_vendas,
+        falta_c_ou_e = contador_vendas,
+        forma_venda = forma_venda
+    )
+    vendacontrole.save()
+
+    return vendacontrole
+
+
+def Valida_Forma_Venda_E_Quantidade(request, slug, forma_venda, quantidade, quantidade_estoque_produto, nome_produto, id_produto):
+    with transaction.atomic():
+        if forma_venda != "Pix" and forma_venda != "Dinheiro" and forma_venda != "Crédito" and forma_venda != "Débito":
+            preco_venda_estoque_produto = preco_venda_estoque_produto_real = preco_venda_total = 0
+            transaction.set_rollback(True)
+            messages.add_message(request, messages.ERROR, 'Forma de pagamento deve ser uma das quatro cadastradas')
+            return redirect(reverse('vendas', kwargs={"slug":slug})), preco_venda_estoque_produto, preco_venda_estoque_produto_real, preco_venda_total
+
+        quantidade = int(quantidade)
+        quantidade_estoque_produto = int(quantidade_estoque_produto)
+
+        if quantidade > quantidade_estoque_produto:
+            preco_venda_estoque_produto = preco_venda_estoque_produto_real = preco_venda_total = 0
+            transaction.set_rollback(True)
+            messages.add_message(request, messages.ERROR, f'O Produto {nome_produto} que você está tentando vender não tem essa quantidade em estoque, quantidade disponível: {quantidade_estoque_produto}')
+            return redirect(reverse('vendas', kwargs={"slug":slug})), preco_venda_estoque_produto, preco_venda_estoque_produto_real, preco_venda_total
+        else:
+            quantidade_estoque_produto = quantidade_estoque_produto - quantidade
+            produto = Produto.objects.filter(id=id_produto) #Buscando produto pelo ID encontrado lá em cima
+            if produto:
+                produto = Produto.objects.get(id=id_produto)#Pegando dados do produto encontrado
+                preco_venda_estoque_produto = float(produto.preco_venda)
+                preco_venda_estoque_produto_real = preco_venda_estoque_produto 
+                preco_venda_total = preco_venda_estoque_produto * quantidade
+
+                Produto.objects.filter(id=id_produto).update(quantidade=quantidade_estoque_produto)
+
+    return None, preco_venda_estoque_produto, preco_venda_estoque_produto_real, preco_venda_total
+
+
+def Criando_Vendas(request, id_nome_produto, quantidade, peso, peso_total, forma_venda, preco_compra_estoque_produto, preco_venda, preco_venda_total, slugp, id_comunidade, label, label_vendas_get, id_produto, nome_cliente, vendacontrole):
+    venda = Vendas.objects.create(
+                    nome_produto_id = id_nome_produto, 
+                    quantidade = quantidade,
+                    peso=peso,
+                    peso_total=peso_total,
+                    forma_venda=forma_venda,
+                    preco_compra = preco_compra_estoque_produto,
+                    preco_venda = preco_venda,
+                    preco_venda_total=preco_venda_total,
+                    criado_por = request.user.username,
+                    slug = slugp,
+                    nome_comunidade_id = id_comunidade,
+                    label_vendas = label,
+                    label_vendas_get = label_vendas_get,
+                    produto_id = id_produto,
+                    nome_cliente = nome_cliente,
+                    venda_finalizada = 0,
+                    id_venda = vendacontrole,
+                    modificado = False,
+    )
+    venda.save()
+
+
+def Cadastro_Planilhas_Troca_E_Estorno_Vendas(request, id_user, nome_produto_str, quantidade, vendacontrole, slugp, slug_comunidade):
+    excel_venda_T_E = Excel_T_E(acao="Venda_Item",
+                                tipo = "Venda",
+                                id_user = id_user,
+                                criado_por=request.user,
+                                nome_produto = nome_produto_str,
+                                quantidade_antiga = quantidade,
+                                quantidade_nova = 0,
+                                id_venda = vendacontrole,
+                                slug = slugp,
+                                nome_e_cidade_comunidade = slug_comunidade)
+    excel_venda_T_E.save()
+
+
+def Atualiza_Venda_Controle(num_sequencial, preco_total_controle):
+    vendacontrole = VendasControle.objects.get(id_venda=num_sequencial)        
+    vendacontrole.preco_venda_total = preco_total_controle
+    vendacontrole.novo_preco_venda_total = preco_total_controle
+    vendacontrole.save()

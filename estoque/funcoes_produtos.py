@@ -1,6 +1,7 @@
 from .models import *
 from usuarios.models import *
 from .funcoes_comunidades import *
+from usuarios.funcoes_usuarios import *
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.db.models import Q, Max
@@ -12,26 +13,28 @@ from urllib.parse import urlencode
 from django.core.paginator import Paginator
 
 
-# def Consultar_Valores_Dos_Produtos(valor, opcao):
-#     if opcao == "slug":
-#         valorBusca = valor
-#         BuscaValores = Q( #Fazendo o Filtro com Busca Q para a tabela NomeProduto
-#                 Q(nome_comunidade=valorBusca) 
-#         )
-#         valores = NomeProduto.objects.filter(BuscaValores).values_list('id', 'nome_produto', 'slug', 'nome_comunidade_id') #procurando se existe produtos com o filtro acima
+def Consultar_Nome_Dos_Produtos(valor, opcao):
+    if opcao == "id":
+        id_comunidade = valor[0]
+        nome_produto = valor[1]
+        BuscaValores = Q( #Fazendo o Filtro com Busca Q para a tabela NomeProduto
+                Q(nome_comunidade_id=id_comunidade) & Q(nome_produto=nome_produto)
+        )
 
-#     return Validacao_Objeto_Produto(valores)
+    valores = NomeProduto.objects.filter(BuscaValores).values_list('id', 'nome_produto', 'slug', 'nome_comunidade_id') #procurando se existe produtos com o filtro acima
+
+    return Validacao_Objeto_Nome_Produto(valores)
 
 
-# def Validacao_Objeto_Produto(produtos):
-#     resultado = []  # Lista para armazenar as produtos válidas
-#     if produtos:
-#         resultado = list(produtos[0])  # Transforma a primeira tupla em uma lista simples
-#     else:
-#         # Adiciona uma lista com valores padrões caso não haja produtos
-#         resultado = [0] * 4  # 4 elementos correspondendo aos campos (zeros ou valores padrões)
+def Validacao_Objeto_Nome_Produto(produtos):
+    resultado = []  # Lista para armazenar as produtos válidas
+    if produtos:
+        resultado = list(produtos[0])  # Transforma a primeira tupla em uma lista simples
+    else:
+        # Adiciona uma lista com valores padrões caso não haja produtos
+        resultado = [0] * 4  # 4 elementos correspondendo aos campos (zeros ou valores padrões)
 
-#     return resultado  # Retorna a lista de resultados
+    return resultado  # Retorna a lista de resultados
 
 
 def Gerar_Token_Com_Tempo_Minutos(tempo):
@@ -206,7 +209,7 @@ def Gerando_Numero_Sequencial(tabela):
 
         return num_sequencial
     elif tabela == "venda":
-        last_number = Produto.objects.aggregate(max_id=Max('cod_produto'))['max_id'] #Pegando o valor mais alto de cod_produto
+        last_number = Vendas.objects.aggregate(max_id=Max('id_venda'))['max_id'] #Pegando o valor mais alto de ID_VENDA
         if last_number is not None:
             last_number = int(last_number)  # Converter para inteiro
             num_sequencial = str(last_number + 1).zfill(9) #Criando um com 9 digitos e somando +1 ao numero
@@ -232,23 +235,25 @@ def Cadastro_Estoque(request, nome, label, quantidade, preco_compra, preco_venda
     produto.save()
 
 
-def Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantidade, preco_compra, preco_venda, acao, slug_comunidade):
+def Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantidade, preco_compra, preco_venda, acao, slug_comunidade, peso, id_produto):
     with transaction.atomic():
-        produto = Produto.objects.get(slug=slugp) #Pegando o produto recem-criado
+        if acao != "vender":
+            produto = Produto.objects.get(slug=slugp) #Pegando o produto recem-criado
+        else:
+            produto = Produto.objects.get(id=id_produto) #Pegando o produto
+
         nome_produto_p_excel = str(produto.nome_produto)
         nome_comunidade_p_excel = slug_comunidade
 
-        id_user = Users.objects.get(username=request.user) #Adicionando na tabela de entrada para exportar
-        id_user = id_user.id
-
-        data_alteracao = Capturar_Ano_E_Hora_Atual()
+        id_user = Capturar_Id_Do_Usuario(request)
+        data_atual = Capturar_Ano_E_Hora_Atual()
 
         p_excel_filtro = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Entrada",)#Pegando o produto alterado
         if acao == "adicionar":
             if p_excel_filtro:
                 p_excel_filtro = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Entrada",) #Pegando o produto alterado
                 p_excel_filtro.quantidade += int(quantidade)
-                p_excel_filtro.ultima_alteracao = data_alteracao
+                p_excel_filtro.ultima_alteracao = data_atual
                 p_excel_filtro.alterado_por = request.user.username
                 p_excel_filtro.save()
             else:
@@ -259,16 +264,37 @@ def Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantid
                                 quantidade = quantidade, 
                                 preco_compra = preco_compra, 
                                 preco_venda = preco_venda,
-                                nome_comunidade = nome_comunidade_p_excel)
+                                nome_e_cidade_comunidade = nome_comunidade_p_excel,
+                                peso = peso
+                )
                 p_excel.save()
         elif acao == "excluir":
             existe_entrada_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Entrada")
             existe_entrada_venda.quantidade = 0
-            existe_entrada_venda.ultima_alteracao = data_alteracao
+            existe_entrada_venda.ultima_alteracao = data_atual
             existe_entrada_venda.alterado_por = request.user.username
             existe_entrada_venda.save()
-
             produto.delete()
+        elif acao == "vender":
+            existe_saida_venda = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Saída")
+            if existe_saida_venda:
+                existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída")
+                existe_saida_venda.quantidade += quantidade
+                existe_saida_venda.ultima_alteracao = data_atual
+                existe_saida_venda.alterado_por = request.user.username
+                existe_saida_venda.save()
+            else:
+                p_excel = P_Excel(acao="Saída",
+                                id_user = id_user,
+                                nome_user=request.user,
+                                nome_produto = nome_produto_p_excel,
+                                quantidade = quantidade, 
+                                preco_compra = preco_compra, 
+                                preco_venda = preco_venda,
+                                nome_e_cidade_comunidade = slug_comunidade,
+                                peso = peso
+                )
+                p_excel.save()
 
 
 def Registrar_Log_Alteracao_Produto_E_Alterar_Produto(request, slug_comunidade, slug_produto, id_produto_antigo, abastecer_quantidade, preco_compra, cod_produto, cod_barras, peso, nome_produto_antigo1, data_alteracao, alterado_por):
@@ -465,3 +491,28 @@ def Get_Paginacao_Logs(request, nome_user, dia, acao, model, paginacao):
                 return redirect(reverse('listar_logs')), page 
 
     return None, page
+
+
+def Consultar_Dados_Dos_Produtos(valor, opcao):
+    if opcao == "id":
+        id_produto_tabela_nome_produto = valor[0]
+        nome_produto = valor[1]
+        id_comunidade = valor[2]
+        BuscaValores = Q( #Fazendo o Filtro com Busca Q
+                Q(nome_produto_id=id_produto_tabela_nome_produto) & Q(label=nome_produto) & Q(nome_comunidade_id=id_comunidade)
+        )
+
+    valores = Produto.objects.filter(BuscaValores).values_list('id', 'slug', 'nome_produto', 'nome_comunidade_id', 'quantidade', 'preco_compra', 'preco_venda') #procurando se existe produtos com o filtro acima
+
+    return Validacao_Objeto_Produto(valores)
+
+
+def Validacao_Objeto_Produto(produtos):
+    resultado = []  # Lista para armazenar as produtos válidas
+    if produtos:
+        resultado = list(produtos[0])  # Transforma a primeira tupla em uma lista simples
+    else:
+        # Adiciona uma lista com valores padrões caso não haja produtos
+        resultado = [0] * 7  # 7 elementos correspondendo aos campos (zeros ou valores padrões)
+
+    return resultado  # Retorna a lista de resultados

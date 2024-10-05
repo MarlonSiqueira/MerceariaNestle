@@ -12,6 +12,15 @@ from django.utils.html import strip_tags
 from django.shortcuts import get_object_or_404
 import secrets
 
+
+def Capturar_Dia_Ultima_Compra():
+    data_modelo_update = timezone.localtime(timezone.now())
+    data_modelo_update_1 = data_modelo_update.strftime("%Y-%m-%d") 
+    ultima_compra = data_modelo_update_1
+
+    return  ultima_compra
+
+
 def Consultar_Familia(valor, opcao):
     if opcao == "cpf":
         id_comunidade = valor[0]
@@ -32,7 +41,12 @@ def Consultar_Familia(valor, opcao):
 
 def Salvando_Novo_Token_Venda_Familia(cpf, token_venda):
     familia = Familia.objects.get(cpf=cpf)
-    familia.token_venda = token_venda
+    if token_venda == "reset":
+        familia.token_venda = ""
+        ultima_compra = Capturar_Dia_Ultima_Compra()
+        familia.ultima_compra = ultima_compra
+    else:
+        familia.token_venda = token_venda
     familia.save()
 
 

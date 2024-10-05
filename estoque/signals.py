@@ -249,15 +249,12 @@ def vendas_saved(sender, instance, created, **kwargs): #Insert
             vendas_inclusao.quantidade = str(vendas_inclusao.quantidade)
             vendas_inclusao.preco_compra = str(vendas_inclusao.preco_compra)
             vendas_inclusao.preco_venda = str(vendas_inclusao.preco_venda)
-            vendas_inclusao.lucro = str(vendas_inclusao.lucro)
             vendas_inclusao.criado_por = str(vendas_inclusao.criado_por)
             vendas_inclusao.nome_produto_id = str(vendas_inclusao.nome_produto_id)
             vendas_inclusao.forma_venda = str(vendas_inclusao.forma_venda)
             vendas_inclusao.nome_cliente = str(vendas_inclusao.nome_cliente)
             vendas_inclusao.venda_finalizada = str(vendas_inclusao.venda_finalizada)
             vendas_inclusao.preco_venda_total = str(vendas_inclusao.preco_venda_total)
-            vendas_inclusao.autorizado_por = str(vendas_inclusao.autorizado_por)
-            vendas_inclusao.preco_original = str(vendas_inclusao.preco_original)
 
             if vendas_inclusao.venda_finalizada:
                 campos_inclusao.append('venda_finalizada')
@@ -275,19 +272,8 @@ def vendas_saved(sender, instance, created, **kwargs): #Insert
                 campos_inclusao.append('preco_venda')
             if vendas_inclusao.preco_venda_total:
                 campos_inclusao.append('preco_venda_total')
-            if vendas_inclusao.preco_original:
-                campos_inclusao.append('preco_original')
-            if vendas_inclusao.lucro:
-                campos_inclusao.append('lucro')
             if vendas_inclusao.criado_por:
                 campos_inclusao.append('criado_por')
-            if vendas_inclusao.autorizado_por:
-                campos_inclusao.append('autorizado_por')
-            if vendas_inclusao.tamanho_produto_id:
-                vendas_inclusao.tamanho_produto_id = str(vendas_inclusao.tamanho_produto_id)
-                campos_inclusao.append('tamanho_produto') 
-            elif vendas_inclusao.tamanho_produto_id == None: 
-                pass
             
             if campos_inclusao:
                 valores_inclusao = []
@@ -329,26 +315,17 @@ def vendas_deleted(sender, instance, **kwargs):
     vendas_exclusao.quantidade = str(vendas_exclusao.quantidade)
     vendas_exclusao.preco_compra = str(vendas_exclusao.preco_compra)
     vendas_exclusao.preco_venda = str(vendas_exclusao.preco_venda)
-    vendas_exclusao.desconto = str(vendas_exclusao.desconto)
-    vendas_exclusao.lucro = str(vendas_exclusao.lucro)
     vendas_exclusao.criado_por = str(vendas_exclusao.criado_por)
     vendas_exclusao.nome_produto_id = str(vendas_exclusao.nome_produto_id)
     vendas_exclusao.forma_venda = str(vendas_exclusao.forma_venda)
     vendas_exclusao.nome_cliente = str(vendas_exclusao.nome_cliente)
     vendas_exclusao.venda_finalizada = str(vendas_exclusao.venda_finalizada)
     vendas_exclusao.preco_venda_total = str(vendas_exclusao.preco_venda_total)
-    vendas_exclusao.autorizado_por = str(vendas_exclusao.autorizado_por)
-    vendas_exclusao.preco_original = str(vendas_exclusao.preco_original)
     id_produto = vendas_exclusao.produto_id
 
     #Inicio - Retirando quantidade da p_excel
     produto = Produto.objects.get(id=id_produto) #Pegando o produto
-    tamanho_p_excel = ""
-    if produto.tamanho_produto is not None and produto.tamanho_produto != "":
-        tamanho_p_excel = produto.tamanho_produto
-    categoria_p_excel = produto.categoria
-    nome_produto_p_excel = str(produto.nome_produto) + " (" + str(produto.cor) + ")"
-    ano_festa_p_excel = produto.ano_festa
+    nome_produto_p_excel = str(produto.nome_produto)
 
     id_user = Users.objects.get(username=username)
     id_user = id_user.id
@@ -357,14 +334,12 @@ def vendas_deleted(sender, instance, **kwargs):
     data_modelo_update_1 = data_modelo_update.strftime("%d/%m/%Y %H:%M:%S") 
     data_alteracao = data_modelo_update_1
 
-    lucro_decimal = Decimal(vendas_exclusao.lucro)
-    existe_saida_venda = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Saída", tamanho_produto=tamanho_p_excel)
+    existe_saida_venda = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Saída")
     if existe_saida_venda:
-        existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída", tamanho_produto=tamanho_p_excel)
+        existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída")
         existe_saida_venda.quantidade -= int(vendas_exclusao.quantidade)
         existe_saida_venda.ultima_alteracao = data_alteracao
         existe_saida_venda.alterado_por = username
-        existe_saida_venda.lucro -= lucro_decimal
         existe_saida_venda.save()
     #Fim - Retirando quantidade da p_excel
 
@@ -380,35 +355,18 @@ def vendas_deleted(sender, instance, **kwargs):
         campos_exclusao.append('forma_venda') 
     if vendas_exclusao.nome_produto_id:
         campos_exclusao.append('nome_produto') 
-    if vendas_exclusao.categoria_id:
-        campos_exclusao.append('categoria') 
     if vendas_exclusao.quantidade:
         campos_exclusao.append('quantidade')
     if vendas_exclusao.preco_compra:
         campos_exclusao.append('preco_compra')
     if vendas_exclusao.preco_venda:
         campos_exclusao.append('preco_venda')
-    if vendas_exclusao.desconto:
-        campos_exclusao.append('desconto')
     if vendas_exclusao.preco_venda_total:
         campos_exclusao.append('preco_venda_total')
     if vendas_exclusao.desconto_total:
         campos_exclusao.append('desconto_total')
-    if vendas_exclusao.preco_original:
-        campos_exclusao.append('preco_original')
-    if vendas_exclusao.lucro:
-        campos_exclusao.append('lucro')
     if vendas_exclusao.criado_por:
         campos_exclusao.append('criado_por')
-    if vendas_exclusao.desconto_autorizado:
-        campos_exclusao.append('desconto_autorizado')
-    if vendas_exclusao.autorizado_por:
-        campos_exclusao.append('autorizado_por')
-    if vendas_exclusao.tamanho_produto_id:
-        vendas_exclusao.tamanho_produto_id = str(vendas_exclusao.tamanho_produto_id)
-        campos_exclusao.append('tamanho_produto') 
-    elif vendas_exclusao.tamanho_produto_id == None: 
-        pass
 
     if campos_exclusao:
         valores_exclusao = []
@@ -456,7 +414,6 @@ def vendas_geral_deleted(sender, instance, **kwargs):
     vendas_exclusao.valor_cancelado = str(vendas_exclusao.valor_cancelado)
     vendas_exclusao.valor_pago = str(vendas_exclusao.valor_pago)
     vendas_exclusao.ano_festa_id = str(vendas_exclusao.ano_festa_id)
-    vendas_exclusao.preco_original = str(vendas_exclusao.preco_original)
 
     if vendas_exclusao.nome_cliente:
         campos_exclusao.append('nome_cliente')
@@ -476,8 +433,6 @@ def vendas_geral_deleted(sender, instance, **kwargs):
         campos_exclusao.append('valor_pago')
     if vendas_exclusao.ano_festa_id:
         campos_exclusao.append('ano_festa_id')
-    if vendas_exclusao.preco_original:
-        campos_exclusao.append('preco_original')
 
     if campos_exclusao:
         valores_exclusao = []
