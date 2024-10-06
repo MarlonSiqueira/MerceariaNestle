@@ -191,6 +191,79 @@ def Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max
     return None, page
 
 
+def Get_Paginacao_Vendas_Controle(request, slug, nome_cliente, nome, get_dt_start, get_dt_end, vendedor, vendas):
+    #Aqui está removendo os acentos do nome do cliente
+    nome_cliente_novo = unidecode.unidecode(f'{nome_cliente}')
+    nome_cliente_novo = str(nome_cliente_novo)
+
+    vendas = vendas.order_by('-data_criacao')
+    logs_paginator = Paginator(vendas, 80) #Pegando a VAR Logs com todas as vendas e colocando dentro do Paginator pra trazer 80 porpágina
+    page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
+    page = logs_paginator.get_page(page_num) #Passando as 80 vendas para page
+
+    #Parte do Filtro
+    if nome_cliente or nome or get_dt_start or get_dt_end or vendedor:
+        if nome_cliente:
+            vendas = vendas.filter(nome_cliente__icontains=nome_cliente_novo)#Verificando se existem vendas com o nome do cliente preenchido
+            if vendas:
+                vendas = vendas.order_by('dia')
+                logs_paginator = Paginator(vendas, 18) 
+                page_num = request.GET.get('page')
+                page = logs_paginator.get_page(page_num) #Passando os 18 logs para page
+            if not vendas:
+                messages.add_message(request, messages.ERROR, 'Não há vendas para esse cliente')
+                return redirect(reverse('consultar_vendas_geral', kwargs={"slug":slug})), page
+        if nome:
+            vendas = vendas.filter(label_vendas_get__icontains=nome)#Verificando se existem vendas com o nome do produto preenchido
+            if vendas:
+                vendas = vendas.order_by('dia')
+                logs_paginator = Paginator(vendas, 18) 
+                page_num = request.GET.get('page')
+                page = logs_paginator.get_page(page_num) 
+            if not vendas:
+                messages.add_message(request, messages.ERROR, 'Não há vendas desse produto')
+                return redirect(reverse('consultar_vendas_geral', kwargs={"slug":slug})), page   
+        if vendedor:
+            vendas = vendas.filter(criado_por__icontains=vendedor)#Verificando se existem vendas com o nome do vendedor preenchida
+            if vendas:
+                vendas = vendas.order_by('dia')
+                logs_paginator = Paginator(vendas, 18) 
+                page_num = request.GET.get('page')
+                page = logs_paginator.get_page(page_num) 
+            if not vendas:
+                messages.add_message(request, messages.ERROR, 'Não há vendas desse vendedor')
+                return redirect(reverse('consultar_vendas_geral', kwargs={"slug":slug})), page 
+        if get_dt_start and not get_dt_end:
+            messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto a data início quanto a data fim')
+            return redirect(reverse('consultar_vendas_geral', kwargs={"slug":slug})), page
+        if get_dt_end and not get_dt_start:
+            messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto a data início quanto a data fim')
+            return redirect(reverse('consultar_vendas_geral', kwargs={"slug":slug})), page
+        if get_dt_start and get_dt_end:
+            vendas = vendas.filter(dia__range=[get_dt_start, get_dt_end])
+            if vendas:
+                vendas = vendas.order_by('dia')
+                logs_paginator = Paginator(vendas, 18) 
+                page_num = request.GET.get('page')
+                page = logs_paginator.get_page(page_num) 
+            if not vendas:
+                messages.add_message(request, messages.ERROR, 'Não foi encontrado nenhuma venda entre essas datas')
+                return redirect(reverse('consultar_vendas_geral', kwargs={"slug":slug})), page
+
+        if vendas:
+            vendas = vendas.order_by('dia')
+            logs_paginator = Paginator(vendas, 18) 
+            page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
+            page = logs_paginator.get_page(page_num) 
+
+        if not vendas:
+            messages.add_message(request, messages.ERROR, 'Houve algum problema com a consulta das vendas, contate a administração caso o problema persista')
+            return redirect(reverse('consultar_vendas_geral', kwargs={"slug":slug})), page 
+        #Fim do Filtro
+    
+    return None, page
+
+
 def Capturar_Valores_Post_Tela_Vendas(produto):
     nome_produto = produto['label']
     preco = produto['preco']
@@ -202,7 +275,7 @@ def Capturar_Valores_Post_Tela_Vendas(produto):
     quantidade = int(quantidade)
     peso_item_total = peso
 
-    if peso <= 0.500:
+    if peso <= 0.500 and quantidade > 1:
         peso_item_total *= 2
         preco *= 2
         quantidade = 2
@@ -212,12 +285,13 @@ def Capturar_Valores_Post_Tela_Vendas(produto):
     return nome_produto, preco, peso, peso_item_total, quantidade
 
 
-def Criando_Vendas_Controle(nome_cliente, num_sequencial, id_comunidade, contador_vendas, forma_venda):
+def Criando_Vendas_Controle(request, nome_cliente, num_sequencial, id_comunidade, contador_vendas, forma_venda):
     vendacontrole = VendasControle.objects.create(
         nome_cliente = nome_cliente,
         id_venda = num_sequencial,
         slug = num_sequencial,
         venda_finalizada = 0,
+        criado_por = request.user.username,
         nome_comunidade_id = id_comunidade,
         alteracoes_finalizadas = False,
         novo_preco_venda_total = 0,
@@ -300,8 +374,9 @@ def Cadastro_Planilhas_Troca_E_Estorno_Vendas(request, id_user, nome_produto_str
     excel_venda_T_E.save()
 
 
-def Atualiza_Venda_Controle(num_sequencial, preco_total_controle):
+def Atualiza_Venda_Controle(num_sequencial, preco_total_controle, nome_dos_produtos):
     vendacontrole = VendasControle.objects.get(id_venda=num_sequencial)        
     vendacontrole.preco_venda_total = preco_total_controle
     vendacontrole.novo_preco_venda_total = preco_total_controle
+    vendacontrole.label_vendas_get = nome_dos_produtos
     vendacontrole.save()

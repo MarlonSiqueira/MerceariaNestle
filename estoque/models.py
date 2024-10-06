@@ -209,6 +209,9 @@ class VendasControle(models.Model):
     forma_venda = models.CharField(max_length=8, null=True, blank=True)
     quantidade_parcelas = models.IntegerField(null=False, blank=False, default=0)
     data_criacao = models.CharField(max_length=20, null=True, editable=False)
+    criado_por = models.CharField(max_length=128, unique=False, null=True, editable=False)
+    dia = models.CharField(max_length=10, null=True, editable=False)
+    label_vendas_get = models.CharField(max_length=128, unique=False, blank=True, null=True)
 
     def __str__(self):
         return self.id_venda
@@ -217,7 +220,10 @@ class VendasControle(models.Model):
         if not self.data_criacao:
             data_modelo2 = timezone.localtime(timezone.now())
             data_criacao_m = data_modelo2.strftime("%d/%m/%Y %H:%M:%S")
+            data_criacao_g = data_modelo2.strftime("%d/%m/%Y")
             self.data_criacao = data_criacao_m
+            data_criacao_g = datetime.strptime(data_criacao_g, '%d/%m/%Y').date()
+            self.dia = data_criacao_g
         return super().save(*args, **kwargs)
 
 

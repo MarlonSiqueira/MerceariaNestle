@@ -116,12 +116,17 @@ def add_produto(request, slug):
         nome_produto_original = nome
         acao = "adicionar"
         tabela = "produto"
+        peso_float = float(peso)
+
+        if peso_float <= 0.5:
+            preco_venda = 0.50
+
         with transaction.atomic():
             resultado = Consultar_Uma_Comunidade(slug, opcao)
             if resultado[0] != 0:
 
                 label = nome
-                slugp = slugify(nome + "-" + slug) 
+                slugp = slugify(nome + "-" + slug)
 
                 validacao = Validacoes_Post_Cadastro_Estoque(request, slug, nome, preco_compra, preco_venda, quantidade, slugp, peso)    
                 if validacao:
@@ -303,6 +308,7 @@ def excluir_produto(request, slug):
 
     id_comunidade_produto = produto.nome_comunidade_id #Pegando o ID da comunidade do produto
     id_produto = produto.id
+    peso = produto.peso
     nome_produto_p_excel = str(produto.nome_produto)
 
     resultado = Consultar_Uma_Comunidade(id_comunidade_produto, opcao)
@@ -323,7 +329,7 @@ def excluir_produto(request, slug):
 
         #se não tiver venda
         if produto_ja_foi_vendido == 0:
-            Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao, resultado[1], 1)
+            Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao, resultado[1], peso, 1)
 
             messages.add_message(request, messages.SUCCESS, 'Produto excluído com sucesso')
             return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
@@ -331,7 +337,7 @@ def excluir_produto(request, slug):
             if vendas[0] != 0: #caso tenha venda
                 existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída")
                 if existe_saida_venda.quantidade == 0:
-                    Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao, resultado[1], 1)
+                    Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao, resultado[1], peso, 1)
 
                     messages.add_message(request, messages.SUCCESS, 'Produto excluído com sucesso')
                     return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
@@ -516,12 +522,13 @@ def vendas(request, slug):
         produtos_selecionados = json.loads(produtos_selecionados_json)
         contador_vendas = len(produtos_selecionados)
         tabela = "venda"
+        nome_dos_produtos = ""
 
         with transaction.atomic():
             num_sequencial = Gerando_Numero_Sequencial(tabela)
 
             # Se passar pelas validações, crie o objeto VendasControle contendo o ID venda e salve no banco
-            vendacontrole = Criando_Vendas_Controle(nome_cliente, num_sequencial, id_comunidade, contador_vendas, forma_venda)
+            vendacontrole = Criando_Vendas_Controle(request, nome_cliente, num_sequencial, id_comunidade, contador_vendas, forma_venda)
 
             preco_original_venda = 0
             cont_num_aleatorio = 0
@@ -624,8 +631,12 @@ def vendas(request, slug):
                 acao = "vender"
                 Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug_produto, quantidade, preco_compra_estoque_produto, preco_venda_estoque_produto, acao, slug_comunidade, peso, id_produto)
 
+                if nome_dos_produtos:  # Verifica se a string já tem algum valor
+                    nome_dos_produtos += ","  # Adiciona uma vírgula
+                nome_dos_produtos +=  nome_produto # Adiciona o novo produto
+
             # Se passar pelas validações, pega o objeto VendasControle contendo o ID venda gerado lá em cima#
-            Atualiza_Venda_Controle(num_sequencial, preco_total_controle)
+            Atualiza_Venda_Controle(num_sequencial, preco_total_controle, nome_dos_produtos)
 
             Salvando_Novo_Token_Venda_Familia(cpf, "reset")
 
@@ -639,8 +650,6 @@ def consultar_vendas_geral(request, slug):
     if request.method == "GET":
         nome_cliente = request.GET.get('nome_cliente_filtro')
         nome = request.GET.get('nome_produto_filtro')
-        preco_min = request.GET.get('preco_min')
-        preco_max = request.GET.get('preco_max')
         vendedor = request.GET.get('vendedor')
         get_dt_start = request.GET.get('dt_start')
         get_dt_end = request.GET.get('dt_end')
@@ -656,7 +665,7 @@ def consultar_vendas_geral(request, slug):
 
             vendas = VendasControle.objects.filter(BuscaVendas)
 
-            validacao, page = Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, vendedor, vendas)
+            validacao, page = Get_Paginacao_Vendas_Controle(request, slug, nome_cliente, nome, get_dt_start, get_dt_end, vendedor, vendas)
             if validacao:
                 return validacao
             

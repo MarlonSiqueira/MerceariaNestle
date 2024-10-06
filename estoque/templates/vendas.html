@@ -22,9 +22,9 @@
                         data-quantidade="{{ produto.quantidade }}">
                         <!-- <img src=" {{ produto.img_url }} " alt="{{ produto.nome_produto }}" class="produto-imagem"> -->
                         <h5>{{ produto.label }}</h5>
-                        <p>Preço R$ {{ produto.preco_venda|floatformat:2 }} {% if produto.peso == 0.5 %} <b>x2</b>{% endif %}<br>
+                        <p>Preço R$ {{ produto.preco_venda|floatformat:2 }} {% if produto.peso == 0.5 and produto.quantidade > 1 %} <b>x2</b>{% endif %}<br>
                             Qtd Restante: {{ produto.quantidade }}<br>
-                            Peso: {{ produto.peso|floatformat:3 }} KG {% if produto.peso == 0.5 %} <b>x2</b>{% endif %}
+                            Peso: {{ produto.peso|floatformat:3 }} KG {% if produto.peso == 0.5 and produto.quantidade > 1 %} <b>x2</b>{% endif %}
                         </p>
                     </div>
                 {% endif %}
@@ -91,6 +91,7 @@
         card.addEventListener('click', function() {
             const preco = parseFloat(card.getAttribute('data-preco').replace(',', '.')); // Troca a vírgula por ponto
             const peso = parseFloat(card.getAttribute('data-peso').replace(',', '.')); // Troca a vírgula por ponto
+            const quantidade = parseFloat(card.getAttribute('data-quantidade'));
 
             //console.log(`Produto: ${card.getAttribute('data-label')}, Preço: ${preco}, Peso: ${peso}`); // Debugging
 
@@ -101,7 +102,7 @@
                 // Verifica se o peso é 0,500 kg e ajusta o peso a ser subtraído
                 let pesoSubtrair = peso; // Inicializa pesoSubtrair com o peso padrão
                 let precoSubtrair = preco; // Inicializa precoSubtrair com o preço padrão
-                if (peso === 0.5) { // Verifica se o peso é 0,500 kg
+                if (peso === 0.5 & quantidade > 1) { // Verifica se o peso é 0,500 kg e se a quantidade é maior que 1
                     pesoSubtrair *= 2; // Multiplica o peso por 2 para subtrair corretamente
                     precoSubtrair *= 2; // Multiplica o preço por 2 para subtrair corretamente
                 }
@@ -114,7 +115,7 @@
                 // Verifica se o peso total com o novo produto não excede o máximo permitido
                 let pesoFinal = peso; // inicializa pesoFinal com o peso padrão
                 let precoFinal = preco; // inicializa precoFinal com o preço padrão
-                if (peso === 0.5) { // Verifica se o peso é 0,500 kg
+                if (peso === 0.5 & quantidade > 1) { // Verifica se o peso é 0,500 kg
                     pesoFinal *= 2; // Multiplica o peso por 2
                     precoFinal *= 2; // Multiplica o preço por 2
                 }
