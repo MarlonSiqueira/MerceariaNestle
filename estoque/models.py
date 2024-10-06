@@ -31,6 +31,7 @@ class Comunidade(models.Model):
             self.data_criacao = data_modelo_1
         return super().save(*args, **kwargs) 
 
+
 class NomeProduto(models.Model):
     nome_produto = models.CharField(max_length=128)
     slug = models.SlugField(unique=True, blank=True, null=True)
@@ -50,6 +51,7 @@ class NomeProduto(models.Model):
             self.data_criacao = data_modelo_1
             self.slug = slugify(self.nome_produto + "-" + self.nome_comunidade_str + "-" + self.cidade_comunidade)
         return super().save(*args, **kwargs)
+
 
 class Produto(models.Model):
     nome_produto = models.ForeignKey(NomeProduto, on_delete=models.PROTECT, null=True)
@@ -90,6 +92,7 @@ class Produto(models.Model):
         # salva o produto
         super().save(*args, **kwargs)
 
+
 class P_Excel(models.Model):
     data = models.CharField(max_length=20, null=True, editable=False)
     acao = models.CharField(max_length=20)
@@ -125,6 +128,7 @@ class P_Excel(models.Model):
             self.dia = data_criacao_g
         super().save(*args, **kwargs)       
 
+
 class Excel_T_E(models.Model):
     acao = models.CharField(max_length=20)
     tipo = models.CharField(max_length=20)
@@ -149,6 +153,7 @@ class Excel_T_E(models.Model):
             self.dia = data_criacao_g
             
         super().save(*args, **kwargs)   
+
 
 class LogsItens(models.Model):
     id_user = models.IntegerField(blank=True, null=True)
@@ -185,6 +190,7 @@ class LogsItens(models.Model):
             self.dia = data_criacao_g
         super().save(*args, **kwargs)
 
+
 class VendasControle(models.Model):
     nome_cliente = models.CharField(max_length=128, unique=False, null=True, editable=False)
     id_venda = models.CharField(max_length=10, primary_key=True)
@@ -202,9 +208,18 @@ class VendasControle(models.Model):
     falta_c_ou_e = models.IntegerField(null=False, blank=False)
     forma_venda = models.CharField(max_length=8, null=True, blank=True)
     quantidade_parcelas = models.IntegerField(null=False, blank=False, default=0)
+    data_criacao = models.CharField(max_length=20, null=True, editable=False)
 
     def __str__(self):
         return self.id_venda
+
+    def save(self, *args, **kwargs):#Criando Slug para buscas e Data_Criação
+        if not self.data_criacao:
+            data_modelo2 = timezone.localtime(timezone.now())
+            data_criacao_m = data_modelo2.strftime("%d/%m/%Y %H:%M:%S")
+            self.data_criacao = data_criacao_m
+        return super().save(*args, **kwargs)
+
 
 class Vendas(models.Model):
     nome_cliente = models.TextField(max_length=30, blank=True, null=True)
@@ -233,7 +248,7 @@ class Vendas(models.Model):
     peso_total = models.DecimalField(max_digits=5, decimal_places=3, default=0)
 
     def __str__(self):
-        return self.nome_produto
+        return str(self.nome_produto)
 
     def save(self, *args, **kwargs):#Criando Slug para buscas e Data_Criação
         if not self.data_criacao:

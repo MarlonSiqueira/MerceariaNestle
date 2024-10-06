@@ -1,19 +1,14 @@
 {% extends 'base.html' %}
-{% load filtersvenda %}
 {% load define_action %}
 
 {% block 'body' %}
 <div class="container">
-        {% if data_modelo_2 == ano_atual_str %}
             {% for all_venda in all_vendas %}
-                {% if all_venda.ano_festa_id == id_ano_festa %}
+                {% if all_venda.nome_comunidade_id == id_comunidade %}
                     {% if all_venda.venda_finalizada != 1 and all_venda.alteracoes_finalizadas != 1 %}
                     <div class="rectangle">
                         <div class="left-side">
                             <p>Nome do cliente: {{all_venda.nome_cliente}}</p>
-                            {% if all_venda.desconto_total > 0 %}
-                            <p>Desconto: R$ {{all_venda.desconto_total}}</p>
-                            {% endif %}
                             <p>Preço à ser Cobrado: <span data-preco-venda="{{ all_venda.novo_preco_venda_total }}">R$ {{all_venda.novo_preco_venda_total}}</span></p>
                             {% if all_venda.forma_venda == "Dinheiro" %}
                                 <div class="input-row">
@@ -56,30 +51,25 @@
                     {% endif %}
                 {% endif %}
             {% endfor %}
-            <br>
-            <a href="{% url 'cadastrogeral_festa' ano_atual_str %}" class="btn btn-info">Voltar</a>
-        {% endif %}
-        <br>
-        <br>
         <form action="" method="GET">
             {% if page.has_other_pages %}
                 <div class="btn-group" role="group" aria-label="Item Pagination">
                     {% if page.has_previous %} <!-- Se existe alguma página antes, mostre Anterior-->
-                        {% if request.GET.nome_cliente or request.GET.nome_produto or request.categoria%}
-                            <a class="btn btn-info" href="{% url 'vendas_finalizadas' ano_atual_str %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
+                        {% if request.GET.nome_cliente or request.GET.nome_produto%}
+                            <a class="btn btn-info" href="{% url 'vendas_finalizadas' slug %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
                         {% else%}
-                            <a class="btn btn-info" href="{% url 'vendas_finalizadas' ano_atual_str %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
+                            <a class="btn btn-info" href="{% url 'vendas_finalizadas' slug %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
                         {% endif %}
                     {% endif %}
 
                     {% for page_num in page.paginator.page_range %}
-                        {% if request.GET.nome_cliente or request.GET.nome_produto or request.categoria%}
+                        {% if request.GET.nome_cliente or request.GET.nome_produto%}
                             {% if page.number == page_num %}
                                 <button class="btn btn-outline-primary active">
                                     <span>{{ page_num }} (Atual)</span>
                                 </button>
                             {% else %}
-                                <a href="{% url 'vendas_finalizadas' ano_atual_str %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
+                                <a href="{% url 'vendas_finalizadas' slug %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
                                     {{ page_num }}</a>
                             {% endif %}
                         {% else %}
@@ -88,17 +78,17 @@
                                     <span>{{ page_num }} (Atual)</span>
                                 </button>
                             {% else %}
-                                <a href="{% url 'vendas_finalizadas' ano_atual_str %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
+                                <a href="{% url 'vendas_finalizadas' slug %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
                                     {{ page_num }}</a>
                             {% endif %}
                         {% endif %}
                     {% endfor %}
                     
                         {% if page.has_next %}<!-- Se existe alguma página depois, mostre Próximo-->
-                            {% if request.GET.nome_cliente or request.GET.nome_produto or request.categoria%}
-                                <a class="btn btn-info" href="{% url 'vendas_finalizadas' ano_atual_str %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
+                            {% if request.GET.nome_cliente or request.GET.nome_produto%}
+                                <a class="btn btn-info" href="{% url 'vendas_finalizadas' slug %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
                             {% else %}
-                                <a class="btn btn-info" href="{% url 'vendas_finalizadas' ano_atual_str %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
+                                <a class="btn btn-info" href="{% url 'vendas_finalizadas' slug %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
                             {% endif %}          
                         {% endif %}
                 </div>
@@ -107,20 +97,11 @@
             <br>
             <div class="row">
                 <div class="col-md">
-                    <input class="form-control" type="text" name="nome_cliente" value="{{request.GET.nome_cliente}}" placeholder="Nome do Cliente">
+                    <input class="form-control" type="text" name="nome_cliente_filtro" value="{{request.GET.nome_cliente}}" placeholder="Nome do Cliente">
                 </div>
 
                 <div class="col-md">
-                    <input class="form-control" type="text" name="nome_produto" value="{{request.GET.nome_produto}}" placeholder="Nome do Produto">
-                </div>
-
-                <div class="col-md">
-                    <select class="form-control" name="categoria">
-                        <option value="">Todas as categorias</option>
-                        {% for categoria in categorias %}
-                        <option value="{{categoria.id}}">{{categoria.titulo}}</option>
-                        {% endfor %}
-                    </select>
+                    <input class="form-control" type="text" name="nome_produto_filtro" value="{{request.GET.nome_produto}}" placeholder="Nome do Produto">
                 </div>
 
                 <div class="col-md">
@@ -148,46 +129,63 @@
                 </div>
             </div>
             <br>
+            <a href="{% url 'cadastrogeral_comunidade' slug %}" class="btn btn-info">Voltar</a>&nbsp;
                 <input type="submit" value="Filtrar" class="btn btn-success">&nbsp;
-                {% if data_modelo_2 == ano_atual_str %}
-                    {% if user.cargo == "A" or user.cargo == "P" or user.cargo == "CF" or user.cargo == "CL" %}
-                        <a class="btn btn-info" href="{% url 'export_csv_finalizadas' %}?nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">Exportar Planilha</a>&nbsp;
-                    {% endif %}
-                {% elif data_modelo_2 != ano_atual_str %}
-                    <a class="btn btn-info" href="{% url 'export_csv_finalizadas' %}?nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&categoria={{request.GET.categoria}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">Exportar Planilha</a>&nbsp;
-                    <a href="{% url 'cadastrogeral_festa' ano_atual_str %}" class="btn btn-info">Voltar</a>
-                {% endif %}
+                    <a class="btn btn-info" href="{% url 'export_csv_finalizadas' %}?nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">Exportar Planilha</a>&nbsp;
         </form>
             <br>
-            <div class="row">
+            <div class="produtos-container">
                 {% for venda in page.object_list %}
-                    {% if id_ano_festa == venda.ano_festa_id %}
-                        {% if venda.venda_finalizada == 1 %}
-                            <div class="col-md-4">
-                                <div style="background-color: #e0ffff; width: 18rem" class="card" style="width: 18rem;">
-                                    <div class="card-body">
-                                        {% if "Sem Cor" in venda.label_vendas_get %}
-                                            <h5 class="card-title">{{venda.nome_produto}}</h5>
-                                        {% else %}
-                                            <h5 class="card-title">{{venda.label_vendas_get}}</h5>
-                                        {% endif %}
-                                        <span class="badge badge-info">{{venda.categoria}}</span>
-                                        <br>
-                                        <br>
-                                            <a href="{% url 'visualizar_vendas_finalizadas' venda.slug %}" class="btn btn-primary">Visualizar</a>
-                                    </div>
-                                </div>
-                                <br>
-                            </div>
-                        {% endif %}
-                    {% endif %}
-                    {% if forloop.counter|divisibleby:3 %}
-                        <div class="clearfix"></div>
+                    {% if venda.venda_finalizada == 1 %}
+                        <div class="produto-card" data-slug="{{ venda.slug }}" data-url="{% url 'visualizar_vendas_finalizadas' venda.slug %}" onclick="window.location.href=this.dataset.url;">
+                            <h5>Cliente: {{ venda.nome_cliente }}</h5>
+                            <p>
+                                Dia da venda: {{ venda.data_criacao }}<br><br>
+                                <a href="{% url 'visualizar_vendas_finalizadas' venda.slug %}" class="btn btn-primary">Visualizar</a>
+                            </p>
+                        </div>
                     {% endif %}
                 {% endfor %}
             </div>
-
 </div>
+
+<style>
+    .produtos-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: flex-start;
+    }
+    .produto-card {
+        width: 30%;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+    }
+    .produto-card:hover {
+        transform: scale(1.05);
+    }
+    .produto-selecionado {
+        background-color: #f0f0f0;
+        border: 2px solid #007bff;
+    }
+
+    @media (max-width: 768px) {
+        .produto-card {
+            width: calc(50% - 20px); /* Dois cartões por linha em telas menores */
+        }
+    }
+
+    @media (max-width: 480px) {
+        .produto-card {
+            width: calc(100% - 20px); /* Um cartão por linha em telas ainda menores */
+        }
+    }
+</style>
+
 {% endblock %}
 
 {% block scripts %}

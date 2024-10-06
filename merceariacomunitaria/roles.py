@@ -16,6 +16,8 @@ class Vendedor(AbstractUserRole):
         'realizar_venda': True,
         'editar_produtos': True,
         'excluir_produtos': True,
+        'finalizar_venda': True,
+        'cancelar_venda': True,
     }
 
 class ResponsavelGeral(AbstractUserRole):
@@ -34,6 +36,8 @@ class ResponsavelGeral(AbstractUserRole):
         'cadastrar_produtos': True,
         'editar_produtos': True,
         'excluir_produtos': True,
+        'finalizar_venda': True,
+        'cancelar_venda': True,
     }
 
 class Admin(AbstractUserRole):
@@ -54,4 +58,6 @@ class Admin(AbstractUserRole):
         'cadastrar_produtos': True,
         'editar_produtos': True,
         'excluir_produtos': True,
+        'finalizar_venda': True,
+        'cancelar_venda': True,
     }   

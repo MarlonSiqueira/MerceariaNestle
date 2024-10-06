@@ -20,7 +20,7 @@
                                         <a class="btn dropdown-toggle" href="#" style="color: white; background-color: blue;" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Vendas</a>
                                         <div class="dropdown-menu" aria-labelledby="navbarDropdown">
                                             <a class="dropdown-item" href="{% url 'pre_vendas' slug %}">Realizar Vendas</a>
-                                            <a class="dropdown-item" href="{% url 'consultar_vendas' slug %}">Consultar Vendas</a>
+                                            <a class="dropdown-item" href="{% url 'consultar_vendas_geral' slug %}">Consultar Vendas</a>
                                             <a class="dropdown-item" href="{% url 'vendas_finalizadas' slug %}">Finalizar Venda</a>
                                             <a class="dropdown-item" href="{% url 'editar_vendas' slug %}">Trocar/Estornar</a>
                                         </div>
@@ -59,7 +59,7 @@
                                 <div class="nav-item dropright">
                                     <a class="btn dropdown-toggle" href="#" style="color: white; background-color: blue;" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Vendas</a>
                                     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                        <a class="dropdown-item" href="{% url 'consultar_vendas' slug %}">Consultar Vendas</a>
+                                        <a class="dropdown-item" href="{% url 'consultar_vendas_geral' slug %}">Consultar Vendas</a>
                                         <a class="dropdown-item" href="{% url 'vendas_finalizadas' slug %}">Finalizar Venda</a>
                                         <a class="dropdown-item" href="{% url 'editar_vendas' slug %}">Trocar/Estornar</a>
                                     </div>

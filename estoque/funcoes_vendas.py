@@ -9,6 +9,43 @@ import unidecode
 from django.core.paginator import Paginator
 
 
+def Consultar_Venda_Controle(valor, opcao):
+    if opcao == "id_venda":
+        valorBusca = valor
+        BuscaVendas = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
+                Q(id_venda=valorBusca)
+        )    
+    elif opcao == "slug":
+        valorBusca = valor
+        BuscaVendas = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
+                Q(slug=valorBusca)
+        )
+
+    if opcao != "filtro-id-venda":
+        vendas = VendasControle.objects.filter(BuscaVendas).values_list('nome_cliente', 'id_venda', 'nome_comunidade_id', 'preco_venda_total', 'venda_finalizada', 'alteracoes_finalizadas', 'novo_preco_venda_total', 'valor_cancelado', 'valor_pago', 'valor_realmente_pago', 'troco', 'falta_editar', 'falta_c_ou_e', 'forma_venda', 'quantidade_parcelas') #procurando se existe comunidade com um dos filtros acima
+
+        return Validacao_Objeto_Vendas_Controle(vendas)
+    else:
+        valorBusca = valor
+        BuscaVendas = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
+                Q(slug=valorBusca)
+        )
+        vendas = VendasControle.objects.filter(BuscaVendas).first()
+
+        return vendas
+
+
+def Validacao_Objeto_Vendas_Controle(vendas):
+    resultado = []  # Lista para armazenar as vendas válidas
+    if vendas:
+        resultado = list(vendas[0])  # Transforma a primeira tupla em uma lista simples
+    else:
+        # Adiciona uma lista com valores padrões caso não haja vendas
+        resultado = [0] * 14  # 14 elementos correspondendo aos campos (zeros ou valores padrões)
+
+    return resultado  # Retorna a lista de resultados
+
+
 def Consultar_Uma_Venda(valor, opcao):
     if opcao == "produto_id":
         valorBusca = valor
@@ -22,8 +59,8 @@ def Consultar_Uma_Venda(valor, opcao):
         )    
     elif opcao == "id_venda":
         valorBusca = valor
-        BuscaVendas = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
-                Q(id_venda_id=valorBusca)
+        BuscaVendas = Q(
+                Q(id_venda=valorBusca) & Q(modificado=False)     
         )
     elif opcao == "slug":
         valorBusca = valor
@@ -31,18 +68,35 @@ def Consultar_Uma_Venda(valor, opcao):
                 Q(slug=valorBusca)
         )
 
-    vendas = Vendas.objects.filter(BuscaVendas).values_list('id', 'produto_id', 'slug', 'forma_venda', 'venda_finalizada', 'nome_cliente', 'quantidade', 'preco_compra', 'preco_venda_total', 'houve_estorno', 'houve_troca', 'lucro', 'criado_por', 'id_venda_id', 'nome_comunidade_id', 'nome_produto_id') #procurando se existe comunidade com um dos filtros acima
+    if opcao != "filtro-id-venda":
+        vendas = Vendas.objects.filter(BuscaVendas).values_list('id', 'produto_id', 'slug', 'forma_venda', 'venda_finalizada', 'nome_cliente', 'quantidade', 'preco_compra', 'preco_venda_total', 'houve_estorno', 'houve_troca', 'criado_por', 'id_venda_id', 'nome_comunidade_id', 'nome_produto_id') #procurando se existe comunidade com um dos filtros acima
 
-    return Validacao_Objeto_Vendas(vendas)
-
-
-def Validacao_Objeto_Vendas(vendas):
-    resultado = []  # Lista para armazenar as vendas válidas
-    if vendas:
-        resultado = list(vendas[0])  # Transforma a primeira tupla em uma lista simples
+        return Validacao_Objeto_Vendas(vendas, opcao)
     else:
-        # Adiciona uma lista com valores padrões caso não haja vendas
-        resultado = [0] * 16  # 16 elementos correspondendo aos campos (zeros ou valores padrões)
+        valorBusca = valor
+        BuscaVendas = Q(
+                Q(id_venda=valorBusca) & Q(modificado=False)
+        )
+        vendas = Vendas.objects.filter(BuscaVendas)
+
+        return vendas
+
+
+
+def Validacao_Objeto_Vendas(vendas, opcao):
+    resultado = []  # Lista para armazenar as vendas válidas
+    if opcao == "id_venda":
+        if vendas:
+            resultado = list(vendas)  # Transforma todas as tuplas em uma lista de tuplas
+        else:
+            # Adiciona uma lista com valores padrões caso não haja vendas
+            resultado = [[0] * 15]  # 15 elementos correspondendo aos campos (zeros ou valores padrões)
+    else:
+        if vendas:
+            resultado = list(vendas[0])  # Transforma a primeira tupla em uma lista simples
+        else:
+            # Adiciona uma lista com valores padrões caso não haja vendas
+            resultado = [0] * 15  # 15 elementos correspondendo aos campos (zeros ou valores padrões)
 
     return resultado  # Retorna a lista de resultados
 

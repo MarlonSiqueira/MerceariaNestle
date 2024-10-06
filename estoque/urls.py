@@ -9,6 +9,7 @@ urlpatterns = [
     path('produto/<slug:slug>', views.produto, name="produto"),#Editar Produto
 
     path('pre_vendas/<slug:slug>', views.pre_vendas, name="pre_vendas"),#Antes da Venda
+    path('consultar_vendas_geral/<slug:slug>', views.consultar_vendas_geral, name="consultar_vendas_geral"),#Consultar Vendas Geral Não Finalizadas
     path('consultar_vendas/<slug:slug>', views.consultar_vendas, name="consultar_vendas"),#Consultar Vendas Não Finalizadas
     path('vendas/<slug:slug>', views.vendas, name="vendas"),#Vender Produto
     path('visualizar_vendas/<slug:slug>', views.visualizar_vendas, name="visualizar_vendas"),#Visualizar Vendas

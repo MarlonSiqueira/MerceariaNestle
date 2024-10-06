@@ -30,6 +30,15 @@ def Capturar_Ano_E_Hora_Atual():
     return  data_alteracao
 
 
+def Capturar_Data_Em_Formato_Data():
+    data = timezone.localtime(timezone.now())
+    data_criacao_g = data.strftime("%d/%m/%Y")
+    data_criacao_g = datetime.strptime(data_criacao_g, '%d/%m/%Y').date()
+    data = data_criacao_g
+
+    return data
+
+
 def Consultar_Uma_Comunidade(valor, opcao):
     if opcao == "nome":
         nome_comunidade = valor[0]

@@ -70,7 +70,7 @@ if (url_sem_slug == "/conferir_vendas_geral/"){
 }
 
 //Funções tela de vendas_finalizadas
-if (url_sem_slug == "/vendas_finalizadas/"){
+if (url_sem_slug == "vendas_finalizadas"){
     //////////////////////////////////////////////////////
     //Modal Excluir Venda tela de Vendas finalizadas
     function excluirVenda(element){
