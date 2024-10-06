@@ -78,111 +78,122 @@ def add_produto_redirect(request, slug):
 @has_permission_decorator('cadastrar_produtos')
 def add_produto(request, slug):
     opcao = "slug"
-    if request.method == "GET":
-        nome = request.GET.get('nome_produto')
-        preco_min = request.GET.get('preco_min')
-        preco_max = request.GET.get('preco_max')
+    resultado = Consultar_Uma_Comunidade(slug, opcao)
+    if resultado[0] != 0:
+        id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+        if id_comunidade_comparar_usuario == id_comunidade_usuario:
+            if request.method == "GET":
+                nome = request.GET.get('nome_produto')
+                preco_min = request.GET.get('preco_min')
+                preco_max = request.GET.get('preco_max')
 
-        resultado = Consultar_Uma_Comunidade(slug, opcao)
-        if resultado[0] != 0:
-            produtos = Produto.objects.filter(nome_comunidade_id=resultado[0])
+                produtos = Produto.objects.filter(nome_comunidade_id=resultado[0])
 
-            Validacao_Alterando_Produto()
+                Validacao_Alterando_Produto()
 
-            validacao_produtos_filtrados, produtos = Validacao_Produtos_Filtrados(request, slug, produtos, nome, preco_min, preco_max)
+                validacao_produtos_filtrados, produtos = Validacao_Produtos_Filtrados(request, slug, produtos, nome, preco_min, preco_max)
 
-            if validacao_produtos_filtrados:
-                return validacao_produtos_filtrados
+                if validacao_produtos_filtrados:
+                    return validacao_produtos_filtrados
 
-            nome_produtos = NomeProduto.objects.filter(nome_comunidade_id=resultado[0])
+                nome_produtos = NomeProduto.objects.filter(nome_comunidade_id=resultado[0])
 
-            context = {
-                'nome_produtos': nome_produtos,
-                'produtos': produtos,
-                'slug': slug,
-            }
+                context = {
+                    'nome_produtos': nome_produtos,
+                    'produtos': produtos,
+                    'slug': slug,
+                }
 
-            return render(request, 'add_produto.html', context)
+                return render(request, 'add_produto.html', context)
+            elif request.method == "POST":
+                nome = request.POST.get('nome_produto')
+                quantidade = request.POST.get('quantidade')
+                preco_compra = request.POST.get('preco_compra')
+                peso = request.POST.get('peso')
+                preco_compra = preco_compra.replace(',', '.') # Substitui a vírgula pelo ponto
+                preco_venda = 1.00
+                nome_produto_original = nome
+                acao = "adicionar"
+                tabela = "produto"
+                peso_float = float(peso)
+
+                if peso_float <= 0.5:
+                    preco_venda = 0.50
+
+                with transaction.atomic():
+                    resultado = Consultar_Uma_Comunidade(slug, opcao)
+                    if resultado[0] != 0:
+
+                        label = nome
+                        slugp = slugify(nome + "-" + slug)
+
+                        validacao = Validacoes_Post_Cadastro_Estoque(request, slug, nome, preco_compra, preco_venda, quantidade, slugp, peso)    
+                        if validacao:
+                            transaction.set_rollback(True)
+                            return validacao
+
+                        nome = Capturar_Id_Do_Nome_Do_Produto(nome)
+
+                        num_sequencial = Gerando_Numero_Sequencial(tabela)
+
+                        Cadastro_Estoque(request, nome, label, quantidade, preco_compra, preco_venda, slugp, resultado[0], num_sequencial, peso)
+
+                        Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantidade, preco_compra, preco_venda, acao, resultado[1], peso, 1)
+
+                        messages.add_message(request, messages.SUCCESS, f'Produto {nome_produto_original} Cadastrado com sucesso')
+                        return redirect(reverse('add_produto', kwargs={"slug":slug}))
+                    else:
+                        messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+                        return redirect(reverse('home'))
         else:
-            messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+            messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
             return redirect(reverse('home'))
-    elif request.method == "POST":
-        nome = request.POST.get('nome_produto')
-        quantidade = request.POST.get('quantidade')
-        preco_compra = request.POST.get('preco_compra')
-        peso = request.POST.get('peso')
-        preco_compra = preco_compra.replace(',', '.') # Substitui a vírgula pelo ponto
-        preco_venda = 1.00
-        nome_produto_original = nome
-        acao = "adicionar"
-        tabela = "produto"
-        peso_float = float(peso)
-
-        if peso_float <= 0.5:
-            preco_venda = 0.50
-
-        with transaction.atomic():
-            resultado = Consultar_Uma_Comunidade(slug, opcao)
-            if resultado[0] != 0:
-
-                label = nome
-                slugp = slugify(nome + "-" + slug)
-
-                validacao = Validacoes_Post_Cadastro_Estoque(request, slug, nome, preco_compra, preco_venda, quantidade, slugp, peso)    
-                if validacao:
-                    transaction.set_rollback(True)
-                    return validacao
-
-                nome = Capturar_Id_Do_Nome_Do_Produto(nome)
-
-                num_sequencial = Gerando_Numero_Sequencial(tabela)
-
-                Cadastro_Estoque(request, nome, label, quantidade, preco_compra, preco_venda, slugp, resultado[0], num_sequencial, peso)
-
-                Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantidade, preco_compra, preco_venda, acao, resultado[1], peso, 1)
-
-                messages.add_message(request, messages.SUCCESS, f'Produto {nome_produto_original} Cadastrado com sucesso')
-                return redirect(reverse('add_produto', kwargs={"slug":slug}))
-            else:
-                messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
-                return redirect(reverse('home'))
+    else:
+        messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+        return redirect(reverse('home'))
 
 #Função para a tela de adicionar Novo nome de Produtos
 @has_permission_decorator('cadastrar_produtos')
 def add_novonome_produto(request, slug):
     opcao = "slug"
-    if request.method == "GET":
-        resultado = Consultar_Uma_Comunidade(slug, opcao)
-        if resultado[0] != 0:
-            produtos = NomeProduto.objects.filter(nome_comunidade_id=resultado[0])
+    resultado = Consultar_Uma_Comunidade(slug, opcao)
 
-            context = {
-                'produtos': produtos,
-                'slug': slug,
-            }
+    if resultado[0] != 0:
+        id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+        if id_comunidade_comparar_usuario == id_comunidade_usuario:
+            if request.method == "GET":
+                    produtos = NomeProduto.objects.filter(nome_comunidade_id=resultado[0])
 
-            return render(request, 'add_novonome_produto.html', context)
+                    context = {
+                        'produtos': produtos,
+                        'slug': slug,
+                    }
+
+                    return render(request, 'add_novonome_produto.html', context)
+            elif request.method == "POST":
+                nome_produto = request.POST.get('nome_produto')
+                with transaction.atomic():
+                    resultado = Consultar_Uma_Comunidade(slug, opcao)
+                    produtos = NomeProduto.objects.filter(nome_comunidade_id=resultado[0])
+
+                    validacao_campos = Validacoes_Post_Cadastro_Produtos_Campos_Preenchidos(request, slug, nome_produto)
+                    if validacao_campos:
+                        transaction.set_rollback(True)
+                        return validacao_campos
+
+                    validacao_produto = Cadastrar_Nome_Produto(request, slug, nome_produto, produtos, resultado[0], resultado[4], resultado[5])
+                    if validacao_produto:
+                        transaction.set_rollback(True)
+                        return validacao_produto
+
+                    messages.add_message(request, messages.SUCCESS, f'Produto {nome_produto} cadastrado com sucesso')
+                    return redirect(reverse('add_novonome_produto', kwargs={"slug":slug}))
         else:
-            messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+            messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
             return redirect(reverse('home'))
-    elif request.method == "POST":
-        nome_produto = request.POST.get('nome_produto')
-        with transaction.atomic():
-            resultado = Consultar_Uma_Comunidade(slug, opcao)
-            produtos = NomeProduto.objects.filter(nome_comunidade_id=resultado[0])
-
-            validacao_campos = Validacoes_Post_Cadastro_Produtos_Campos_Preenchidos(request, slug, nome_produto)
-            if validacao_campos:
-                transaction.set_rollback(True)
-                return validacao_campos
-
-            validacao_produto = Cadastrar_Nome_Produto(request, slug, nome_produto, produtos, resultado[0], resultado[4], resultado[5])
-            if validacao_produto:
-                transaction.set_rollback(True)
-                return validacao_produto
-
-            messages.add_message(request, messages.SUCCESS, f'Produto {nome_produto} cadastrado com sucesso')
-            return redirect(reverse('add_novonome_produto', kwargs={"slug":slug}))
+    else:
+        messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+        return redirect(reverse('home'))
 
 
 #Função para a tela de excluir nome dos Produtos
@@ -194,15 +205,24 @@ def excluir_novonome_produto(request, slug):
 
         id_comunidade_vendedor = produto.nome_comunidade_id #Pegando o ID da comunidade do vendedor
         resultado = Consultar_Uma_Comunidade(id_comunidade_vendedor, opcao)
-        if resultado[1]:
-            if hasattr(produto, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
-                # se a flag _excluido já está setada, não chama o sinal
-                pass
-            else:#Caso não tenha sido excluído ele chama o registro.
-                novonome_produto_deleted(instance=produto, user=request.user)
-            produto.delete()
-            messages.add_message(request, messages.SUCCESS, 'Produto excluído com sucesso')
-            return redirect(reverse('add_novonome_produto', kwargs={"slug":resultado[1]}))
+        if resultado[0] != 0:
+            id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+            if id_comunidade_comparar_usuario == id_comunidade_usuario:
+                if resultado[1]:
+                    if hasattr(produto, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
+                        # se a flag _excluido já está setada, não chama o sinal
+                        pass
+                    else:#Caso não tenha sido excluído ele chama o registro.
+                        novonome_produto_deleted(instance=produto, user=request.user)
+                    produto.delete()
+                    messages.add_message(request, messages.SUCCESS, 'Produto excluído com sucesso')
+                    return redirect(reverse('add_novonome_produto', kwargs={"slug":resultado[1]}))
+            else:
+                messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+                return redirect(reverse('home'))
+        else:
+            messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+            return redirect(reverse('home'))
     except ProtectedError:#Caso não consiga, entre aqui
         messages.add_message(request, messages.ERROR, 'Esse Nome de Produto não pode ser excluído pois possui produtos vinculados')
         return redirect(reverse('add_novonome_produto', kwargs={"slug":resultado[1]}))
@@ -221,36 +241,45 @@ def produto (request, slug):
         id_comunidade_produto = produto.nome_comunidade_id #Pegando o ID da comunidade do produto
         resultado = Consultar_Uma_Comunidade(id_comunidade_produto, opcao)
 
-        alterando_produto = produto.alterando_produto
-        label = produto.label
-        usuario = str(request.user) #Pegando o nome do usuario em formato de string.
-        if alterando_produto == "0":
-            ultimo_acesso = Gerar_Token_Com_Tempo_Minutos(5)
+        if resultado[0] != 0:
+            id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+            if id_comunidade_comparar_usuario == id_comunidade_usuario:
+                alterando_produto = produto.alterando_produto
+                label = produto.label
+                usuario = str(request.user) #Pegando o nome do usuario em formato de string.
+                if alterando_produto == "0":
+                    ultimo_acesso = Gerar_Token_Com_Tempo_Minutos(5)
 
-            produto.alterando_produto = usuario #adicionando o nome do usuario à coluna
-            produto.ultimo_acesso = ultimo_acesso #adicionando o contador à coluna
-            produto.save()
-        elif alterando_produto == usuario:
-            pass
+                    produto.alterando_produto = usuario #adicionando o nome do usuario à coluna
+                    produto.ultimo_acesso = ultimo_acesso #adicionando o contador à coluna
+                    produto.save()
+                elif alterando_produto == usuario:
+                    pass
+                else:
+                    messages.add_message(request, messages.ERROR, f'O Produto {label} está sendo editado pelo usuário {alterando_produto}')
+                    return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
+
+                nome_produto = ""
+
+                nomes = NomeProduto.objects.all()#Pegando todos os nomes de produtoso
+                if nomes:
+                    nomes = nomes.filter(id__contains=produto.nome_produto_id)#Verificando se existem nomes de produto com o nome escolhido
+                    nomes = NomeProduto.objects.get(id=produto.nome_produto_id)
+                    nome_produto = nomes.nome_produto
+                
+                context = {
+                    'form': form,
+                    'slug': resultado[1],
+                    'nome_produto': nome_produto
+                }
+
+                return render(request, 'produto.html', context)
+            else:
+                messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+                return redirect(reverse('home'))
         else:
-            messages.add_message(request, messages.ERROR, f'O Produto {label} está sendo editado pelo usuário {alterando_produto}')
-            return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
-
-        nome_produto = ""
-
-        nomes = NomeProduto.objects.all()#Pegando todos os nomes de produtoso
-        if nomes:
-            nomes = nomes.filter(id__contains=produto.nome_produto_id)#Verificando se existem nomes de produto com o nome escolhido
-            nomes = NomeProduto.objects.get(id=produto.nome_produto_id)
-            nome_produto = nomes.nome_produto
-        
-        context = {
-            'form': form,
-            'slug': resultado[1],
-            'nome_produto': nome_produto
-        }
-
-        return render(request, 'produto.html', context)
+            messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+            return redirect(reverse('home'))
 
     elif request.method == "POST":
         abastecer_quantidade = request.POST.get('abastecer_quantidade')
@@ -269,34 +298,40 @@ def produto (request, slug):
             id_comunidade_produto = nome_produto_antigo.nome_comunidade_id #Pegando o ID da comunidade do produto
             resultado = Consultar_Uma_Comunidade(id_comunidade_produto, opcao)
 
-            nome_produto_antigo1 = nome_produto_antigo.__dict__
-            nome_produto_antigo1['nome_produto'] = nome_produto_antigo.nome_produto
-            nome_produto_antigo1 = nome_produto_antigo1['nome_produto']
+            id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+            if id_comunidade_comparar_usuario == id_comunidade_usuario:
 
-            produto = get_object_or_404(Produto, slug=slug) #pegando o slug do produto
-            quantidade_atual = produto.quantidade
+                nome_produto_antigo1 = nome_produto_antigo.__dict__
+                nome_produto_antigo1['nome_produto'] = nome_produto_antigo.nome_produto
+                nome_produto_antigo1 = nome_produto_antigo1['nome_produto']
 
-            alterado_por_ = auth.get_user(request)
-            alterado_por = alterado_por_.username
+                produto = get_object_or_404(Produto, slug=slug) #pegando o slug do produto
+                quantidade_atual = produto.quantidade
 
-            data_alteracao = Capturar_Ano_E_Hora_Atual()
+                alterado_por_ = auth.get_user(request)
+                alterado_por = alterado_por_.username
 
-            preco_compra = preco_compra.replace(',', '.') # Substitui a vírgula pelo ponto
-            preco_compra = float(preco_compra)#transformando em float
+                data_alteracao = Capturar_Ano_E_Hora_Atual()
 
-            if abastecer_quantidade or preco_compra or cod_produto or cod_barras or peso:
-                if preco_compra == 0 or not preco_compra:
-                    messages.add_message(request, messages.ERROR, 'Preço de Compra não pode ser vazio')
-                    return redirect(reverse('produto', kwargs={"slug":resultado[1]}))
+                preco_compra = preco_compra.replace(',', '.') # Substitui a vírgula pelo ponto
+                preco_compra = float(preco_compra)#transformando em float
 
-                validacao = Registrar_Log_Alteracao_Produto_E_Alterar_Produto(request, resultado[1], slug, id_produto_antigo,abastecer_quantidade, preco_compra, cod_produto, cod_barras, peso, nome_produto_antigo1, data_alteracao, alterado_por)
-                
-                if validacao:
-                    transaction.set_rollback(True)
-                    return validacao
+                if abastecer_quantidade or preco_compra or cod_produto or cod_barras or peso:
+                    if preco_compra == 0 or not preco_compra:
+                        messages.add_message(request, messages.ERROR, 'Preço de Compra não pode ser vazio')
+                        return redirect(reverse('produto', kwargs={"slug":resultado[1]}))
 
-                messages.add_message(request, messages.SUCCESS, (f'Produto {nome_produto_antigo1} atualizado com sucesso'))
-                return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
+                    validacao = Registrar_Log_Alteracao_Produto_E_Alterar_Produto(request, resultado[1], slug, id_produto_antigo,abastecer_quantidade, preco_compra, cod_produto, cod_barras, peso, nome_produto_antigo1, data_alteracao, alterado_por)
+                    
+                    if validacao:
+                        transaction.set_rollback(True)
+                        return validacao
+
+                    messages.add_message(request, messages.SUCCESS, (f'Produto {nome_produto_antigo1} atualizado com sucesso'))
+                    return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
+            else:
+                messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+                return redirect(reverse('home'))
 
 
 #Função para a tela de excluir produto
@@ -312,38 +347,46 @@ def excluir_produto(request, slug):
     nome_produto_p_excel = str(produto.nome_produto)
 
     resultado = Consultar_Uma_Comunidade(id_comunidade_produto, opcao)
+    if resultado[0] != 0:
+        id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+        if id_comunidade_comparar_usuario == id_comunidade_usuario:
+            opcao = "produto_id"
+            with transaction.atomic():
+                if hasattr(produto, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
+                    # se a flag _excluido já está setada, não chama o sinal
+                    pass
+                else:#Caso não tenha sido excluído ele chama o registro.
+                    produto_deleted(instance=produto, user=request.user)
+                produto_ja_foi_vendido = 0
 
-    opcao = "produto_id"
-    with transaction.atomic():
-        if hasattr(produto, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
-            # se a flag _excluido já está setada, não chama o sinal
-            pass
-        else:#Caso não tenha sido excluído ele chama o registro.
-            produto_deleted(instance=produto, user=request.user)
-        produto_ja_foi_vendido = 0
+                vendas = Consultar_Uma_Venda(id_produto, opcao)
 
-        vendas = Consultar_Uma_Venda(id_produto, opcao)
+                if vendas[1] == id_produto:
+                    produto_ja_foi_vendido = 1
 
-        if vendas[1] == id_produto:
-            produto_ja_foi_vendido = 1
-
-        #se não tiver venda
-        if produto_ja_foi_vendido == 0:
-            Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao, resultado[1], peso, 1)
-
-            messages.add_message(request, messages.SUCCESS, 'Produto excluído com sucesso')
-            return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
-        else:  #Se tiver venda entra aqui
-            if vendas[0] != 0: #caso tenha venda
-                existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída")
-                if existe_saida_venda.quantidade == 0:
+                #se não tiver venda
+                if produto_ja_foi_vendido == 0:
                     Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao, resultado[1], peso, 1)
 
                     messages.add_message(request, messages.SUCCESS, 'Produto excluído com sucesso')
                     return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
-                transaction.set_rollback(True)
-                messages.add_message(request, messages.ERROR, 'Já existem vendas vinculadas à este produto, contate a administração para a exclusão')
-                return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
+                else:  #Se tiver venda entra aqui
+                    if vendas[0] != 0: #caso tenha venda
+                        existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída")
+                        if existe_saida_venda.quantidade == 0:
+                            Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug, 1, 2, 3, acao, resultado[1], peso, 1)
+
+                            messages.add_message(request, messages.SUCCESS, 'Produto excluído com sucesso')
+                            return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
+                        transaction.set_rollback(True)
+                        messages.add_message(request, messages.ERROR, 'Já existem vendas vinculadas à este produto, contate a administração para a exclusão')
+                        return redirect(reverse('add_produto', kwargs={"slug":resultado[1]}))
+        else:
+            messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+            return redirect(reverse('home'))
+    else:
+        messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+        return redirect(reverse('home'))
 
 
 #Função para a tela de cadastrar comunidade
@@ -395,66 +438,71 @@ def cadastrar_comunidade (request):
 def pre_vendas(request, slug):
     opcao = "slug"
     resultado = Consultar_Uma_Comunidade(slug, opcao)
-    if request.method == "GET":
-        if resultado[0] != 0:
-            context = {
-                'slug': slug,
-                'nome_e_cidade_comunidade': slug,
-            }
-            return render(request, 'pre_vendas.html', context)
-        else:
-            messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
-            return redirect(reverse('home'))
-    elif request.method == "POST":
-        cpf = request.POST.get('cpf')
+    if resultado[0] != 0:
+        id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+        if id_comunidade_comparar_usuario == id_comunidade_usuario:
+            if request.method == "GET":
+                    context = {
+                        'slug': slug,
+                        'nome_e_cidade_comunidade': slug,
+                    }
+                    return render(request, 'pre_vendas.html', context)
+            elif request.method == "POST":
+                cpf = request.POST.get('cpf')
 
-        with transaction.atomic():
-            validacao = validar_cpf(request, cpf, slug)
-            if validacao:
-                transaction.set_rollback(True)
-                return validacao
-            
-            opcao = "cpf"
-            valor = [resultado[0], cpf]
+                with transaction.atomic():
+                    validacao = validar_cpf(request, cpf, slug)
+                    if validacao:
+                        transaction.set_rollback(True)
+                        return validacao
+                    
+                    opcao = "cpf"
+                    valor = [resultado[0], cpf]
 
-            resultado_familia = Consultar_Familia(valor, opcao)
-            ativo = resultado_familia[6]
-            ultima_compra = resultado_familia[4]
+                    resultado_familia = Consultar_Familia(valor, opcao)
+                    ativo = resultado_familia[6]
+                    ultima_compra = resultado_familia[4]
 
-            if resultado_familia[0] != 0:
-                if ativo != 0:
-                    if ativo == "sim":
-                        if ultima_compra is not None and ultima_compra != 0:
-                            
-                            # Data de hoje
-                            hoje = datetime.today().date()
+                    if resultado_familia[0] != 0:
+                        if ativo != 0:
+                            if ativo == "sim":
+                                if ultima_compra is not None and ultima_compra != 0:
+                                    
+                                    # Data de hoje
+                                    hoje = datetime.today().date()
 
-                            # Verificar se já passaram mais de 7 dias
-                            diferenca = hoje - ultima_compra
-                            if diferenca.days >= 7:
-                                token_venda = Gerar_Token()
-                                Salvando_Novo_Token_Venda_Familia(cpf, token_venda)
-                                
-                                messages.add_message(request, messages.SUCCESS, (f'Esse CPF está autorizado a realizar compra'))
-                                return redirect(reverse('vendas', kwargs={"slug":token_venda}))
-                            else:
-                                messages.add_message(request, messages.ERROR, (f'Esse CPF realizou compra nos últimos 7 dias'))
+                                    # Verificar se já passaram mais de 7 dias
+                                    diferenca = hoje - ultima_compra
+                                    if diferenca.days >= 7:
+                                        token_venda = Gerar_Token()
+                                        Salvando_Novo_Token_Venda_Familia(cpf, token_venda)
+                                        
+                                        messages.add_message(request, messages.SUCCESS, (f'Esse CPF está autorizado a realizar compra'))
+                                        return redirect(reverse('vendas', kwargs={"slug":token_venda}))
+                                    else:
+                                        messages.add_message(request, messages.ERROR, (f'Esse CPF realizou compra nos últimos 7 dias'))
+                                        return redirect(reverse('pre_vendas', kwargs={"slug":slug}))
+                                else:
+                                    token_venda = Gerar_Token()
+                                    Salvando_Novo_Token_Venda_Familia(cpf, token_venda)
+
+                                    messages.add_message(request, messages.SUCCESS, (f'Esse CPF está autorizado a realizar compra'))
+                                    return redirect(reverse('vendas', kwargs={"slug":token_venda}))
+                            elif ativo == "nao":
+                                messages.add_message(request, messages.ERROR, (f'Esse CPF não está ativo na comunidade, caso isso seja um problema, favor contatar a administração'))
                                 return redirect(reverse('pre_vendas', kwargs={"slug":slug}))
                         else:
-                            token_venda = Gerar_Token()
-                            Salvando_Novo_Token_Venda_Familia(cpf, token_venda)
-
-                            messages.add_message(request, messages.SUCCESS, (f'Esse CPF está autorizado a realizar compra'))
-                            return redirect(reverse('vendas', kwargs={"slug":token_venda}))
-                    elif ativo == "nao":
-                        messages.add_message(request, messages.ERROR, (f'Esse CPF não está ativo na comunidade, caso isso seja um problema, favor contatar a administração'))
+                            messages.add_message(request, messages.ERROR, (f'CPF não encontrado nessa comunidade'))
+                            return redirect(reverse('pre_vendas', kwargs={"slug":slug}))
+                    else:
+                        messages.add_message(request, messages.ERROR, (f'CPF não encontrado nessa comunidade'))
                         return redirect(reverse('pre_vendas', kwargs={"slug":slug}))
-                else:
-                    messages.add_message(request, messages.ERROR, (f'CPF não encontrado nessa comunidade'))
-                    return redirect(reverse('pre_vendas', kwargs={"slug":slug}))
-            else:
-                messages.add_message(request, messages.ERROR, (f'CPF não encontrado nessa comunidade'))
-                return redirect(reverse('pre_vendas', kwargs={"slug":slug}))
+        else:
+            messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+            return redirect(reverse('home'))
+    else:
+        messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+        return redirect(reverse('home'))
 
 
 #Função para a tela de vender produto
@@ -471,32 +519,37 @@ def vendas(request, slug):
             opcao = "id"
             resultado = Consultar_Uma_Comunidade(resultado_familia[1], opcao)
             if resultado[0] != 0:
-                id_comunidade = resultado[0]
-                slug_comunidade = resultado[1]
+                id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+                if id_comunidade_comparar_usuario == id_comunidade_usuario:
+                    id_comunidade = resultado[0]
+                    slug_comunidade = resultado[1]
 
-                BuscaVendas = Q(
-                        Q(venda_finalizada=0) & Q(nome_comunidade_id=id_comunidade)     
-                )
+                    BuscaVendas = Q(
+                            Q(venda_finalizada=0) & Q(nome_comunidade_id=id_comunidade)     
+                    )
 
-                vendas = Vendas.objects.filter(BuscaVendas)
+                    vendas = Vendas.objects.filter(BuscaVendas)
 
-                produtos = Produto.objects.filter(nome_comunidade_id=id_comunidade)
+                    produtos = Produto.objects.filter(nome_comunidade_id=id_comunidade)
 
-                nome_produtos = NomeProduto.objects.all()
-                
-                context = {
-                    'nome_produtos':nome_produtos, 
-                    'produtos':produtos, 
-                    'vendas': vendas, 
-                    'slug': slug_token_venda_familia,
-                    'slug_voltar_tela': slug_comunidade,
-                    'nome_cliente_familia': nome_cliente_familia
-                }
+                    nome_produtos = NomeProduto.objects.all()
+                    
+                    context = {
+                        'nome_produtos':nome_produtos, 
+                        'produtos':produtos, 
+                        'vendas': vendas, 
+                        'slug': slug_token_venda_familia,
+                        'slug_voltar_tela': slug_comunidade,
+                        'nome_cliente_familia': nome_cliente_familia
+                    }
 
-                return render(request, 'vendas.html', context)
+                    return render(request, 'vendas.html', context)
+                else:
+                    messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+                    return redirect(reverse('home'))
             else:
                 messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
-                return redirect(reverse('home')) 
+                return redirect(reverse('home'))
         else:
             messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
             return redirect(reverse('home'))
@@ -514,134 +567,143 @@ def vendas(request, slug):
 
         opcao = "id"
         resultado = Consultar_Uma_Comunidade(resultado_familia[1], opcao)
-        id_comunidade = resultado[0]
-        slug_comunidade = resultado[1]
-        slug_voltar_tela = slug_comunidade
+        if resultado[0] != 0:
+            id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+            if id_comunidade_comparar_usuario == id_comunidade_usuario:
+                id_comunidade = resultado[0]
+                slug_comunidade = resultado[1]
+                slug_voltar_tela = slug_comunidade
 
-        # Converte a string JSON de produtos selecionados para um objeto Python
-        produtos_selecionados = json.loads(produtos_selecionados_json)
-        contador_vendas = len(produtos_selecionados)
-        tabela = "venda"
-        nome_dos_produtos = ""
+                # Converte a string JSON de produtos selecionados para um objeto Python
+                produtos_selecionados = json.loads(produtos_selecionados_json)
+                contador_vendas = len(produtos_selecionados)
+                tabela = "venda"
+                nome_dos_produtos = ""
 
-        with transaction.atomic():
-            num_sequencial = Gerando_Numero_Sequencial(tabela)
+                with transaction.atomic():
+                    num_sequencial = Gerando_Numero_Sequencial(tabela)
 
-            # Se passar pelas validações, crie o objeto VendasControle contendo o ID venda e salve no banco
-            vendacontrole = Criando_Vendas_Controle(request, nome_cliente, num_sequencial, id_comunidade, contador_vendas, forma_venda)
+                    # Se passar pelas validações, crie o objeto VendasControle contendo o ID venda e salve no banco
+                    vendacontrole = Criando_Vendas_Controle(request, nome_cliente, num_sequencial, id_comunidade, contador_vendas, forma_venda)
 
-            preco_original_venda = 0
-            cont_num_aleatorio = 0
-            preco_total_controle = 0
+                    preco_original_venda = 0
+                    cont_num_aleatorio = 0
+                    preco_total_controle = 0
 
-            for produto in produtos_selecionados:
-                nome_produto, preco, peso, peso_item_total, quantidade = Capturar_Valores_Post_Tela_Vendas(produto)
+                    for produto in produtos_selecionados:
+                        nome_produto, preco, peso, peso_item_total, quantidade = Capturar_Valores_Post_Tela_Vendas(produto)
 
-                try:
-                    if not nome_cliente:
-                        transaction.set_rollback(True)
-                        messages.add_message(request, messages.ERROR, 'Você não preencheu o nome do cliente')
-                        return redirect(reverse('vendas', kwargs={"slug":slug})) 
-
-                    # Inicio Declaração de Variáveis da Venda 
-                    nome = nome_cliente
-                    num_aleatorio = "v" + str(num_sequencial)
-                    cont_num_aleatorio += 1
-                    label = nome_produto
-                    label_vendas_get = nome_produto
-
-                    nome_cliente = nome_cliente
-                    nome_cliente = unidecode.unidecode(f'{nome_cliente}')
-                    nome_cliente = str(nome_cliente)
-                    
-                    quantidade_estoque_produto = 0
-                    id_produto = 0
-                    id_nome_produto = 0
-                    produto = 0
-                    preco_compra_estoque_produto = 0
-                    preco_venda_estoque_produto = 0
-
-                    data_atual = Capturar_Ano_E_Hora_Atual()
-                    
-                    label = slugify(nome_produto + "-" + data_atual)
-                    slugp = slugify(nome_produto + "-" + data_atual + "-" + num_aleatorio)
-
-                    valor = [id_comunidade, nome_produto]
-                    # Fim Declaração de Variáveis da Venda 
-
-                    labelf = Vendas.objects.filter(label_vendas=label)#Verificando se está sendo preenchido produtos duplicados na mesma venda.
-
-                    if labelf:
-                        transaction.set_rollback(True) #Desfazer alterações caso haja erro em alguma.
-                        messages.add_message(request, messages.ERROR, 'Confira os produtos, parecem duplicados')
-                        return redirect(reverse('vendas', kwargs={"slug":slug}))
-
-                    resultado_nome_produto = Consultar_Nome_Dos_Produtos(valor, opcao)
-                    id_nome_produto = resultado_nome_produto[0]
-
-                    if id_nome_produto != 0:
-                        valor = [id_nome_produto, nome_produto, id_comunidade]
-                        resultado_produto = Consultar_Dados_Dos_Produtos(valor, opcao)
-                        id_produto = resultado_produto[0]
-                        slug_produto = resultado_produto[1]
-
-                        if id_produto != 0:
-                            quantidade_estoque_produto = resultado_produto[4]
-                            preco_compra_estoque_produto = resultado_produto[5]
-                            preco_venda_estoque_produto = preco
-                            nome_produto_str_ = resultado_produto[3]
-                            nome_produto_str = str(nome_produto_str_)
-
-                            if quantidade_estoque_produto <= 0:
+                        try:
+                            if not nome_cliente:
                                 transaction.set_rollback(True)
-                                messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
-                                return redirect(reverse('vendas', kwargs={"slug":slug}))              
-                        else:
+                                messages.add_message(request, messages.ERROR, 'Você não preencheu o nome do cliente')
+                                return redirect(reverse('vendas', kwargs={"slug":slug})) 
+
+                            # Inicio Declaração de Variáveis da Venda 
+                            nome = nome_cliente
+                            num_aleatorio = "v" + str(num_sequencial)
+                            cont_num_aleatorio += 1
+                            label = nome_produto
+                            label_vendas_get = nome_produto
+
+                            nome_cliente = nome_cliente
+                            nome_cliente = unidecode.unidecode(f'{nome_cliente}')
+                            nome_cliente = str(nome_cliente)
+                            
+                            quantidade_estoque_produto = 0
+                            id_produto = 0
+                            id_nome_produto = 0
+                            produto = 0
+                            preco_compra_estoque_produto = 0
+                            preco_venda_estoque_produto = 0
+
+                            data_atual = Capturar_Ano_E_Hora_Atual()
+                            
+                            label = slugify(nome_produto + "-" + data_atual)
+                            slugp = slugify(nome_produto + "-" + data_atual + "-" + num_aleatorio)
+
+                            valor = [id_comunidade, nome_produto]
+                            # Fim Declaração de Variáveis da Venda 
+
+                            labelf = Vendas.objects.filter(label_vendas=label)#Verificando se está sendo preenchido produtos duplicados na mesma venda.
+
+                            if labelf:
+                                transaction.set_rollback(True) #Desfazer alterações caso haja erro em alguma.
+                                messages.add_message(request, messages.ERROR, 'Confira os produtos, parecem duplicados')
+                                return redirect(reverse('vendas', kwargs={"slug":slug}))
+
+                            resultado_nome_produto = Consultar_Nome_Dos_Produtos(valor, opcao)
+                            id_nome_produto = resultado_nome_produto[0]
+
+                            if id_nome_produto != 0:
+                                valor = [id_nome_produto, nome_produto, id_comunidade]
+                                resultado_produto = Consultar_Dados_Dos_Produtos(valor, opcao)
+                                id_produto = resultado_produto[0]
+                                slug_produto = resultado_produto[1]
+
+                                if id_produto != 0:
+                                    quantidade_estoque_produto = resultado_produto[4]
+                                    preco_compra_estoque_produto = resultado_produto[5]
+                                    preco_venda_estoque_produto = preco
+                                    nome_produto_str_ = resultado_produto[3]
+                                    nome_produto_str = str(nome_produto_str_)
+
+                                    if quantidade_estoque_produto <= 0:
+                                        transaction.set_rollback(True)
+                                        messages.add_message(request, messages.ERROR, 'Não temos esse Produto no estoque no momento')
+                                        return redirect(reverse('vendas', kwargs={"slug":slug}))              
+                                else:
+                                    transaction.set_rollback(True)
+                                    messages.add_message(request, messages.ERROR, 'Algo de errado aconteceu com sua venda, caso persista, contate a administração.')
+                                    return redirect(reverse('vendas', kwargs={"slug":slug}))  
+                            else:
+                                transaction.set_rollback(True)
+                                messages.add_message(request, messages.ERROR, 'Algo de errado aconteceu com sua venda, caso persista, contate a administração.')
+                                return redirect(reverse('vendas', kwargs={"slug":slug}))                  
+                        except Exception as e:
                             transaction.set_rollback(True)
-                            messages.add_message(request, messages.ERROR, 'Algo de errado aconteceu com sua venda, caso persista, contate a administração.')
-                            return redirect(reverse('vendas', kwargs={"slug":slug}))  
-                    else:
-                        transaction.set_rollback(True)
-                        messages.add_message(request, messages.ERROR, 'Algo de errado aconteceu com sua venda, caso persista, contate a administração.')
-                        return redirect(reverse('vendas', kwargs={"slug":slug}))                  
-                except Exception as e:
-                    transaction.set_rollback(True)
-                    messages.add_message(request, messages.ERROR, 'Ocorreu um erro ao processar a venda, fale com a administração')
-                    return redirect(reverse('vendas', kwargs={"slug":slug}))
+                            messages.add_message(request, messages.ERROR, 'Ocorreu um erro ao processar a venda, fale com a administração')
+                            return redirect(reverse('vendas', kwargs={"slug":slug}))
 
-                validacao_forma_venda_e_qtd, preco_venda_estoque_produto, preco_venda_estoque_produto_real, preco_venda_total = Valida_Forma_Venda_E_Quantidade(request, slug, forma_venda, quantidade, quantidade_estoque_produto, nome_produto, id_produto)
+                        validacao_forma_venda_e_qtd, preco_venda_estoque_produto, preco_venda_estoque_produto_real, preco_venda_total = Valida_Forma_Venda_E_Quantidade(request, slug, forma_venda, quantidade, quantidade_estoque_produto, nome_produto, id_produto)
 
-                if validacao_forma_venda_e_qtd:
-                    transaction.set_rollback(True)
-                    return validacao_forma_venda_e_qtd
+                        if validacao_forma_venda_e_qtd:
+                            transaction.set_rollback(True)
+                            return validacao_forma_venda_e_qtd
 
-                # Inicio Declaração Variaveis
-                preco_total_controle += float(preco_venda_total)
-                preco_venda = preco_venda_estoque_produto_real
-                preco_original_venda += float(preco_venda_total)
-                # Fim Declaração Variaveis
+                        # Inicio Declaração Variaveis
+                        preco_total_controle += float(preco_venda_total)
+                        preco_venda = preco_venda_estoque_produto_real
+                        preco_original_venda += float(preco_venda_total)
+                        # Fim Declaração Variaveis
 
-                # Se passar pelas validações, crie o objeto Venda e salve no banco
-                Criando_Vendas(request, id_nome_produto, quantidade, peso, peso_item_total, forma_venda, preco_compra_estoque_produto, preco_venda, preco_venda_total, slugp, id_comunidade, label, label_vendas_get, id_produto, nome_cliente, vendacontrole)
+                        # Se passar pelas validações, crie o objeto Venda e salve no banco
+                        Criando_Vendas(request, id_nome_produto, quantidade, peso, peso_item_total, forma_venda, preco_compra_estoque_produto, preco_venda, preco_venda_total, slugp, id_comunidade, label, label_vendas_get, id_produto, nome_cliente, vendacontrole)
 
-                id_user = Capturar_Id_Do_Usuario(request)
+                        id_user, id_comunidade_usuario = Capturar_Id_E_Comunidade_Do_Usuario(request)
 
-                Cadastro_Planilhas_Troca_E_Estorno_Vendas(request, id_user, nome_produto_str, quantidade, vendacontrole, slugp, slug_comunidade)
+                        Cadastro_Planilhas_Troca_E_Estorno_Vendas(request, id_user, nome_produto_str, quantidade, vendacontrole, slugp, slug_comunidade)
 
-                acao = "vender"
-                Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug_produto, quantidade, preco_compra_estoque_produto, preco_venda_estoque_produto, acao, slug_comunidade, peso, id_produto)
+                        acao = "vender"
+                        Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug_produto, quantidade, preco_compra_estoque_produto, preco_venda_estoque_produto, acao, slug_comunidade, peso, id_produto)
 
-                if nome_dos_produtos:  # Verifica se a string já tem algum valor
-                    nome_dos_produtos += ","  # Adiciona uma vírgula
-                nome_dos_produtos +=  nome_produto # Adiciona o novo produto
+                        if nome_dos_produtos:  # Verifica se a string já tem algum valor
+                            nome_dos_produtos += ","  # Adiciona uma vírgula
+                        nome_dos_produtos +=  nome_produto # Adiciona o novo produto
 
-            # Se passar pelas validações, pega o objeto VendasControle contendo o ID venda gerado lá em cima#
-            Atualiza_Venda_Controle(num_sequencial, preco_total_controle, nome_dos_produtos)
+                    # Se passar pelas validações, pega o objeto VendasControle contendo o ID venda gerado lá em cima#
+                    Atualiza_Venda_Controle(num_sequencial, preco_total_controle, nome_dos_produtos)
 
-            Salvando_Novo_Token_Venda_Familia(cpf, "reset")
+                    Salvando_Novo_Token_Venda_Familia(cpf, "reset")
 
-            messages.add_message(request, messages.SUCCESS, 'Venda Cadastrada com sucesso')
-            return redirect(reverse('pre_vendas', kwargs={"slug":slug_voltar_tela}))
+                    messages.add_message(request, messages.SUCCESS, 'Venda Cadastrada com sucesso')
+                    return redirect(reverse('pre_vendas', kwargs={"slug":slug_voltar_tela}))
+            else:
+                messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+                return redirect(reverse('home'))
+        else:
+            messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+            return redirect(reverse('home'))
 
 
 #Função para a tela de consultar vendas geral
@@ -657,28 +719,33 @@ def consultar_vendas_geral(request, slug):
         opcao = "slug"
         resultado = Consultar_Uma_Comunidade(slug, opcao)
         if resultado[0] != 0:
-            id_comunidade = resultado[0]
+            id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+            if id_comunidade_comparar_usuario == id_comunidade_usuario:
+                    id_comunidade = resultado[0]
 
-            BuscaVendas = Q(
-                    Q(venda_finalizada=0) & Q(nome_comunidade_id=id_comunidade)     
-            )
+                    BuscaVendas = Q(
+                            Q(venda_finalizada=0) & Q(nome_comunidade_id=id_comunidade)     
+                    )
 
-            vendas = VendasControle.objects.filter(BuscaVendas)
+                    vendas = VendasControle.objects.filter(BuscaVendas)
 
-            validacao, page = Get_Paginacao_Vendas_Controle(request, slug, nome_cliente, nome, get_dt_start, get_dt_end, vendedor, vendas)
-            if validacao:
-                return validacao
-            
-            context = {
-                'vendas': vendas, 
-                'page': page,
-                'slug': slug,
-            }
+                    validacao, page = Get_Paginacao_Vendas_Controle(request, slug, nome_cliente, nome, get_dt_start, get_dt_end, vendedor, vendas)
+                    if validacao:
+                        return validacao
+                    
+                    context = {
+                        'vendas': vendas, 
+                        'page': page,
+                        'slug': slug,
+                    }
 
-            return render(request, 'consultar_vendas_geral.html', context)
+                    return render(request, 'consultar_vendas_geral.html', context)
+            else:
+                messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+                return redirect(reverse('home'))
         else:
             messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
-            return redirect(reverse('home')) 
+            return redirect(reverse('home'))
 
 
 #Função para a tela de consultar venda
@@ -695,17 +762,23 @@ def consultar_vendas(request, slug):
         vendas = Vendas.objects.filter(id_venda_id=slug)
         opcao = "id"
         resultado = Consultar_Uma_Comunidade(id_comunidade, opcao)
-        if resultado[0] != 0:
-            id_comunidade = resultado[0]
-            slug_comunidade = resultado[1]
-            
-            context = {
-                'vendas': vendas,
-                'slug': slug,
-                'slug_comunidade': slug_comunidade,
-            }
 
-            return render(request, 'consultar_vendas.html', context)
+        if resultado[0] != 0:
+            id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+            if id_comunidade_comparar_usuario == id_comunidade_usuario:
+                id_comunidade = resultado[0]
+                slug_comunidade = resultado[1]
+                
+                context = {
+                    'vendas': vendas,
+                    'slug': slug,
+                    'slug_comunidade': slug_comunidade,
+                }
+
+                return render(request, 'consultar_vendas.html', context)
+            else:
+                messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+                return redirect(reverse('home'))
         else:
             messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
             return redirect(reverse('home')) 
@@ -726,40 +799,45 @@ def vendas_finalizadas(request, slug):
         opcao = "slug"
         resultado = Consultar_Uma_Comunidade(slug, opcao)
         if resultado[0] != 0:
-            id_comunidade = resultado[0]
+            id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+            if id_comunidade_comparar_usuario == id_comunidade_usuario:
+                id_comunidade = resultado[0]
 
-            BuscaVendasFinalizadas = Q(
-                    Q(venda_finalizada=1) & Q(nome_comunidade_id=id_comunidade)     
-            )
+                BuscaVendasFinalizadas = Q(
+                        Q(venda_finalizada=1) & Q(nome_comunidade_id=id_comunidade)     
+                )
 
-            vendas = Vendas.objects.filter(BuscaVendasFinalizadas)
+                vendas = Vendas.objects.filter(BuscaVendasFinalizadas)
 
-            validacao, page = Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, vendedor, vendas)
-            if validacao:
-                return validacao
+                validacao, page = Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, vendedor, vendas)
+                if validacao:
+                    return validacao
 
-            produtos = Produto.objects.filter(nome_comunidade_id=id_comunidade)
+                produtos = Produto.objects.filter(nome_comunidade_id=id_comunidade)
 
-            nome_produtos = NomeProduto.objects.all()
+                nome_produtos = NomeProduto.objects.all()
 
-            #o sinal de "~" antes significa negação
-            BuscaVendasNaoFinalizadas = Q(
-                    ~Q(venda_finalizada=1) & Q(nome_comunidade_id=id_comunidade)     
-            )
+                #o sinal de "~" antes significa negação
+                BuscaVendasNaoFinalizadas = Q(
+                        ~Q(venda_finalizada=1) & Q(nome_comunidade_id=id_comunidade)     
+                )
 
-            all_vendas = VendasControle.objects.filter(BuscaVendasNaoFinalizadas).order_by('-id_venda') #Vendas mais novas primeiro, ordenadas pelo ID
+                all_vendas = VendasControle.objects.filter(BuscaVendasNaoFinalizadas).order_by('-id_venda') #Vendas mais novas primeiro, ordenadas pelo ID
 
-            context = {
-                'nome_produtos':nome_produtos, 
-                'produtos':produtos, 
-                'vendas': vendas, 
-                'page': page,
-                'slug': slug,
-                'id_comunidade': id_comunidade,
-                'all_vendas': all_vendas,
-            }
+                context = {
+                    'nome_produtos':nome_produtos, 
+                    'produtos':produtos, 
+                    'vendas': vendas, 
+                    'page': page,
+                    'slug': slug,
+                    'id_comunidade': id_comunidade,
+                    'all_vendas': all_vendas,
+                }
 
-            return render(request, 'vendas_finalizadas.html', context)
+                return render(request, 'vendas_finalizadas.html', context)
+            else:
+                messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+                return redirect(reverse('home'))
         else:
             messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
             return redirect(reverse('home')) 
@@ -778,57 +856,66 @@ def visualizar_vendas (request, slug):
                 id_comunidade = venda.nome_comunidade_id
                 opcao = "id"
                 resultado = Consultar_Uma_Comunidade(id_comunidade, opcao)
-                slug_comunidade = resultado[1]
+                if resultado[0] != 0:
+                    id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+                    if id_comunidade_comparar_usuario == id_comunidade_usuario:
+                        slug_comunidade = resultado[1]
 
-                id_nome_produto = venda.nome_produto_id
+                        id_nome_produto = venda.nome_produto_id
 
-                BuscaProduto = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
-                    Q(nome_comunidade_id=id_comunidade) & Q(nome_produto_id=id_nome_produto) 
-                )
+                        BuscaProduto = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
+                            Q(nome_comunidade_id=id_comunidade) & Q(nome_produto_id=id_nome_produto) 
+                        )
 
-                produto = Produto.objects.get(BuscaProduto)
-                cod_produto = produto.cod_produto
+                        produto = Produto.objects.get(BuscaProduto)
+                        cod_produto = produto.cod_produto
 
-                data_criacao = venda.data_criacao
-                quantidade_venda = venda.quantidade
-                vendido_por = venda.criado_por
-                forma_venda = venda.forma_venda
-                nome_cliente = venda.nome_cliente
+                        data_criacao = venda.data_criacao
+                        quantidade_venda = venda.quantidade
+                        vendido_por = venda.criado_por
+                        forma_venda = venda.forma_venda
+                        nome_cliente = venda.nome_cliente
 
-                preco_compra = venda.preco_compra#Pegando preco_compra
+                        preco_compra = venda.preco_compra#Pegando preco_compra
 
-                preco_venda = venda.preco_venda#Pegando preco_venda
-                preco_venda_total = venda.preco_venda_total#Pegando preco_venda total
-                nome_produto = ""
-                # Fim Declaração de Variaveis
+                        preco_venda = venda.preco_venda#Pegando preco_venda
+                        preco_venda_total = venda.preco_venda_total#Pegando preco_venda total
+                        nome_produto = ""
+                        # Fim Declaração de Variaveis
 
-                if preco_compra or preco_venda:
-                    preco_compra = "R$ " + str(preco_compra)
-                    preco_venda = "R$ " + str(preco_venda)
-                    preco_venda_total = "R$ " + str(preco_venda_total)
+                        if preco_compra or preco_venda:
+                            preco_compra = "R$ " + str(preco_compra)
+                            preco_venda = "R$ " + str(preco_venda)
+                            preco_venda_total = "R$ " + str(preco_venda_total)
 
-                nomes = NomeProduto.objects.all()#Pegando todos os nomes de produtos
-                if nomes:
-                    nomes = nomes.filter(id__contains=venda.nome_produto_id)#Verificando se existem nomes de produto com o nome escolhido
-                    nomes = NomeProduto.objects.get(id=venda.nome_produto_id)
-                    nome_produto = nomes.nome_produto
+                        nomes = NomeProduto.objects.all()#Pegando todos os nomes de produtos
+                        if nomes:
+                            nomes = nomes.filter(id__contains=venda.nome_produto_id)#Verificando se existem nomes de produto com o nome escolhido
+                            nomes = NomeProduto.objects.get(id=venda.nome_produto_id)
+                            nome_produto = nomes.nome_produto
 
-                context = {
-                    'slug_venda': slug_venda,
-                    'slug_comunidade': slug_comunidade,
-                    'vendido_por':vendido_por,
-                    'preco_venda':preco_venda,
-                    'preco_compra':preco_compra,
-                    'quantidade_venda':quantidade_venda,
-                    'data_criacao':data_criacao,
-                    'nome_produto':nome_produto,
-                    'forma_venda':forma_venda,
-                    'nome_cliente':nome_cliente,
-                    'venda_finalizada':venda_finalizada,
-                    'preco_venda_total':preco_venda_total,
-                    'cod_produto': cod_produto,
-                }
-                return render(request, 'visualizar_vendas.html', context)
+                        context = {
+                            'slug_venda': slug_venda,
+                            'slug_comunidade': slug_comunidade,
+                            'vendido_por':vendido_por,
+                            'preco_venda':preco_venda,
+                            'preco_compra':preco_compra,
+                            'quantidade_venda':quantidade_venda,
+                            'data_criacao':data_criacao,
+                            'nome_produto':nome_produto,
+                            'forma_venda':forma_venda,
+                            'nome_cliente':nome_cliente,
+                            'venda_finalizada':venda_finalizada,
+                            'preco_venda_total':preco_venda_total,
+                            'cod_produto': cod_produto,
+                        }
+                        return render(request, 'visualizar_vendas.html', context)
+                    else:
+                        messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+                        return redirect(reverse('home'))
+                else:
+                    messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+                    return redirect(reverse('home'))
             else:
                 messages.add_message(request, messages.ERROR, 'Essa venda já foi finalizada')
                 return redirect(reverse('vendas', kwargs={"slug":slug_comunidade}))
@@ -2582,125 +2669,135 @@ def confirmar_venda_geral(request, slug):
 
         opcao = "id"
         resultado_comunidade = Consultar_Uma_Comunidade(id_comunidade, opcao)
-        slug_comunidade = resultado_comunidade[1]
-        
-        if valor_pago == "0" or valor_pago == "" or valor_pago == 0:
-            if forma_venda == "Dinheiro":
-                messages.add_message(request, messages.ERROR, 'Valor Pago não pode ser vazio')
-                return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_comunidade}))
-            else:
-                valor_pago = valor_a_pagar
 
-        if forma_venda == "Crédito":
-            if quantidade_parcelas.isdigit(): 
-                quantidade_parcelas = int(quantidade_parcelas) 
-                if quantidade_parcelas <= 0:
-                        messages.add_message(request, messages.ERROR, 'Quantidade de parcelas não pode ser vazio, igual ou menor que zero para crédito')
+        if resultado_comunidade[0] != 0:
+            id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado_comunidade[0])
+            if id_comunidade_comparar_usuario == id_comunidade_usuario:
+                slug_comunidade = resultado_comunidade[1]
+                
+                if valor_pago == "0" or valor_pago == "" or valor_pago == 0:
+                    if forma_venda == "Dinheiro":
+                        messages.add_message(request, messages.ERROR, 'Valor Pago não pode ser vazio')
                         return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_comunidade}))
-                if quantidade_parcelas > 0:
-                    pass
+                    else:
+                        valor_pago = valor_a_pagar
+
+                if forma_venda == "Crédito":
+                    if quantidade_parcelas.isdigit(): 
+                        quantidade_parcelas = int(quantidade_parcelas) 
+                        if quantidade_parcelas <= 0:
+                                messages.add_message(request, messages.ERROR, 'Quantidade de parcelas não pode ser vazio, igual ou menor que zero para crédito')
+                                return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_comunidade}))
+                        if quantidade_parcelas > 0:
+                            pass
+                        else:
+                            messages.add_message(request, messages.ERROR, 'Você deve preencher um número para quantidade de parcelas')
+                            return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_comunidade}))
+                    else:
+                        messages.add_message(request, messages.ERROR, 'Quantidade de Parcelas deve conter apenas números')#Verificando se contém apenas números
+                        return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_comunidade})) 
                 else:
-                    messages.add_message(request, messages.ERROR, 'Você deve preencher um número para quantidade de parcelas')
+                    quantidade_parcelas = 0
+
+                valor_pago = str(valor_pago).replace(',', '.') # Substitui a vírgula pelo ponto
+                valor_pago = float(valor_pago)#Transformando em float
+                valor_pago = Decimal(valor_pago)#Transformando em Decimal
+
+                troco = str(troco).replace(',', '.') # Substitui a vírgula pelo ponto
+                troco = float(troco)#Transformando em float
+                troco = Decimal(troco)#Transformando em Decimal
+
+                data_alteracao = Capturar_Ano_E_Hora_Atual()
+
+                if resultado_venda_controle[0] != 0:
+                    opcao = "filtro-id-venda"
+                    resultado_venda = Consultar_Uma_Venda(slug, opcao)
+                    for venda in resultado_venda:#Loop For para colocar quantidade, nome do produto, e preco dentro de arrays.
+                        preco_total = venda.preco_venda_total
+                        id_venda_atual = venda.id
+
+                        if valor_pago < valor_a_pagar:
+                            messages.add_message(request, messages.ERROR, 'O Valor pago não pode ser menor que o valor à pagar')
+                            return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_comunidade}))
+                        if troco < 0:
+                            messages.add_message(request, messages.ERROR, 'Troco não pode ser negativo')
+                            return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_comunidade}))
+
+                        opcao = "filtro-id-venda"
+                        resultado_venda_controle_filter = Consultar_Venda_Controle(slug, opcao)
+                        resultado_venda_controle_filter.novo_preco_venda_total -= preco_total #Retirando o preço do item confirmado, da tabela de vendacontrole
+                        resultado_venda_controle_filter.falta_editar -= 1
+                        resultado_venda_controle_filter.valor_pago += preco_total #Somando o valor do item confirmado (pago)
+                        resultado_venda_controle_filter.save()
+
+                        dia = Capturar_Data_Em_Formato_Data()
+
+                        confirmar_venda = True
+                        venda_antiga = None
+                        venda_antiga = Vendas.objects.get(id=id_venda_atual)
+
+                        campos_alteracao = []
+                        if venda_antiga:
+                            venda_antiga.venda_finalizada = str(venda_antiga.venda_finalizada)
+
+                            if venda_antiga.venda_finalizada != confirmar_venda:
+                                campos_alteracao.append('venda_finalizada')                  
+
+                            venda.venda_finalizada = confirmar_venda #Confirmando a venda
+                            venda.modificado = True
+                            venda.alterado_por = request.user.username
+                            venda.data_criacao = data_alteracao
+                            venda.dia = dia
+                            venda.data_alteracao = data_alteracao
+                            venda.save()
+
+                            #Atualizando a data da venda para a data que foi finalizada.
+                            vendas_ = Vendas.objects.filter(id_venda=slug)
+                            for venda in vendas_:
+                                venda.dia = dia
+                                venda.data_criacao = data_alteracao
+                                venda.save()
+
+                            venda_nova = None
+                            venda_nova = Vendas.objects.get(id=id_venda_atual)
+                            if campos_alteracao:
+                                valores_antigos = []
+                                valores_novos = []
+                                for campo in campos_alteracao:
+                                    valor_antigo = getattr(venda_antiga, campo)
+                                    valor_novo = getattr(venda_nova, campo)
+                                    valores_antigos.append(f'{campo}: {valor_antigo}')
+                                    valores_novos.append(f'{campo}: {valor_novo}')
+                                    
+                            id_user = Users.objects.get(username=request.user)
+                            id_user = id_user.id
+                            LogsItens.objects.create(
+                                id_user = id_user,
+                                nome_user=request.user,
+                                nome_objeto=str(venda_nova.slug),
+                                acao='Alteração',
+                                model = "Vendas_Item",
+                                campos_alteracao=', '.join(campos_alteracao),
+                                valores_antigos=', '.join(valores_antigos),
+                                valores_novos=', '.join(valores_novos)
+                            )
+                    resultado_venda_controle_filter.venda_finalizada = True #Finalizando a compra
+                    resultado_venda_controle_filter.alteracoes_finalizadas = True #Finalizando a compra
+                    resultado_venda_controle_filter.troco = troco
+                    resultado_venda_controle_filter.valor_realmente_pago = valor_pago
+                    resultado_venda_controle_filter.quantidade_parcelas = quantidade_parcelas
+                    resultado_venda_controle_filter.save()
+                    messages.add_message(request, messages.SUCCESS, 'Venda Confirmada com sucesso')
+                    return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_comunidade}))
+                else:
+                    messages.add_message(request, messages.ERROR, 'Houve um erro na confirmação dessa venda, caso persista contate o administrador')
                     return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_comunidade}))
             else:
-                messages.add_message(request, messages.ERROR, 'Quantidade de Parcelas deve conter apenas números')#Verificando se contém apenas números
-                return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_comunidade})) 
+                messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+                return redirect(reverse('home'))
         else:
-            quantidade_parcelas = 0
-
-        valor_pago = str(valor_pago).replace(',', '.') # Substitui a vírgula pelo ponto
-        valor_pago = float(valor_pago)#Transformando em float
-        valor_pago = Decimal(valor_pago)#Transformando em Decimal
-
-        troco = str(troco).replace(',', '.') # Substitui a vírgula pelo ponto
-        troco = float(troco)#Transformando em float
-        troco = Decimal(troco)#Transformando em Decimal
-
-        data_alteracao = Capturar_Ano_E_Hora_Atual()
-
-        if resultado_venda_controle[0] != 0:
-            opcao = "filtro-id-venda"
-            resultado_venda = Consultar_Uma_Venda(slug, opcao)
-            for venda in resultado_venda:#Loop For para colocar quantidade, nome do produto, e preco dentro de arrays.
-                preco_total = venda.preco_venda_total
-                id_venda_atual = venda.id
-
-                if valor_pago < valor_a_pagar:
-                    messages.add_message(request, messages.ERROR, 'O Valor pago não pode ser menor que o valor à pagar')
-                    return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_comunidade}))
-                if troco < 0:
-                    messages.add_message(request, messages.ERROR, 'Troco não pode ser negativo')
-                    return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_comunidade}))
-
-                opcao = "filtro-id-venda"
-                resultado_venda_controle_filter = Consultar_Venda_Controle(slug, opcao)
-                resultado_venda_controle_filter.novo_preco_venda_total -= preco_total #Retirando o preço do item confirmado, da tabela de vendacontrole
-                resultado_venda_controle_filter.falta_editar -= 1
-                resultado_venda_controle_filter.valor_pago += preco_total #Somando o valor do item confirmado (pago)
-                resultado_venda_controle_filter.save()
-
-                dia = Capturar_Data_Em_Formato_Data()
-
-                confirmar_venda = True
-                venda_antiga = None
-                venda_antiga = Vendas.objects.get(id=id_venda_atual)
-
-                campos_alteracao = []
-                if venda_antiga:
-                    venda_antiga.venda_finalizada = str(venda_antiga.venda_finalizada)
-
-                    if venda_antiga.venda_finalizada != confirmar_venda:
-                        campos_alteracao.append('venda_finalizada')                  
-
-                    venda.venda_finalizada = confirmar_venda #Confirmando a venda
-                    venda.modificado = True
-                    venda.alterado_por = request.user.username
-                    venda.data_criacao = data_alteracao
-                    venda.dia = dia
-                    venda.data_alteracao = data_alteracao
-                    venda.save()
-
-                    #Atualizando a data da venda para a data que foi finalizada.
-                    vendas_ = Vendas.objects.filter(id_venda=slug)
-                    for venda in vendas_:
-                        venda.dia = dia
-                        venda.data_criacao = data_alteracao
-                        venda.save()
-
-                    venda_nova = None
-                    venda_nova = Vendas.objects.get(id=id_venda_atual)
-                    if campos_alteracao:
-                        valores_antigos = []
-                        valores_novos = []
-                        for campo in campos_alteracao:
-                            valor_antigo = getattr(venda_antiga, campo)
-                            valor_novo = getattr(venda_nova, campo)
-                            valores_antigos.append(f'{campo}: {valor_antigo}')
-                            valores_novos.append(f'{campo}: {valor_novo}')
-                            
-                    id_user = Users.objects.get(username=request.user)
-                    id_user = id_user.id
-                    LogsItens.objects.create(
-                        id_user = id_user,
-                        nome_user=request.user,
-                        nome_objeto=str(venda_nova.slug),
-                        acao='Alteração',
-                        model = "Vendas_Item",
-                        campos_alteracao=', '.join(campos_alteracao),
-                        valores_antigos=', '.join(valores_antigos),
-                        valores_novos=', '.join(valores_novos)
-                    )
-            resultado_venda_controle_filter.venda_finalizada = True #Finalizando a compra
-            resultado_venda_controle_filter.alteracoes_finalizadas = True #Finalizando a compra
-            resultado_venda_controle_filter.troco = troco
-            resultado_venda_controle_filter.valor_realmente_pago = valor_pago
-            resultado_venda_controle_filter.quantidade_parcelas = quantidade_parcelas
-            resultado_venda_controle_filter.save()
-            messages.add_message(request, messages.SUCCESS, 'Venda Confirmada com sucesso')
-            return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_comunidade}))
-        else:
-            messages.add_message(request, messages.ERROR, 'Houve um erro na confirmação dessa venda, caso persista contate o administrador')
-            return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_comunidade}))        
+            messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+            return redirect(reverse('home'))
 
 
 # ======================== ERRORS ========================
@@ -2906,7 +3003,12 @@ def export_csv_produto(request, slug):
     resultado = Consultar_Uma_Comunidade(slug, opcao)
 
     if resultado[0] != 0:
-        pass
+        id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+        if id_comunidade_comparar_usuario == id_comunidade_usuario:
+            pass
+        else:
+            messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+            return redirect(reverse('home'))
     else:
         messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
         return redirect(reverse('export_entrada_produtos', kwargs={"slug":slug})) 

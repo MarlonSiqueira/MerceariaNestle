@@ -34,7 +34,10 @@ SENHA_PADRAO = os.environ.get('SENHA_PADRAO')
 @has_permission_decorator('cadastrar_vendedor')
 def cadastrar_vendedor(request, slug):
     opcao = "slug"
-    if request.user.is_authenticated:
+    resultado = Consultar_Uma_Comunidade(slug, opcao)
+
+    id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+    if id_comunidade_comparar_usuario == id_comunidade_usuario:
         if request.method == "GET":
             if request.user.cargo == "A" or request.user.cargo == "R":
                 nome = request.GET.get('nome')
@@ -49,8 +52,6 @@ def cadastrar_vendedor(request, slug):
                 )
 
                 vendedores = Users.objects.filter(BuscaVendedores)
-
-                resultado = Consultar_Uma_Comunidade(slug, opcao)
 
                 if resultado[0] != 0:
                     vendedores = Validacoes_Get_Cadastro_Usuario(request, cargo, slug, nome, sobrenome, email, vendedoresnome, vendedores)
@@ -101,19 +102,25 @@ def excluir_vendedor(request, id):
 
     id_comunidade_vendedor = vendedor.nome_comunidade_id #Pegando o ID da comunidade do vendedor
     resultado = Consultar_Uma_Comunidade(id_comunidade_vendedor, opcao)
-    try :#Tente Excluir
-        if resultado[1]:
-            if hasattr(vendedor, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
-                    # se a flag _excluido já está setada, não chama o sinal
-                pass
-            else:#Caso não tenha sido excluído ele chama o registro.
-                user_deleted(instance=vendedor, user=request.user)
-            vendedor.delete()
-            messages.add_message(request, messages.SUCCESS, 'Vendedor excluído com sucesso')
+
+    id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+    if id_comunidade_comparar_usuario == id_comunidade_usuario:
+        try :#Tente Excluir
+            if resultado[1]:
+                if hasattr(vendedor, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
+                        # se a flag _excluido já está setada, não chama o sinal
+                    pass
+                else:#Caso não tenha sido excluído ele chama o registro.
+                    user_deleted(instance=vendedor, user=request.user)
+                vendedor.delete()
+                messages.add_message(request, messages.SUCCESS, 'Vendedor excluído com sucesso')
+                return redirect(reverse('cadastrar_vendedor', kwargs={"slug":resultado[1]}))
+        except ProtectedError:#Caso não consiga, entre aqui
+            messages.add_message(request, messages.ERROR, 'Esse Vendedor não pode ser excluído pois possui logs vinculados')
             return redirect(reverse('cadastrar_vendedor', kwargs={"slug":resultado[1]}))
-    except ProtectedError:#Caso não consiga, entre aqui
-        messages.add_message(request, messages.ERROR, 'Esse Vendedor não pode ser excluído pois possui logs vinculados')
-        return redirect(reverse('cadastrar_vendedor', kwargs={"slug":resultado[1]}))
+    else:
+        messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+        return redirect(reverse('home'))
 
 
 #Funções para a tela de cadastrar_responsavel
@@ -198,7 +205,10 @@ def excluir_responsavel(request, id):
 @has_permission_decorator('cadastrar_familia')
 def cadastrar_familia(request, slug):
     opcao = "slug"
-    if request.user.is_authenticated:
+    resultado = Consultar_Uma_Comunidade(slug, opcao)
+
+    id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+    if id_comunidade_comparar_usuario == id_comunidade_usuario:
         if request.method == "GET":  
             if request.user.cargo == "A" or request.user.cargo == "R":
                 nome_completo = request.GET.get('nome_completo')
@@ -207,7 +217,7 @@ def cadastrar_familia(request, slug):
 
                 familias = Familia.objects.all()
 
-                resultado = Consultar_Uma_Comunidade(slug, opcao)
+
 
                 if resultado[0] != 0:
                     familias = Validacoes_Get_Familia(request, slug, nome_completo, cpf, familiasnome, familias)
@@ -243,7 +253,8 @@ def cadastrar_familia(request, slug):
             messages.add_message(request, messages.SUCCESS, 'Família criada com sucesso')
             return redirect(reverse('cadastrar_familia', kwargs={"slug": slug}))
     else:
-        return redirect(reverse('login'))
+        messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+        return redirect(reverse('home'))
 
 
 @has_permission_decorator('excluir_familia')
@@ -253,19 +264,25 @@ def excluir_familia(request, id):
 
     id_comunidade_familia = familia.nome_comunidade_id #Pegando o ID da comunidade do familia
     resultado = Consultar_Uma_Comunidade(id_comunidade_familia, opcao)
-    try :#Tente Excluir
-        if resultado[1]:
-            if hasattr(familia, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
-                    # se a flag _excluido já está setada, não chama o sinal
-                pass
-            else:#Caso não tenha sido excluído ele chama o registro.
-                familia_deleted(instance=familia, user=request.user)
-            familia.delete()
-            messages.add_message(request, messages.SUCCESS, 'Familia excluída com sucesso')
+
+    id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+    if id_comunidade_comparar_usuario == id_comunidade_usuario:
+        try :#Tente Excluir
+            if resultado[1]:
+                if hasattr(familia, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
+                        # se a flag _excluido já está setada, não chama o sinal
+                    pass
+                else:#Caso não tenha sido excluído ele chama o registro.
+                    familia_deleted(instance=familia, user=request.user)
+                familia.delete()
+                messages.add_message(request, messages.SUCCESS, 'Familia excluída com sucesso')
+                return redirect(reverse('cadastrar_familia', kwargs={"slug":resultado[1]}))
+        except ProtectedError:#Caso não consiga, entre aqui
+            messages.add_message(request, messages.ERROR, 'Esse Familia não pode ser excluída pois possui logs vinculados')
             return redirect(reverse('cadastrar_familia', kwargs={"slug":resultado[1]}))
-    except ProtectedError:#Caso não consiga, entre aqui
-        messages.add_message(request, messages.ERROR, 'Esse Familia não pode ser excluída pois possui logs vinculados')
-        return redirect(reverse('cadastrar_familia', kwargs={"slug":resultado[1]}))
+    else:
+        messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+        return redirect(reverse('home'))
 
 
 @has_permission_decorator('inativar_familia')
@@ -276,13 +293,19 @@ def inativar_familia(request, id):
 
     id_comunidade_familia = familia.nome_comunidade_id #Pegando o ID da comunidade do familia
     resultado = Consultar_Uma_Comunidade(id_comunidade_familia, opcao)
-    if resultado[1]:
-        validacao = Registrar_Log_Alteracao_Status_Familia(request, id, status, resultado[1])
-        if validacao:
-            return validacao
+    
+    id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+    if id_comunidade_comparar_usuario == id_comunidade_usuario:
+        if resultado[1]:
+            validacao = Registrar_Log_Alteracao_Status_Familia(request, id, status, resultado[1])
+            if validacao:
+                return validacao
 
-        messages.add_message(request, messages.SUCCESS, 'Familia inativada com sucesso')
-        return redirect(reverse('cadastrar_familia', kwargs={"slug":resultado[1]}))
+            messages.add_message(request, messages.SUCCESS, 'Familia inativada com sucesso')
+            return redirect(reverse('cadastrar_familia', kwargs={"slug":resultado[1]}))
+    else:
+        messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+        return redirect(reverse('home'))
 
 
 @has_permission_decorator('ativar_familia')
@@ -293,13 +316,19 @@ def ativar_familia(request, id):
 
     id_comunidade_familia = familia.nome_comunidade_id #Pegando o ID da comunidade do familia
     resultado = Consultar_Uma_Comunidade(id_comunidade_familia, opcao)
-    if resultado[1]:
-        validacao = Registrar_Log_Alteracao_Status_Familia(request, id, status, resultado[1])
-        if validacao:
-            return validacao
 
-        messages.add_message(request, messages.SUCCESS, 'Familia ativada com sucesso')
-        return redirect(reverse('cadastrar_familia', kwargs={"slug":resultado[1]}))
+    id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+    if id_comunidade_comparar_usuario == id_comunidade_usuario:
+        if resultado[1]:
+            validacao = Registrar_Log_Alteracao_Status_Familia(request, id, status, resultado[1])
+            if validacao:
+                return validacao
+
+            messages.add_message(request, messages.SUCCESS, 'Familia ativada com sucesso')
+            return redirect(reverse('cadastrar_familia', kwargs={"slug":resultado[1]}))
+    else:
+        messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+        return redirect(reverse('home'))
 
 
 def login(request):
@@ -380,37 +409,28 @@ def comunidades(request):
 #Função para a tela de acessos da comunidade
 @has_permission_decorator('cadastrar_comunidade')
 def cadastrogeral_comunidade(request, slug):
-    if request.method == "GET":
-        if request.user.is_authenticated:
-            opcao = "slug"
-            if request.user.cargo == "A" or request.user.cargo == "R":
-                resultado = Consultar_Uma_Comunidade(slug, opcao)
-                if resultado[0] != 0:
+    opcao = "slug"
+    resultado = Consultar_Uma_Comunidade(slug, opcao)
+
+    id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+    if id_comunidade_comparar_usuario == id_comunidade_usuario:
+        if request.method == "GET":
+            if resultado[0] != 0:
                     context = {
                         'slug': slug,
                     }
                     return render(request, 'cadastrogeral_comunidade.html', context)
-                else:
-                    messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
-                    return redirect(reverse('home'))
             else:
-                resultado = Consultar_Uma_Comunidade(slug, opcao)
-                if resultado[0] != 0:
-                    context = {
-                        'slug': slug,
-                        'nome_comunidade': slug
-                    }
-                    return render(request, 'cadastrogeral_comunidade.html', context)
-                else:
-                    messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
-                    return redirect(reverse('home'))
-        else:
-            return redirect(reverse('login'))
-    elif request.method == "POST":   
-        if request.user.is_authenticated:
-            return redirect(reverse('home'))
-        else:
-            return render(request, 'login.html')
+                messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+                return redirect(reverse('home'))
+        elif request.method == "POST":   
+            if request.user.is_authenticated:
+                return redirect(reverse('home'))
+            else:
+                return render(request, 'login.html')
+    else:
+        messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+        return redirect(reverse('home'))
 
 
 ################################## RESET SENHA ################################## 

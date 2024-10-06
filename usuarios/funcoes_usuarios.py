@@ -12,11 +12,24 @@ from django.utils.html import strip_tags
 from django.shortcuts import get_object_or_404
 
 
-def Capturar_Id_Do_Usuario(request):
+def Capturar_Id_E_Comunidade_Do_Usuario(request):
     id_user = Users.objects.get(username=request.user)
+    id_comunidade_usuario = id_user.nome_comunidade_id
     id_user = id_user.id
     
-    return id_user
+    return id_user, id_comunidade_usuario
+
+
+def Bloqueio_Acesso_Demais_Comunidades(request, id_comunidade_comparar_usuario):
+    id_user, id_comunidade_usuario = Capturar_Id_E_Comunidade_Do_Usuario(request)
+    if request.user.cargo == "A" or request.user.cargo == "R":
+        id_comunidade_comparar_usuario = 0
+        id_comunidade_usuario = 0
+
+    if request.user.cargo != "A" and request.user.cargo != "R":
+        id_comunidade_comparar_usuario = id_comunidade_comparar_usuario
+
+    return id_comunidade_comparar_usuario, id_comunidade_usuario
 
 
 def enviar_email(destinatario, cargo, nome_usuario_email, username):
