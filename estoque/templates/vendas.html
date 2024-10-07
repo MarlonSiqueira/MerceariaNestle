@@ -48,39 +48,9 @@
         <input type="hidden" name="preco_total" id="preco_total_input" value="0">
         <input type="hidden" name="peso_total" id="peso_total_input" value="0">
         <input type="hidden" name="produtos_selecionados" id="produtos_selecionados_input" value="">
-        <a href="{% url 'pre_vendas' slug_voltar_tela %}" class="btn btn-info">Voltar</a>
         <input type="submit" name="CadAulas" id="CadAulas" disabled value="Vender" class="btn btn-primary">
     </form>
 </div>
-
-<style>
-    .produtos-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        justify-content: flex-start;
-    }
-    .produto-card {
-        width: 30%;
-        border: 1px solid #ddd;
-        border-radius: 10px;
-        padding: 10px;
-        text-align: center;
-        cursor: pointer;
-        transition: transform 0.3s ease;
-    }
-    .produto-card:hover {
-        transform: scale(1.05);
-    }
-    /* .produto-imagem {
-        max-width: 100px;
-        height: auto;
-    } */
-    .produto-selecionado {
-        background-color: #f0f0f0;
-        border: 2px solid #007bff;
-    }
-</style>
 
 <script>
     let pesoTotal = 0;

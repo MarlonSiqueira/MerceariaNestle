@@ -7,6 +7,13 @@ from django.contrib import messages
 from django.db import transaction
 
 
+def Capturar_Url_Atual_Sem_O_Final(request):
+    url_atual = request.path
+    url_atual = '/'.join(url_atual.split('/')[:2]) + '/'  # Pega a parte até a primeira barra
+
+    return url_atual
+
+
 def Capturar_Ano_Atual():
     data_modelo = timezone.localtime(timezone.now())
     ano_atual_str = data_modelo.strftime("%Y")

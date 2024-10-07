@@ -3,6 +3,20 @@ var url_atual = window.location.pathname; //Full Path
 var url_sem_slug = url_atual.split('/');
 var url_sem_slug = url_sem_slug[1];
 
+//Sidebar
+$(document).ready(function(){
+    const sidebar = document.querySelector('.sidebar');
+    
+    sidebar.addEventListener('mouseenter', function() {
+        sidebar.classList.remove('collapsed');
+    });
+
+    sidebar.addEventListener('mouseleave', function() {
+        sidebar.classList.add('collapsed');
+    });
+});
+//FimSidebar
+
 //Funções tela de vendas
 if (url_sem_slug == "/vendas/"){
     //////////////////////////////////////////////////////   

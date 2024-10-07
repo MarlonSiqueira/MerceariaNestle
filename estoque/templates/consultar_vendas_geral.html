@@ -73,7 +73,6 @@
             </div>
         </div>
         <br>
-            <a href="{% url 'cadastrogeral_comunidade' slug %}" class="btn btn-info">Voltar</a>
             <input type="submit" value="Filtrar" class="btn btn-success">&nbsp;
             <a class="btn btn-info" href="{% url 'export_csv_finalizadas' %}?nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&vendedor={{request.GET.vendedor}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">Exportar Planilha</a>&nbsp;
 
@@ -93,41 +92,4 @@
         {% endfor %}
     </div>
 </div>
-
-<style>
-    .produtos-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        justify-content: flex-start;
-    }
-    .produto-card {
-        width: 30%;
-        border: 1px solid #ddd;
-        border-radius: 10px;
-        padding: 10px;
-        text-align: center;
-        cursor: pointer;
-        transition: transform 0.3s ease;
-    }
-    .produto-card:hover {
-        transform: scale(1.05);
-    }
-    .produto-selecionado {
-        background-color: #f0f0f0;
-        border: 2px solid #007bff;
-    }
-
-    @media (max-width: 768px) {
-        .produto-card {
-            width: calc(50% - 20px); /* Dois cartões por linha em telas menores */
-        }
-    }
-
-    @media (max-width: 480px) {
-        .produto-card {
-            width: calc(100% - 20px); /* Um cartão por linha em telas ainda menores */
-        }
-    }
-</style>
 {% endblock %}

@@ -2,6 +2,7 @@
 
 {% block 'body' %}
 <div class="container">
+    <h2 class="text-center my-4">SELECIONE A COMUNIDADE</h2>
     <form action="" method="POST" enctype="multipart/form-data"> {% csrf_token %}
         {% if user.is_authenticated %}
             {% if user.cargo == "A" or user.cargo == "R" %}
@@ -18,7 +19,6 @@
                             <br>
                             <br>
                         </div>
-                        <a class="btn btn-info" style="color: white;" href="{% url 'home' %}" class="btnbtn-primary">Voltar</a>
                     </div>
                     </div>
                 </div>

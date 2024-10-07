@@ -55,8 +55,12 @@ def listar_logs(request):
         validacao, page = Get_Paginacao_Logs(request, nome_user, dia, acao, model, paginacao)
         if validacao:
             return validacao
-
-        return render(request, 'listar_logs.html', {'page': page})
+        url_atual = request.path
+        context = {
+            'page': page,
+            'url_atual': url_atual,
+        }
+        return render(request, 'listar_logs.html', context)
 
 
 #Função de redirect para tela de adicionar produto liberando o produto pra ser alterado novamente ao clicar em "Voltar"
@@ -97,11 +101,13 @@ def add_produto(request, slug):
                     return validacao_produtos_filtrados
 
                 nome_produtos = NomeProduto.objects.filter(nome_comunidade_id=resultado[0])
+                url_atual = Capturar_Url_Atual_Sem_O_Final(request)
 
                 context = {
                     'nome_produtos': nome_produtos,
                     'produtos': produtos,
                     'slug': slug,
+                    'url_atual': url_atual,
                 }
 
                 return render(request, 'add_produto.html', context)
@@ -163,10 +169,12 @@ def add_novonome_produto(request, slug):
         if id_comunidade_comparar_usuario == id_comunidade_usuario:
             if request.method == "GET":
                     produtos = NomeProduto.objects.filter(nome_comunidade_id=resultado[0])
+                    url_atual = Capturar_Url_Atual_Sem_O_Final(request)
 
                     context = {
                         'produtos': produtos,
                         'slug': slug,
+                        'url_atual': url_atual,
                     }
 
                     return render(request, 'add_novonome_produto.html', context)
@@ -266,11 +274,13 @@ def produto (request, slug):
                     nomes = nomes.filter(id__contains=produto.nome_produto_id)#Verificando se existem nomes de produto com o nome escolhido
                     nomes = NomeProduto.objects.get(id=produto.nome_produto_id)
                     nome_produto = nomes.nome_produto
-                
+                    
+                url_atual = Capturar_Url_Atual_Sem_O_Final(request)
                 context = {
                     'form': form,
                     'slug': resultado[1],
-                    'nome_produto': nome_produto
+                    'nome_produto': nome_produto,
+                    'url_atual': url_atual,
                 }
 
                 return render(request, 'produto.html', context)
@@ -393,7 +403,11 @@ def excluir_produto(request, slug):
 @has_permission_decorator('cadastrar_comunidade')
 def cadastrar_comunidade (request):
     if request.method == "GET":
-        return render(request, 'cadastrar_comunidade.html')
+        url_atual = request.path
+        context = {
+            'url_atual': url_atual
+        }
+        return render(request, 'cadastrar_comunidade.html', context)
     elif request.method == "POST":
         cnpj = request.POST.get('cnpj')
         tipo = request.POST.get('tipo')
@@ -442,9 +456,11 @@ def pre_vendas(request, slug):
         id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
         if id_comunidade_comparar_usuario == id_comunidade_usuario:
             if request.method == "GET":
+                    url_atual = Capturar_Url_Atual_Sem_O_Final(request)
                     context = {
                         'slug': slug,
                         'nome_e_cidade_comunidade': slug,
+                        'url_atual': url_atual,
                     }
                     return render(request, 'pre_vendas.html', context)
             elif request.method == "POST":
@@ -533,14 +549,15 @@ def vendas(request, slug):
                     produtos = Produto.objects.filter(nome_comunidade_id=id_comunidade)
 
                     nome_produtos = NomeProduto.objects.all()
-                    
+                    url_atual = Capturar_Url_Atual_Sem_O_Final(request)
                     context = {
                         'nome_produtos':nome_produtos, 
                         'produtos':produtos, 
                         'vendas': vendas, 
-                        'slug': slug_token_venda_familia,
-                        'slug_voltar_tela': slug_comunidade,
-                        'nome_cliente_familia': nome_cliente_familia
+                        'slug': slug_comunidade,
+                        'slug_token_venda_familia': slug_token_venda_familia,
+                        'nome_cliente_familia': nome_cliente_familia,
+                        'url_atual': url_atual,
                     }
 
                     return render(request, 'vendas.html', context)
@@ -732,11 +749,13 @@ def consultar_vendas_geral(request, slug):
                     validacao, page = Get_Paginacao_Vendas_Controle(request, slug, nome_cliente, nome, get_dt_start, get_dt_end, vendedor, vendas)
                     if validacao:
                         return validacao
-                    
+                        
+                    url_atual = Capturar_Url_Atual_Sem_O_Final(request)
                     context = {
                         'vendas': vendas, 
                         'page': page,
                         'slug': slug,
+                        'url_atual': url_atual,
                     }
 
                     return render(request, 'consultar_vendas_geral.html', context)
@@ -768,11 +787,12 @@ def consultar_vendas(request, slug):
             if id_comunidade_comparar_usuario == id_comunidade_usuario:
                 id_comunidade = resultado[0]
                 slug_comunidade = resultado[1]
-                
+
+                url_atual = Capturar_Url_Atual_Sem_O_Final(request)
                 context = {
                     'vendas': vendas,
-                    'slug': slug,
-                    'slug_comunidade': slug_comunidade,
+                    'slug': slug_comunidade,
+                    'url_atual': url_atual,
                 }
 
                 return render(request, 'consultar_vendas.html', context)
@@ -823,7 +843,7 @@ def vendas_finalizadas(request, slug):
                 )
 
                 all_vendas = VendasControle.objects.filter(BuscaVendasNaoFinalizadas).order_by('-id_venda') #Vendas mais novas primeiro, ordenadas pelo ID
-
+                url_atual = Capturar_Url_Atual_Sem_O_Final(request)
                 context = {
                     'nome_produtos':nome_produtos, 
                     'produtos':produtos, 
@@ -832,6 +852,7 @@ def vendas_finalizadas(request, slug):
                     'slug': slug,
                     'id_comunidade': id_comunidade,
                     'all_vendas': all_vendas,
+                    'url_atual': url_atual,
                 }
 
                 return render(request, 'vendas_finalizadas.html', context)
@@ -894,9 +915,10 @@ def visualizar_vendas (request, slug):
                             nomes = NomeProduto.objects.get(id=venda.nome_produto_id)
                             nome_produto = nomes.nome_produto
 
+                        url_atual = Capturar_Url_Atual_Sem_O_Final(request)
                         context = {
                             'slug_venda': slug_venda,
-                            'slug_comunidade': slug_comunidade,
+                            'slug': slug_comunidade,
                             'vendido_por':vendido_por,
                             'preco_venda':preco_venda,
                             'preco_compra':preco_compra,
@@ -908,6 +930,7 @@ def visualizar_vendas (request, slug):
                             'venda_finalizada':venda_finalizada,
                             'preco_venda_total':preco_venda_total,
                             'cod_produto': cod_produto,
+                            'url_atual': url_atual,
                         }
                         return render(request, 'visualizar_vendas.html', context)
                     else:

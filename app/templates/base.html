@@ -11,46 +11,92 @@
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script> <!-- Jquery 2-->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct" crossorigin="anonymous"></script> <!-- BootStrap 3-->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> <!-- Alertas -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> <!-- Fonte Icone Sidebar -->
     {% block 'head' %}
-
     {% endblock %}
-    <title>{% block 'title' %} Merceria Comunitária {% endblock %}</title>
+    <title>{% block 'title' %} Mercearia Comunitária {% endblock %}</title>
 </head>
+{% if url_atual != '/login/' %}
 <body class="fundo">
-        <nav class="navbar navbar-expand-lg navbar-dark">
-            <img src="{% static 'imagem_site/aparecida.png' %}" width="40" height="40" class="d-inline-block align-top" alt="">
-            <a class="navbar-brand fw-bold mb2 text-uppercase" href="{% url 'home' %}"><font color="RoyalBlue"><strong>&nbspMercearia Comunitária</strong></font></a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-            <!--<div class="navbar-nav">
-                <a class="nav-item nav-link active" href="{% url 'home' %}">Home</a>
-            </div>-->
-            </div>
-            {% if user.is_authenticated %}
-                {% if user.cargo == "A" %}
-                    <div><font color="gold">Admin</font></div>
-                {%elif user.cargo == "R"%}
-                    <div><font color="gold">Responsável Geral</font></div>
-                {%elif user.cargo == "V"%}
-                    <div><font color="gold">Vendedor</font></div>
-                {% endif %} 
-                &nbsp
-                &nbsp
-                <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        {{user.username}}
-                    </a>
-                    <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                        {% if user.cargo != "T" %}
-                        <a class="dropdown-item" href="{% url 'password_reset_login' %}">Alterar Senha</a>
-                        {% endif %}
-                        <a class="dropdown-item" href="{% url 'logout'%}">Sair</a>
-                    </div>
+{% else %}
+<body class="fundo-login">
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <img src="{% static 'imagem_site/aparecida.png' %}" width="40" height="40" class="d-inline-block align-top" alt="">
+        <a class="navbar-brand fw-bold mb2 text-uppercase"><font color="RoyalBlue"><strong>&nbspMercearia Comunitária</strong></font></a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+        </button>
+    </nav>
+{% endif %}
+    {% if url_atual != '/login/' %}
+            <div class="sidebar collapsed">
+                <div class="logo">
+                    <img src="{% static 'imagem_site/aparecida.png' %}" width="40" height="40" alt="Logo">
+                    <h5 class="company-name">Mercearia Comunitária</h5>
+                    {% if user.cargo == "A" %}
+                        <div class="role"><font color="blue"><b>Admin</b></font></div>
+                    {% elif user.cargo == "R" %}
+                        <div class="role"><font color="blue"><b>Responsável Geral</b></font></div>
+                    {% elif user.cargo == "V" %}
+                        <div class="role"><font color="blue"><b>Vendedor</b></font></div>
+                    {% endif %}
+                    <p class="username"><b>{{ user.username }}</b></p>
                 </div>
-            {% endif %}
-        </nav>
+                {% if url_atual != '/' %}
+                    {% if url_atual == '/cadastrar_comunidade/' or url_atual == '/cadastrar_responsavel/geral' or url_atual == '/alterar_usuarios/' or url_atual == '/comunidades/' or url_atual == '/listar_logs/' or url_atual == '/cadastrogeral_comunidade/' or url_atual == '/add_produto/' or url_atual == '/add_novonome_produto/' or url_atual == '/pre_vendas/' or url_atual == '/consultar_vendas_geral/' or url_atual == '/vendas_finalizadas/' or url_atual == '/editar_vendas/' or url_atual == '/cadastrar_vendedor/' or url_atual == '/cadastrar_familia/' or url_atual == '/produto/' or url_atual == '/vendas/' or url_atual == '/consultar_vendas/' or url_atual == '/visualizar_vendas/' %}
+                        <a href="{% url 'home' %}" class="menu-item"><i class="fas fa-home"></i><span> Home</span></a>
+                    {% endif %}
+
+                    {% if url_atual != '/cadastrar_comunidade/' and url_atual != '/cadastrar_responsavel/geral' and url_atual != '/alterar_usuarios/' and url_atual != '/comunidades/' and url_atual != '/listar_logs/' %}
+                        <div class="dropdown">
+                            <button class="btn dropdown-toggle menu-item" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-box"></i><span> Estoque</span>
+                            </button>
+                            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                <a class="dropdown-item" href="{% url 'add_produto' slug %}">Abastecer Estoque</a>
+                                <a class="dropdown-item" href="{% url 'add_novonome_produto' slug %}">Cadastrar Novo Produto</a>
+                            </div>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn dropdown-toggle menu-item" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-shopping-cart"></i><span> Vendas</span>
+                            </button>
+                            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                <a class="dropdown-item" href="{% url 'pre_vendas' slug %}">Realizar Vendas</a>
+                                <a class="dropdown-item" href="{% url 'consultar_vendas_geral' slug %}">Consultar Vendas Em Andamento</a>
+                                <a class="dropdown-item" href="{% url 'vendas_finalizadas' slug %}">Finalizar Venda</a>
+                                <a class="dropdown-item" href="{% url 'editar_vendas' slug %}">Trocar/Estornar</a>
+                            </div>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn dropdown-toggle menu-item" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-user-plus"></i><span> Usuários</span>
+                            </button>
+                            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                <a class="dropdown-item" href="{% url 'cadastrar_vendedor' slug %}">Cadastrar Vendedor</a>
+                            </div>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn dropdown-toggle menu-item" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-users"></i><span> Famílias</span>
+                            </button>
+                            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                <a class="dropdown-item" href="{% url 'cadastrar_familia' slug %}">Cadastrar Família</a>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if url_atual == '/cadastrogeral_comunidade/' or url_atual == '/add_produto/' or url_atual == '/add_novonome_produto/' or url_atual == '/pre_vendas/' or url_atual == '/consultar_vendas_geral/' or url_atual == '/vendas_finalizadas/' or url_atual == '/editar_vendas/' or url_atual == '/cadastrar_vendedor/' or url_atual == '/cadastrar_familia/' or url_atual == '/produto/' or url_atual == '/vendas/' or url_atual == '/consultar_vendas/' or url_atual == '/visualizar_vendas/' %}
+                        <a href="{% url 'comunidades' %}" class="menu-item"><i class="fas fa-reply"></i><span> Voltar</span></a>
+                    {% endif %}
+                    
+                {% endif %}
+                <div class="logout-icon">
+                    <a href="{% url 'password_reset_login' %}" class="menu-item"><i class="fas fa-lock"></i><span> Alterar Senha<span></a>
+                    <a href="{% url 'logout' %}" class="menu-item"><i class="fas fa-sign-out-alt"></i><span> Logout</span></a>
+                </div>
+            </div>
+    {% endif %}
 
     {% block 'body' %}
     {% endblock %}
@@ -58,9 +104,9 @@
     <footer class="main-footer">
     </footer>
     {% if messages %} 
-        {% for message in messages%}
-                <script>//Enviando as mensagens da tela.
-                    const Toast = Swal.mixin({
+        {% for message in messages %}
+            <script>//Enviando as mensagens da tela.
+                const Toast = Swal.mixin({
                     toast: true,
                     position: 'top-end',
                     showConfirmButton: false,
@@ -74,28 +120,22 @@
                             Swal.resumeTimer(); // Retomar o timer quando o mouse sair da mensagem
                         });
                     }
-                    })
-                    d = '{{message.tags}}'.toLowerCase()//type
-                    if (d == "alert-danger"){
-                        d = 'error'
-                    }
-                    if (d == "alert-success"){
-                        d = 'success'
-                    }
-                    if (d == "alert-info"){
-                        d = 'question'
-                    }
-                    // if (d == "alert-success"){
-                    //     d = 'success'
-                    // }
-                    // if (d == "alert-success"){
-                    //     d = 'success'
-                    // }
-                    Toast.fire({
+                })
+                d = '{{message.tags}}'.toLowerCase() //type
+                if (d == "alert-danger") {
+                    d = 'error'
+                }
+                if (d == "alert-success") {
+                    d = 'success'
+                }
+                if (d == "alert-info") {
+                    d = 'question'
+                }
+                Toast.fire({
                     icon: d,
                     title: '{{message}}'
-                    })
-                </script>
+                })
+            </script>
         {% endfor %}
     {% endif %}
 
@@ -103,7 +143,7 @@
     <script src="{% static 'js/jquery.mask.min.js' %}"></script> <!-- Jquery Mascara para campos -->
 
     {% block scripts %}
-
+    
     {% endblock %}
 </body>
 </html>

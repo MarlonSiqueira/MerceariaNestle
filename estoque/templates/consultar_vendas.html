@@ -15,44 +15,6 @@
         {% endfor %}
     </div>
     <br>
-    <a href="{% url 'consultar_vendas_geral' slug_comunidade %}" class="btn btn-primary">Voltar</a>
 </div>
-
-<style>
-    .produtos-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        justify-content: flex-start;
-    }
-    .produto-card {
-        width: 30%;
-        border: 1px solid #ddd;
-        border-radius: 10px;
-        padding: 10px;
-        text-align: center;
-        cursor: pointer;
-        transition: transform 0.3s ease;
-    }
-    .produto-card:hover {
-        transform: scale(1.05);
-    }
-    .produto-selecionado {
-        background-color: #f0f0f0;
-        border: 2px solid #007bff;
-    }
-
-    @media (max-width: 768px) {
-        .produto-card {
-            width: calc(50% - 20px); /* Dois cartões por linha em telas menores */
-        }
-    }
-
-    @media (max-width: 480px) {
-        .produto-card {
-            width: calc(100% - 20px); /* Um cartão por linha em telas ainda menores */
-        }
-    }
-</style>
 
 {% endblock %}

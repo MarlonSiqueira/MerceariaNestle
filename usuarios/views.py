@@ -55,12 +55,15 @@ def cadastrar_vendedor(request, slug):
 
                 if resultado[0] != 0:
                     vendedores = Validacoes_Get_Cadastro_Usuario(request, cargo, slug, nome, sobrenome, email, vendedoresnome, vendedores)
+                    url_atual = Capturar_Url_Atual_Sem_O_Final(request)
                     context = {
                             'slug': slug,
                             'nome_e_cidade_comunidade': slug,
                             'vendedores': vendedores,
-                            'id_comunidade': resultado[0]
+                            'id_comunidade': resultado[0],
+                            'url_atual': url_atual,
                         }
+
                     return render(request, 'cadastrar_vendedor.html', context)
                 else:
                     messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
@@ -145,9 +148,11 @@ def cadastrar_responsavel(request, slug):
                 responsaveis = Users.objects.filter(Buscaresponsaveis)
 
                 responsaveis = Validacoes_Get_Cadastro_Usuario(request, cargo, slug, nome, sobrenome, email, responsaveisnome, responsaveis)
+                url_atual = request.path
                 context = {
                         'slug': slug,
                         'responsaveis': responsaveis,
+                        'url_atual': url_atual,
                     }
                 return render(request, 'cadastrar_responsavel.html', context)
             else:
@@ -221,11 +226,13 @@ def cadastrar_familia(request, slug):
 
                 if resultado[0] != 0:
                     familias = Validacoes_Get_Familia(request, slug, nome_completo, cpf, familiasnome, familias)
+                    url_atual = Capturar_Url_Atual_Sem_O_Final(request)
                     context = {
                             'slug': slug,
                             'nome_e_cidade_comunidade': slug,
                             'familias': familias,
-                            'id_comunidade': resultado[0]
+                            'id_comunidade': resultado[0],
+                            'url_atual': url_atual,
                         }
                     return render(request, 'cadastrar_familia.html', context)
                 else:
@@ -336,7 +343,11 @@ def login(request):
         if request.user.is_authenticated:
             messages.add_message(request, messages.ERROR, 'Você já está logado')
             return redirect(reverse('home'))
-        return render(request, 'login.html')
+        url_atual = request.path
+        context = {
+            'url_atual': url_atual
+        }
+        return render(request, 'login.html', context)
     elif request.method == "POST":
         login = request.POST.get('login')
         senha = request.POST.get('senha')
@@ -370,7 +381,11 @@ def home(request):
     if request.method == "GET":
         if request.user.is_authenticated:
             if request.user.cargo != "T":
-                return render(request, 'home.html')
+                url_atual = request.path
+                context = {
+                    'url_atual': url_atual
+                }
+                return render(request, 'home.html', context)
             else:
                 messages.add_message(request, messages.ERROR, f'{request.user.first_name.capitalize()}, bem-vindo(a) cadastre uma nova senha para continuar')
                 return redirect(reverse('password_reset_login_first_time'))
@@ -390,9 +405,11 @@ def comunidades(request):
             comunidades = Comunidade.objects.all()
             comunidade_do_usuario = Comunidade.objects.filter(id=request.user.nome_comunidade_id)
             if comunidades:
+                url_atual = request.path
                 context = {
                     'comunidades': comunidades,
                     'comunidade_do_usuario': comunidade_do_usuario,
+                    'url_atual': url_atual,
                 }
                 return render(request, 'comunidades.html', context)
             else:
@@ -416,8 +433,10 @@ def cadastrogeral_comunidade(request, slug):
     if id_comunidade_comparar_usuario == id_comunidade_usuario:
         if request.method == "GET":
             if resultado[0] != 0:
+                    url_atual = Capturar_Url_Atual_Sem_O_Final(request)
                     context = {
                         'slug': slug,
+                        'url_atual': url_atual,
                     }
                     return render(request, 'cadastrogeral_comunidade.html', context)
             else:
@@ -656,7 +675,11 @@ def alterar_usuarios(request):
                     messages.add_message(request, messages.ERROR, 'Não altere a URL manualmente')#Respondendo que a URL está sendo alterada
                     return redirect(reverse('alterar_usuarios'))
             else:
-                return render(request, 'alterar_usuarios.html')
+                url_atual = request.path
+                context = {
+                    'url_atual': url_atual
+                }
+                return render(request, 'alterar_usuarios.html', context)
         else:
             messages.add_message(request, messages.ERROR, 'Não altere a URL manualmente')#Respondendo que a URL está sendo alterada
             return redirect(reverse('alterar_usuarios'))
