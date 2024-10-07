@@ -53,8 +53,8 @@
                                 <i class="fas fa-box"></i><span> Estoque</span>
                             </button>
                             <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                <a class="dropdown-item" href="{% url 'add_produto' slug %}">Abastecer Estoque</a>
-                                <a class="dropdown-item" href="{% url 'add_novonome_produto' slug %}">Cadastrar Novo Produto</a>
+                                <a class="dropdown-item menu-item" href="{% url 'add_produto' slug %}">Abastecer Estoque</a>
+                                <a class="dropdown-item menu-item" href="{% url 'add_novonome_produto' slug %}">Cadastrar Novo Produto</a>
                             </div>
                         </div>
                         <div class="dropdown">
@@ -62,10 +62,10 @@
                                 <i class="fas fa-shopping-cart"></i><span> Vendas</span>
                             </button>
                             <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                <a class="dropdown-item" href="{% url 'pre_vendas' slug %}">Realizar Vendas</a>
-                                <a class="dropdown-item" href="{% url 'consultar_vendas_geral' slug %}">Consultar Vendas Em Andamento</a>
-                                <a class="dropdown-item" href="{% url 'vendas_finalizadas' slug %}">Finalizar Venda</a>
-                                <a class="dropdown-item" href="{% url 'editar_vendas' slug %}">Trocar/Estornar</a>
+                                <a class="dropdown-item menu-item" href="{% url 'pre_vendas' slug %}">Realizar Vendas</a>
+                                <a class="dropdown-item menu-item" href="{% url 'consultar_vendas_geral' slug %}">Consultar Vendas Em Andamento</a>
+                                <a class="dropdown-item menu-item" href="{% url 'vendas_finalizadas' slug %}">Finalizar Venda</a>
+                                <a class="dropdown-item menu-item" href="{% url 'editar_vendas' slug %}">Trocar/Estornar</a>
                             </div>
                         </div>
                         <div class="dropdown">
@@ -73,7 +73,7 @@
                                 <i class="fas fa-user-plus"></i><span> Usuários</span>
                             </button>
                             <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                <a class="dropdown-item" href="{% url 'cadastrar_vendedor' slug %}">Cadastrar Vendedor</a>
+                                <a class="dropdown-item menu-item" href="{% url 'cadastrar_vendedor' slug %}">Cadastrar Vendedor</a>
                             </div>
                         </div>
                         <div class="dropdown">
@@ -81,7 +81,7 @@
                                 <i class="fas fa-users"></i><span> Famílias</span>
                             </button>
                             <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                <a class="dropdown-item" href="{% url 'cadastrar_familia' slug %}">Cadastrar Família</a>
+                                <a class="dropdown-item menu-item" href="{% url 'cadastrar_familia' slug %}">Cadastrar Família</a>
                             </div>
                         </div>
                     {% endif %}

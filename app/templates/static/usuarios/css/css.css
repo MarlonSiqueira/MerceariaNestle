@@ -357,7 +357,30 @@ footer {
 }
 
 .sidebar:hover {
-    width: 280px; /* Largura quando o mouse está sobre o menu */
+    width: 260px; /* Largura quando o mouse está sobre o menu */
+}
+
+
+/* Oculta o dropdown quando a sidebar está colapsada */
+.sidebar.collapsed .dropdown-menu {
+    display: none;
+}
+
+/* Mostra o dropdown quando a sidebar está expandida */
+.sidebar:not(.collapsed) .dropdown-menu {
+    display: block;
+}
+
+/* Desativa os links do dropdown quando a sidebar está colapsada */
+.sidebar.collapsed .dropdown-item {
+    pointer-events: none; /* Desativa os cliques */
+    opacity: 0.5; /* Opcional: diminui a opacidade para indicar que está desativado */
+}
+
+/* Habilita os links quando a sidebar está expandida */
+.sidebar:not(.collapsed) .dropdown-item {
+    pointer-events: auto;
+    opacity: 1;
 }
 
 

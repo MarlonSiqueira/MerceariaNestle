@@ -4,17 +4,59 @@ var url_sem_slug = url_atual.split('/');
 var url_sem_slug = url_sem_slug[1];
 
 //Sidebar
-$(document).ready(function(){
+$(document).ready(function() {
     const sidebar = document.querySelector('.sidebar');
+    const dropdownButtons = document.querySelectorAll('.dropdown-toggle');
     
+    // Função para ocultar/mostrar os dropdowns com base no estado da sidebar
+    function toggleDropdowns() {
+        const dropdowns = document.querySelectorAll('.dropdown-menu');
+        if (sidebar.classList.contains('collapsed')) {
+            dropdowns.forEach(dropdown => {
+                dropdown.style.display = 'none'; // Oculta o dropdown quando a sidebar está colapsada
+            });
+        }
+    }
+    
+    // Inicializa o estado da sidebar e dos dropdowns ao carregar a página
+    toggleDropdowns();
+
+    // Detecta quando o mouse entra na sidebar
     sidebar.addEventListener('mouseenter', function() {
-        sidebar.classList.remove('collapsed');
+        sidebar.classList.remove('collapsed'); // Expande a sidebar
+        toggleDropdowns(); // Atualiza o estado dos dropdowns
     });
 
+    // Detecta quando o mouse sai da sidebar
     sidebar.addEventListener('mouseleave', function() {
-        sidebar.classList.add('collapsed');
+        sidebar.classList.add('collapsed'); // Colapsa a sidebar
+        toggleDropdowns(); // Atualiza o estado dos dropdowns
+    });
+
+    // Adiciona evento de clique para os botões de dropdown
+    dropdownButtons.forEach(button => {
+        button.addEventListener('click', function(event) {
+            const dropdownMenu = button.nextElementSibling; // Pega o próximo elemento (dropdown-menu)
+            
+            // Verifica se a sidebar está expandida
+            if (!sidebar.classList.contains('collapsed')) {
+                // Alterna a visibilidade do dropdown correspondente
+                const isVisible = dropdownMenu.style.display === 'block';
+                dropdownMenu.style.display = isVisible ? 'none' : 'block';
+            }
+            event.stopPropagation(); // Impede que o clique se propague
+        });
+    });
+
+    // Fecha todos os dropdowns quando clicar fora
+    document.addEventListener('click', function() {
+        const dropdowns = document.querySelectorAll('.dropdown-menu');
+        dropdowns.forEach(dropdown => {
+            dropdown.style.display = 'none'; // Oculta todos os dropdowns
+        });
     });
 });
+
 //FimSidebar
 
 //Funções tela de vendas
