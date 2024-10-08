@@ -16,7 +16,7 @@
     {% endblock %}
     <title>{% block 'title' %} Mercearia Comunitária {% endblock %}</title>
 </head>
-{% if url_atual != '/login/' and url_atual != '/change_password_first_time/' and url_atual != '/reset/' and url_atual != '/change_password_first_time/' %}
+{% if url_atual != '/login/' and url_atual != '/change_password_first_time/' and url_atual != '/reset/' and url_atual != '/change_password_first_time/' and url_atual != 404 and url_atual != 500 %}
 <body class="fundo">
 {% else %}
 <body class="fundo-login">
@@ -28,7 +28,7 @@
         </button>
     </nav>
 {% endif %}
-    {% if url_atual != '/login/' and url_atual != '/change_password_first_time/' and url_atual != '/reset/' and url_atual != '/change_password_first_time/' %}
+    {% if url_atual != '/login/' and url_atual != '/change_password_first_time/' and url_atual != '/reset/' and url_atual != '/change_password_first_time/' and url_atual != 404 and url_atual != 500 %}
             <div class="sidebar collapsed">
                 <div class="logo">
                     <img src="{% static 'imagem_site/aparecida.png' %}" width="40" height="40" alt="Logo">

@@ -71,7 +71,7 @@ SECRET_KEY = SECRET_KEY
 
 if os.environ.get('DJANGO_ENV') == 'production':
     DEBUG = False
-    ALLOWED_HOSTS = ['igreja-matriz-ipsep.up.railway.app']
+    ALLOWED_HOSTS = ['merceariacomunitaria.com.br']
 
     # Application definition
     INSTALLED_APPS = [

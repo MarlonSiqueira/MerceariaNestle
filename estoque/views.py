@@ -2825,11 +2825,17 @@ def confirmar_venda_geral(request, slug):
 
 # ======================== ERRORS ========================
 def error_500(request):
-    return render(request, '500.html')
+    context = {
+        'url_atual': 500,
+    }
+    return render(request, '500.html', context)
 
 
 def error_404(request, exception):
-    return render(request, '404.html')
+    context = {
+        'url_atual': 404,
+    }
+    return render(request, '404.html', context)
 
 
 def error_403(request, exception):
