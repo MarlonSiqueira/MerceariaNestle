@@ -215,7 +215,7 @@ def cadastrar_familia(request, slug):
     id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
     if id_comunidade_comparar_usuario == id_comunidade_usuario:
         if request.method == "GET":  
-            if request.user.cargo == "A" or request.user.cargo == "R":
+            if request.user.cargo == "A" or request.user.cargo == "R" or request.user.cargo == "V":
                 nome_completo = request.GET.get('nome_completo')
                 cpf = request.GET.get('cpf')
                 familiasnome = request.GET.get('familiasnome')
@@ -339,14 +339,14 @@ def ativar_familia(request, id):
 
 
 def login(request):
+    url_atual = request.path
+    context = {
+        'url_atual': url_atual
+    }
     if request.method == "GET":
         if request.user.is_authenticated:
             messages.add_message(request, messages.ERROR, 'Você já está logado')
             return redirect(reverse('home'))
-        url_atual = request.path
-        context = {
-            'url_atual': url_atual
-        }
         return render(request, 'login.html', context)
     elif request.method == "POST":
         login = request.POST.get('login')
@@ -369,7 +369,7 @@ def login(request):
                 return redirect(reverse ('home'))
         if not user:
             messages.add_message(request, messages.ERROR, 'Login e/ou senha incorretos')
-            return render(request, 'login.html')
+            return render(request, 'login.html', context)
 
 
 def logout(request):
@@ -424,7 +424,7 @@ def comunidades(request):
             return render(request, 'login.html')
 
 #Função para a tela de acessos da comunidade
-@has_permission_decorator('cadastrar_comunidade')
+@has_permission_decorator('acessar_comunidade')
 def cadastrogeral_comunidade(request, slug):
     opcao = "slug"
     resultado = Consultar_Uma_Comunidade(slug, opcao)
@@ -454,8 +454,12 @@ def cadastrogeral_comunidade(request, slug):
 
 ################################## RESET SENHA ################################## 
 def password_reset_request(request):
+    url_atual = request.path
+    context = {
+        'url_atual': url_atual,
+    }
     if request.method == 'GET':
-        return render(request, 'Reset_Senha/password_reset.html')
+        return render(request, 'Reset_Senha/password_reset.html', context)
         
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -465,17 +469,17 @@ def password_reset_request(request):
         ) #Não apagar
         if email and username:
             messages.error(request, 'Preencha apenas um campo')
-            return render(request, 'Reset_Senha/password_reset.html')
+            return render(request, 'Reset_Senha/password_reset.html', context)
         if email or username: # se digitar nome ou e-mail
             if username.isdigit():
                 messages.add_message(request, messages.ERROR, 'Nome do Usuário não pode conter números')#verificando se é númerico
-                return render(request, 'Reset_Senha/password_reset.html')
+                return render(request, 'Reset_Senha/password_reset.html', context)
             if any(char.isdigit() for char in username):
                 messages.add_message(request, messages.ERROR, 'Nome do Usuário não pode conter números')#Verificando se contém números
-                return render(request, 'Reset_Senha/password_reset.html')  
+                return render(request, 'Reset_Senha/password_reset.html', context)  
             if username.isspace():
                 messages.add_message(request, messages.ERROR, 'Nome do Usuário não pode conter apenas espaços vazios')#Verificando se contém apenas espaço vazio
-                return render(request, 'Reset_Senha/password_reset.html')
+                return render(request, 'Reset_Senha/password_reset.html', context)
             user = Users.objects.filter(Busca) #busca o usuario
             if user:
                 user = Users.objects.get(Busca) #busca o usuario
@@ -510,7 +514,7 @@ def password_reset_request(request):
 
         if not email:#se deixar o campo vazio e clicar em enviar
             messages.error(request, 'E-mail ou nome de Usuário não pode ser Vazio')
-            return render(request, 'Reset_Senha/password_reset.html')
+            return render(request, 'Reset_Senha/password_reset.html', context)
 
 def password_reset_confirm(request, token):
     expiration_time = timezone.localtime(timezone.now())
@@ -522,20 +526,26 @@ def password_reset_confirm(request, token):
         messages.error(request, 'Token Inválido ou Expirado')
         return redirect('login')
 
+    url_atual = Capturar_Url_Atual_Sem_O_Final(request)
+
     if request.method == 'POST':
         new_password1 = request.POST.get('new_password1')
         new_password2 = request.POST.get('new_password2')
         tam_senha = len(new_password1)      
         form = PasswordResetConfirmForm(request.POST, user=user)
+        context = {
+            'url_atual': url_atual,
+            'form': form,
+        }
         if tam_senha < 8:
             messages.add_message(request, messages.ERROR, 'Nova Senha deve conter 8 ou mais caracteres')#verificando o tamanho da string
-            return render(request, 'Reset_Senha/password_reset_confirm.html', {'form': form})
+            return render(request, 'Reset_Senha/password_reset_confirm.html', context)
         if tam_senha > 20:
             messages.add_message(request, messages.ERROR, 'Nova Senha deve conter no máximo 20 caracteres')#verificando o tamanho da string
-            return render(request, 'Reset_Senha/password_reset_confirm.html', {'form': form})
+            return render(request, 'Reset_Senha/password_reset_confirm.html', context)
         if new_password1 and new_password2 and new_password1 != new_password2:
             messages.add_message(request, messages.ERROR, 'Nova Senha deve ser igual à Confirmação da Nova Senha')#verificando se as senhas são iguais
-            return render(request, 'Reset_Senha/password_reset_confirm.html', {'form': form})  
+            return render(request, 'Reset_Senha/password_reset_confirm.html', context)  
 
         if form.is_valid():
             form.save()
@@ -543,10 +553,13 @@ def password_reset_confirm(request, token):
             return redirect('login')
     else:
         form = PasswordResetConfirmForm(user=user)
+    context = {
+        'form': form,
+        'url_atual': url_atual,
+    }
+    return render(request, 'Reset_Senha/password_reset_confirm.html', context)
 
-    return render(request, 'Reset_Senha/password_reset_confirm.html', {'form': form})
-
-@has_permission_decorator('acessar_festa')
+@has_permission_decorator('trocar_senha')
 def password_reset_login(request):
     user = Users.objects.filter(username=request.user)#Pegando o usuário logado
 
@@ -556,27 +569,33 @@ def password_reset_login(request):
         new_password2 = request.POST.get('new_password2')
 
         tam_senha = len(new_password1)      
+
         form = PasswordResetConfirmForm(request.POST, user=user)
+        url_atual = request.path
+        context = {
+            'form': form,
+            'url_atual': url_atual,
+        }
         if tam_senha < 8:
             messages.add_message(request, messages.ERROR, 'Nova Senha deve conter 8 ou mais caracteres')#verificando o tamanho da string
-            return render(request, 'Reset_Senha/password_reset_login.html', {'form': form})
+            return render(request, 'Reset_Senha/password_reset_login.html', context)
         if tam_senha > 20:
             messages.add_message(request, messages.ERROR, 'Nova Senha deve conter no máximo 20 caracteres')#verificando o tamanho da string
-            return render(request, 'Reset_Senha/password_reset_login.html', {'form': form})
+            return render(request, 'Reset_Senha/password_reset_login.html', context)
         if new_password1 and new_password2 and new_password1 != new_password2:
             messages.add_message(request, messages.ERROR, 'Nova Senha deve ser igual à Confirmação da Nova Senha')#verificando se as senhas são iguais
-            return render(request, 'Reset_Senha/password_reset_login.html', {'form': form})
+            return render(request, 'Reset_Senha/password_reset_login.html', context)
         if senha_atual is None or senha_atual == "":
             messages.add_message(request, messages.ERROR, 'Senha Atual precisa ser preenchida')#verificando se as senhas são iguais
-            return render(request, 'Reset_Senha/password_reset_login.html', {'form': form})
+            return render(request, 'Reset_Senha/password_reset_login.html', context)
         if senha_atual and new_password2:
             if new_password1 is None or new_password1 == "":
                 messages.add_message(request, messages.ERROR, 'Nova Senha precisa ser preenchida')#verificando se as senhas são iguais
-                return render(request, 'Reset_Senha/password_reset_login.html', {'form': form})
+                return render(request, 'Reset_Senha/password_reset_login.html', context)
         if senha_atual and new_password1:
             if new_password2 is None or new_password2 == "":
                 messages.add_message(request, messages.ERROR, 'Confirmação Nova Senha precisa ser preenchida')#verificando se as senhas são iguais
-                return render(request, 'Reset_Senha/password_reset_login.html', {'form': form})        
+                return render(request, 'Reset_Senha/password_reset_login.html', context)        
 
         if form.is_valid():
             usuario = auth.authenticate(username=request.user, password=senha_atual)#Comparando a senha atual com a do banco
@@ -587,11 +606,16 @@ def password_reset_login(request):
                 return redirect('logout')
             else:
                 messages.add_message(request, messages.ERROR, 'A senha atual está incorreta')#verificando se a senha atual confere com a do usuário logado
-                return render(request, 'Reset_Senha/password_reset_login.html', {'form': form})  
+                return render(request, 'Reset_Senha/password_reset_login.html', context)  
     else:
         form = PasswordResetConfirmForm(user=user)
 
-    return render(request, 'Reset_Senha/password_reset_login.html', {'form': form})
+    url_atual = request.path
+    context = {
+        'form': form,
+        'url_atual': url_atual,
+    }
+    return render(request, 'Reset_Senha/password_reset_login.html', context)
 
 @has_permission_decorator('logado', 'trocar_senha')
 def password_reset_login_first_time(request):
@@ -602,8 +626,11 @@ def password_reset_login_first_time(request):
     if request.method == 'GET':
         if cargo_user == "T":
             form = PasswordResetConfirmForm(request.POST, user=user)
+
+            url_atual = request.path
             context = {
-                'form':form
+                'form':form,
+                'url_atual':url_atual,
             }
             return render(request, 'Reset_Senha/password_reset_login_first_time.html', context)
         else:
@@ -615,21 +642,26 @@ def password_reset_login_first_time(request):
 
         tam_senha = len(new_password1)      
         form = PasswordResetConfirmForm(request.POST, user=user)
+        url_atual = request.path
+        context = {
+            'form':form,
+            'url_atual':url_atual,
+        }
         if tam_senha < 8:
             messages.add_message(request, messages.ERROR, 'Nova Senha deve conter 8 ou mais caracteres')#verificando o tamanho da string
-            return render(request, 'Reset_Senha/password_reset_login_first_time.html', {'form': form})
+            return render(request, 'Reset_Senha/password_reset_login_first_time.html', context)
         if tam_senha > 20:
             messages.add_message(request, messages.ERROR, 'Nova Senha deve conter no máximo 20 caracteres')#verificando o tamanho da string
-            return render(request, 'Reset_Senha/password_reset_login_first_time.html', {'form': form})
+            return render(request, 'Reset_Senha/password_reset_login_first_time.html', context)
         if new_password1 and new_password2 and new_password1 != new_password2:
             messages.add_message(request, messages.ERROR, 'Nova Senha deve ser igual à Confirmação da Nova Senha')#verificando se as senhas são iguais
-            return render(request, 'Reset_Senha/password_reset_login_first_time.html', {'form': form})  
+            return render(request, 'Reset_Senha/password_reset_login_first_time.html', context)  
 
         if form.is_valid():
             usuario = auth.authenticate(username=request.user, password=new_password1)#Comparando a senha atual com a do banco
             if usuario:
                 messages.add_message(request, messages.ERROR, 'A nova senha não pode ser a senha padrão')#verificando se nova senha é a a senha padrão
-                return render(request, 'Reset_Senha/password_reset_login_first_time.html', {'form': form}) 
+                return render(request, 'Reset_Senha/password_reset_login_first_time.html', context) 
             else:
                 user_id.password = make_password(new_password1)
                 user_id.cargo = user_id.alterou_senha
@@ -640,7 +672,7 @@ def password_reset_login_first_time(request):
     else:
         form = PasswordResetConfirmForm(user=user)
 
-    return render(request, 'Reset_Senha/password_reset_login_first_time.html', {'form': form})
+    return render(request, 'Reset_Senha/password_reset_login_first_time.html', context)
 
 
 #Função da tela alterar usuarios

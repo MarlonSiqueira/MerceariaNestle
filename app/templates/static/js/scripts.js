@@ -37,6 +37,14 @@ $(document).ready(function() {
     dropdownButtons.forEach(button => {
         button.addEventListener('click', function(event) {
             const dropdownMenu = button.nextElementSibling; // Pega o próximo elemento (dropdown-menu)
+
+            // Fecha todos os outros dropdowns antes de abrir o novo
+            const allDropdowns = document.querySelectorAll('.dropdown-menu');
+            allDropdowns.forEach(dropdown => {
+                if (dropdown !== dropdownMenu) {
+                    dropdown.style.display = 'none'; // Fecha outros dropdowns
+                }
+            });
             
             // Verifica se a sidebar está expandida
             if (!sidebar.classList.contains('collapsed')) {

@@ -3037,7 +3037,7 @@ def export_csv_produto(request, slug):
         return redirect(reverse('export_entrada_produtos', kwargs={"slug":slug})) 
 
     Busca = Q(
-            Q(nome_comunidade=resultado[1])     
+            Q(nome_e_cidade_comunidade=resultado[1])     
     ) 
 
     p_excel = P_Excel.objects.filter(Busca) #Buscando todas os produtos do dia à exportar
@@ -3051,10 +3051,10 @@ def export_csv_produto(request, slug):
     ws = wb.active
     
     if p_excel:
-        if request.user.cargo == "A" or request.user.cargo == "R":
-            ws.append(['Acao','Nome_Produto','Quantidade','Lucro','Data Criação','Criado Por','Última Alteração','Alterado Por','Nome_Comunidde']) # Colunas
+        if request.user.cargo == "A" or request.user.cargo == "R" or request.user.cargo == "V":
+            ws.append(['Acao','Nome_Produto','Quantidade','Data Criação','Criado Por','Última Alteração','Alterado Por','Nome_E_Cidade_Comunidade']) # Colunas
         else:
-            ws.append(['Acao','Nome_Produto','Quantidade','Data','Nome_Comunidade']) # Colunas
+            ws.append(['Acao','Nome_Produto','Quantidade','Data','Nome_E_Cidade_Comunidade']) # Colunas
 
         nome_produto = request.GET.get('nome_produto')
         acao = request.GET.get('acao')
@@ -3071,10 +3071,10 @@ def export_csv_produto(request, slug):
             pass
 
         for itens in p_excel:
-            if request.user.cargo == "A" or request.user.cargo == "R":
-                row = [itens.acao, itens.nome_produto, itens.quantidade, itens.lucro, itens.data, itens.nome_user, itens.ultima_alteracao, itens.alterado_por, itens.nome_comunidade]
+            if request.user.cargo == "A" or request.user.cargo == "R" or request.user.cargo == "V":
+                row = [itens.acao, itens.nome_produto, itens.quantidade, itens.data, itens.nome_user, itens.ultima_alteracao, itens.alterado_por, itens.nome_e_cidade_comunidade]
             else:
-                row = [itens.acao, itens.nome_produto, itens.quantidade, itens.data, itens.nome_comunidade]
+                row = [itens.acao, itens.nome_produto, itens.quantidade, itens.data, itens.nome_e_cidade_comunidade]
             ws.append(row)
 
         #Inicio formatação da planilha
@@ -3211,22 +3211,24 @@ def export_csv_troca_estorno(request):
 
 
 #Função para a tela de export_entrada_produtos
-@has_permission_decorator('exportar_csv_p')#Apenas o Admin, Padre e CF tem acesso
+@has_permission_decorator('exportar_csv_p')
 def export_entrada_produtos(request, slug):
     if request.method == "GET":
         nome_produto = request.GET.get('nome_produto')
         dia = request.GET.get('dia')
         acao = request.GET.get('acao')
         
-        paginacao = P_Excel.objects.filter(nome_comunidade=slug)
+        paginacao = P_Excel.objects.filter(nome_e_cidade_comunidade=slug)
         if paginacao:
             validacao, page = Get_Paginacao(request, nome_produto, dia, acao, slug, paginacao)        
             if validacao:
                 return validacao
-                
+            
+            url_atual = Capturar_Url_Atual_Sem_O_Final(request)
             context = {
                 'page': page,
                 'slug': slug,
+                'url_atual': url_atual,
             }
             return render(request, 'export_entrada_produtos.html', context)
         else:

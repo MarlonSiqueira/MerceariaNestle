@@ -245,7 +245,7 @@ def Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantid
         nome_produto_p_excel = str(produto.nome_produto)
         nome_comunidade_p_excel = slug_comunidade
 
-        id_user = Capturar_Id_Do_Usuario(request)
+        id_user, id_comunidade_usuario = Capturar_Id_E_Comunidade_Do_Usuario(request)
         data_atual = Capturar_Ano_E_Hora_Atual()
 
         p_excel_filtro = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Entrada",)#Pegando o produto alterado

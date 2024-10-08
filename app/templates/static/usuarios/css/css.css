@@ -9,7 +9,7 @@ body {
     background-color: white;
     color: blue;
     margin-left: 75px;
-    margin-top: 40px;
+    padding-top: 40px;
 }
 
 .fundo-login{

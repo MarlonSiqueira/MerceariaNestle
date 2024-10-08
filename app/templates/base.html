@@ -16,7 +16,7 @@
     {% endblock %}
     <title>{% block 'title' %} Mercearia Comunitária {% endblock %}</title>
 </head>
-{% if url_atual != '/login/' %}
+{% if url_atual != '/login/' and url_atual != '/change_password_first_time/' and url_atual != '/reset/' and url_atual != '/change_password_first_time/' %}
 <body class="fundo">
 {% else %}
 <body class="fundo-login">
@@ -28,7 +28,7 @@
         </button>
     </nav>
 {% endif %}
-    {% if url_atual != '/login/' %}
+    {% if url_atual != '/login/' and url_atual != '/change_password_first_time/' and url_atual != '/reset/' and url_atual != '/change_password_first_time/' %}
             <div class="sidebar collapsed">
                 <div class="logo">
                     <img src="{% static 'imagem_site/aparecida.png' %}" width="40" height="40" alt="Logo">
@@ -43,11 +43,11 @@
                     <p class="username"><b>{{ user.username }}</b></p>
                 </div>
                 {% if url_atual != '/' %}
-                    {% if url_atual == '/cadastrar_comunidade/' or url_atual == '/cadastrar_responsavel/geral' or url_atual == '/alterar_usuarios/' or url_atual == '/comunidades/' or url_atual == '/listar_logs/' or url_atual == '/cadastrogeral_comunidade/' or url_atual == '/add_produto/' or url_atual == '/add_novonome_produto/' or url_atual == '/pre_vendas/' or url_atual == '/consultar_vendas_geral/' or url_atual == '/vendas_finalizadas/' or url_atual == '/editar_vendas/' or url_atual == '/cadastrar_vendedor/' or url_atual == '/cadastrar_familia/' or url_atual == '/produto/' or url_atual == '/vendas/' or url_atual == '/consultar_vendas/' or url_atual == '/visualizar_vendas/' %}
+                    {% if url_atual == '/cadastrar_comunidade/' or url_atual == '/cadastrar_responsavel/geral' or url_atual == '/alterar_usuarios/' or url_atual == '/comunidades/' or url_atual == '/listar_logs/' or url_atual == '/cadastrogeral_comunidade/' or url_atual == '/add_produto/' or url_atual == '/add_novonome_produto/' or url_atual == '/pre_vendas/' or url_atual == '/consultar_vendas_geral/' or url_atual == '/vendas_finalizadas/' or url_atual == '/editar_vendas/' or url_atual == '/cadastrar_vendedor/' or url_atual == '/cadastrar_familia/' or url_atual == '/produto/' or url_atual == '/vendas/' or url_atual == '/consultar_vendas/' or url_atual == '/visualizar_vendas/' or url_atual == '/change_password/' or url_atual == '/export_entrada_produtos/' %}
                         <a href="{% url 'home' %}" class="menu-item"><i class="fas fa-home"></i><span> Home</span></a>
                     {% endif %}
 
-                    {% if url_atual != '/cadastrar_comunidade/' and url_atual != '/cadastrar_responsavel/geral' and url_atual != '/alterar_usuarios/' and url_atual != '/comunidades/' and url_atual != '/listar_logs/' %}
+                    {% if url_atual != '/cadastrar_comunidade/' and url_atual != '/cadastrar_responsavel/geral' and url_atual != '/alterar_usuarios/' and url_atual != '/comunidades/' and url_atual != '/listar_logs/' and url_atual != '/change_password/' %}
                         <div class="dropdown">
                             <button class="btn dropdown-toggle menu-item" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <i class="fas fa-box"></i><span> Estoque</span>
@@ -68,14 +68,16 @@
                                 <a class="dropdown-item menu-item" href="{% url 'editar_vendas' slug %}">Trocar/Estornar</a>
                             </div>
                         </div>
-                        <div class="dropdown">
-                            <button class="btn dropdown-toggle menu-item" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fas fa-user-plus"></i><span> Usuários</span>
-                            </button>
-                            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                <a class="dropdown-item menu-item" href="{% url 'cadastrar_vendedor' slug %}">Cadastrar Vendedor</a>
+                        {% if user.cargo == "A" or user.cargo == "R" %}
+                            <div class="dropdown">
+                                <button class="btn dropdown-toggle menu-item" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <i class="fas fa-user-plus"></i><span> Usuários</span>
+                                </button>
+                                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                    <a class="dropdown-item menu-item" href="{% url 'cadastrar_vendedor' slug %}">Cadastrar Vendedor</a>
+                                </div>
                             </div>
-                        </div>
+                        {% endif %}
                         <div class="dropdown">
                             <button class="btn dropdown-toggle menu-item" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <i class="fas fa-users"></i><span> Famílias</span>
@@ -86,8 +88,8 @@
                         </div>
                     {% endif %}
 
-                    {% if url_atual == '/cadastrogeral_comunidade/' or url_atual == '/add_produto/' or url_atual == '/add_novonome_produto/' or url_atual == '/pre_vendas/' or url_atual == '/consultar_vendas_geral/' or url_atual == '/vendas_finalizadas/' or url_atual == '/editar_vendas/' or url_atual == '/cadastrar_vendedor/' or url_atual == '/cadastrar_familia/' or url_atual == '/produto/' or url_atual == '/vendas/' or url_atual == '/consultar_vendas/' or url_atual == '/visualizar_vendas/' %}
-                        <a href="{% url 'comunidades' %}" class="menu-item"><i class="fas fa-reply"></i><span> Voltar</span></a>
+                    {% if url_atual == '/cadastrogeral_comunidade/' or url_atual == '/add_produto/' or url_atual == '/add_novonome_produto/' or url_atual == '/pre_vendas/' or url_atual == '/consultar_vendas_geral/' or url_atual == '/vendas_finalizadas/' or url_atual == '/editar_vendas/' or url_atual == '/cadastrar_vendedor/' or url_atual == '/cadastrar_familia/' or url_atual == '/produto/' or url_atual == '/vendas/' or url_atual == '/consultar_vendas/' or url_atual == '/visualizar_vendas/' or url_atual == '/export_entrada_produtos/' %}
+                        <a href="{% url 'comunidades' %}" class="menu-item"><i class="fas fa-reply"></i><span> Comunidades</span></a>
                     {% endif %}
                     
                 {% endif %}
