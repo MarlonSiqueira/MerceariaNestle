@@ -451,7 +451,7 @@ def Get_Paginacao_Logs(request, nome_user, dia, acao, model, paginacao):
             paginacao = paginacao.filter(nome_user__icontains=nome_user)#Verificando se existem Logs com o nome preenchido
             if paginacao:
                 paginacao = paginacao.order_by('data')
-                logs_paginator = Paginator(paginacao, 10) #Pegando a VAR Logs com todos os Logs e colocando dentro do Paginator pra trazer 10 por página
+                paginacao_paginator = Paginator(paginacao, 10) #Pegando a VAR Logs com todos os Logs e colocando dentro do Paginator pra trazer 10 por página
                 page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
                 page = paginacao_paginator.get_page(page_num) #Passando os 10 logs para page
             if not paginacao:
