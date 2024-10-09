@@ -101,7 +101,7 @@ def Validacao_Objeto_Vendas(vendas, opcao):
     return resultado  # Retorna a lista de resultados
 
 
-def Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, vendedor, vendas):
+def Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, funcionario, vendas):
     #Aqui está removendo os acentos do nome do cliente
     nome_cliente_novo = unidecode.unidecode(f'{nome_cliente}')
     nome_cliente_novo = str(nome_cliente_novo)
@@ -112,7 +112,7 @@ def Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max
     page = logs_paginator.get_page(page_num) #Passando as 80 vendas para page
 
     #Parte do Filtro
-    if nome_cliente or nome or preco_min or preco_max or get_dt_start or get_dt_end or vendedor:
+    if nome_cliente or nome or preco_min or preco_max or get_dt_start or get_dt_end or funcionario:
         if nome_cliente:
             vendas = vendas.filter(nome_cliente__icontains=nome_cliente_novo)#Verificando se existem vendas com o nome do cliente preenchido
             if vendas:
@@ -133,15 +133,15 @@ def Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max
             if not vendas:
                 messages.add_message(request, messages.ERROR, 'Não há vendas desse produto')
                 return redirect(reverse('vendas', kwargs={"slug":slug})), page   
-        if vendedor:
-            vendas = vendas.filter(criado_por__icontains=vendedor)#Verificando se existem vendas com o nome do vendedor preenchida
+        if funcionario:
+            vendas = vendas.filter(criado_por__icontains=funcionario)#Verificando se existem vendas com o nome do funcionario preenchido
             if vendas:
                 vendas = vendas.order_by('dia')
                 logs_paginator = Paginator(vendas, 18) 
                 page_num = request.GET.get('page')
                 page = logs_paginator.get_page(page_num) 
             if not vendas:
-                messages.add_message(request, messages.ERROR, 'Não há vendas desse vendedor')
+                messages.add_message(request, messages.ERROR, 'Não há vendas desse funcionario')
                 return redirect(reverse('vendas', kwargs={"slug":slug})), page 
         if get_dt_start and not get_dt_end:
             messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto a data início quanto a data fim')
@@ -191,7 +191,7 @@ def Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max
     return None, page
 
 
-def Get_Paginacao_Vendas_Controle(request, slug, nome_cliente, nome, get_dt_start, get_dt_end, vendedor, vendas):
+def Get_Paginacao_Vendas_Controle(request, slug, nome_cliente, nome, get_dt_start, get_dt_end, funcionario, vendas):
     #Aqui está removendo os acentos do nome do cliente
     nome_cliente_novo = unidecode.unidecode(f'{nome_cliente}')
     nome_cliente_novo = str(nome_cliente_novo)
@@ -202,7 +202,7 @@ def Get_Paginacao_Vendas_Controle(request, slug, nome_cliente, nome, get_dt_star
     page = logs_paginator.get_page(page_num) #Passando as 80 vendas para page
 
     #Parte do Filtro
-    if nome_cliente or nome or get_dt_start or get_dt_end or vendedor:
+    if nome_cliente or nome or get_dt_start or get_dt_end or funcionario:
         if nome_cliente:
             vendas = vendas.filter(nome_cliente__icontains=nome_cliente_novo)#Verificando se existem vendas com o nome do cliente preenchido
             if vendas:
@@ -223,15 +223,15 @@ def Get_Paginacao_Vendas_Controle(request, slug, nome_cliente, nome, get_dt_star
             if not vendas:
                 messages.add_message(request, messages.ERROR, 'Não há vendas desse produto')
                 return redirect(reverse('consultar_vendas_geral', kwargs={"slug":slug})), page   
-        if vendedor:
-            vendas = vendas.filter(criado_por__icontains=vendedor)#Verificando se existem vendas com o nome do vendedor preenchida
+        if funcionario:
+            vendas = vendas.filter(criado_por__icontains=funcionario)#Verificando se existem vendas com o nome do funcionario preenchida
             if vendas:
                 vendas = vendas.order_by('dia')
                 logs_paginator = Paginator(vendas, 18) 
                 page_num = request.GET.get('page')
                 page = logs_paginator.get_page(page_num) 
             if not vendas:
-                messages.add_message(request, messages.ERROR, 'Não há vendas desse vendedor')
+                messages.add_message(request, messages.ERROR, 'Não há vendas desse organizador')
                 return redirect(reverse('consultar_vendas_geral', kwargs={"slug":slug})), page 
         if get_dt_start and not get_dt_end:
             messages.add_message(request, messages.ERROR, 'Deve ser preenchido tanto a data início quanto a data fim')

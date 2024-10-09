@@ -8,13 +8,13 @@
                 <form action="" method="POST">{% csrf_token %}
                     <br>
                     <label>Nome </label>
-                    <input type="text" id="nome" placeholder="Digite o nome do vendedor" name="nome" class="form-control">
+                    <input type="text" id="nome" placeholder="Digite o nome do organizador" name="nome" class="form-control">
                     <br>
                     <label>Sobrenome </label>
-                    <input type="text" id="sobrenome" placeholder="Digite o sobrenome do vendedor" name="sobrenome" class="form-control">
+                    <input type="text" id="sobrenome" placeholder="Digite o sobrenome do organizador" name="sobrenome" class="form-control">
                     <br>
                     <label>E-mail </label>
-                    <input type="email" placeholder="Digite o e-mail do vendedor" name="email" class="form-control">
+                    <input type="email" placeholder="Digite o e-mail do organizador" name="email" class="form-control">
                     <br>
                     <input type="submit" value="Criar"class="btn btn-primary">
                 </form>
@@ -28,11 +28,11 @@
                     </div>
         
                     <div class="col-md">
-                        <select class="form-control" name="vendedoresnome">
-                            <option value="">Todos os vendedores</option>
-                            {% for vendedor in vendedores %}
-                                {% if id_comunidade == vendedor.nome_comunidade_id %}     
-                                <option value="{{vendedor.username}}">{{vendedor.username}}</option>
+                        <select class="form-control" name="organizadoresnome">
+                            <option value="">Todos os organizadores</option>
+                            {% for organizador in organizadores %}
+                                {% if id_comunidade == organizador.nome_comunidade_id %}     
+                                <option value="{{organizador.username}}">{{organizador.username}}</option>
                                 {% endif %}
                             {% endfor %}
                         </select>
@@ -60,20 +60,20 @@
                     </tr>
                     </thead>
                     <tbody>
-                        {% for vendedor in vendedores %}
-                            {% if id_comunidade == vendedor.nome_comunidade_id %}
+                        {% for organizador in organizadores %}
+                            {% if id_comunidade == organizador.nome_comunidade_id %}
                                 <tr>
-                                    <th>{{vendedor.username}}</th>
-                                    <td>{{vendedor.email}}</td>
-                                    <td>{% if not vendedor.last_login %}
+                                    <th>{{organizador.username}}</th>
+                                    <td>{{organizador.email}}</td>
+                                    <td>{% if not organizador.last_login %}
                                             Aguardando Primeiro Acesso
                                         {% else %}
-                                            {{vendedor.last_login}}
+                                            {{organizador.last_login}}
                                         {% endif %}
                                     </td>
-                                    {% define vendedor.id as idvendedor %}
+                                    {% define organizador.id as idorganizador %}
                                     {% if user.cargo == "A" or user.cargo == "R" %}
-                                        <td><a onclick="excluirVendedor(`{{idvendedor}}`)" class="btn btn-danger">Excluir</a></td>
+                                        <td><a onclick="excluirOrganizador(`{{idorganizador}}`)" class="btn btn-danger">Excluir</a></td>
                                     {% endif %}
                                 </tr>
                             {%endif%}   

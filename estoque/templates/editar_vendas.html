@@ -18,8 +18,8 @@
         <input type="text" name="nome_produto" id="nome_produto" title="apenas o nome, não digite o tamanho">
     </div>
     <div class="col-md">
-        <label for="nome_vendedor">Nome do Vendedor:</label>
-        <input type="text" name="nome_vendedor" id="nome_vendedor">
+        <label for="nome_funcionario">Nome do Funcionario:</label>
+        <input type="text" name="nome_funcionario" id="nome_funcionario">
         <button id="btn-submit" type="submit" class="btn btn-success">Pesquisar</button>
         <a class="btn btn-primary" style="color: white; margin-left: 10px;" href="{% url 'export_troca_estorno' slug %}">Exportar</a>
     </div>
@@ -31,16 +31,16 @@
         <option value="Cancelar">Cancelar</option>
     </select> -->
 <br>
-{% if request.GET.nome_cliente or request.GET.dia or request.GET.nome_produto or request.GET.nome_vendedor or request.GET.acao %}
+{% if request.GET.nome_cliente or request.GET.dia or request.GET.nome_produto or request.GET.nome_funcionario or request.GET.acao %}
     {% if page.has_other_pages %}
         <div class="pagination">
             {% if page.has_previous %}
-                {% if request.GET.nome_cliente or request.GET.dia or request.GET.nome_produto or request.GET.nome_vendedor or request.GET.acao %}
+                {% if request.GET.nome_cliente or request.GET.dia or request.GET.nome_produto or request.GET.nome_funcionario or request.GET.acao %}
                     <!-- Verifica se há uma página anterior -->
                     <!-- Verifica se o usuário está buscando algo nos campos acima -->
                     <!-- Cria um link para a página anterior com os parâmetros de filtro na URL com base nos campos preenchidos -->
                     <!-- Se a página atual for igual a 1(primeira página) desabilite o botão "Anterior" -->
-                    <a class="page-link {% if page.number == 1 %}disabled{% endif %}" {% if page.number != 1 %}href="{% url 'editar_vendas' slug %}?page={{ page.previous_page_number }}&nome_cliente={{ request.GET.nome_cliente }}&dia={{ request.GET.dia }}&nome_produto={{ request.GET.nome_produto }}&nome_vendedor={{ request.GET.nome_vendedor }}&acao={{ request.GET.acao }}"{% endif %}>&laquo; Anterior</a>
+                    <a class="page-link {% if page.number == 1 %}disabled{% endif %}" {% if page.number != 1 %}href="{% url 'editar_vendas' slug %}?page={{ page.previous_page_number }}&nome_cliente={{ request.GET.nome_cliente }}&dia={{ request.GET.dia }}&nome_produto={{ request.GET.nome_produto }}&nome_funcionario={{ request.GET.nome_funcionario }}&acao={{ request.GET.acao }}"{% endif %}>&laquo; Anterior</a>
                 {% else %}
                     <!-- Verifica se há uma página anterior -->
                     <!-- Cria um link para a página anterior -->
@@ -53,7 +53,7 @@
             {% endif %}
 
             {% for page_num in page.paginator.page_range %}
-                {% if request.GET.nome_cliente or request.GET.dia or request.GET.nome_produto or request.GET.nome_vendedor or request.GET.acao %}
+                {% if request.GET.nome_cliente or request.GET.dia or request.GET.nome_produto or request.GET.nome_funcionario or request.GET.acao %}
                     {% if page_num == page.number %}
                         <!-- Verifica se a página atual é igual ao número da iteração -->
                         <!-- Mostra o número da página atual destacado -->
@@ -61,7 +61,7 @@
                     {% elif page_num >= page.number|add:-15 and page_num <= page.number|add:15 %}
                         <!-- Verifica se o número da iteração está dentro do intervalo de páginas próximas à página atual -->
                         <!-- Cria um link para o número da página com os parâmetros de filtro na URL -->
-                        <a class="page-link" href="{% url 'editar_vendas' slug %}?page={{ page_num }}&nome_cliente={{ request.GET.nome_cliente }}&dia={{ request.GET.dia }}&nome_produto={{ request.GET.nome_produto }}&nome_vendedor={{ request.GET.nome_vendedor }}&acao={{ request.GET.acao }}">{{ page_num }}</a>
+                        <a class="page-link" href="{% url 'editar_vendas' slug %}?page={{ page_num }}&nome_cliente={{ request.GET.nome_cliente }}&dia={{ request.GET.dia }}&nome_produto={{ request.GET.nome_produto }}&nome_funcionario={{ request.GET.nome_funcionario }}&acao={{ request.GET.acao }}">{{ page_num }}</a>
                     {% endif %}
                 {% else %}
                     {% if page_num == page.number %}
@@ -78,12 +78,12 @@
 
             
             {% if page.has_next %}
-                {% if request.GET.nome_cliente or request.GET.dia or request.GET.nome_produto or request.GET.nome_vendedor or request.GET.acao %}
+                {% if request.GET.nome_cliente or request.GET.dia or request.GET.nome_produto or request.GET.nome_funcionario or request.GET.acao %}
                     <!-- Verifica se há uma próxima página -->
                     <!-- Verifica se o usuário está buscando algo nos campos acima -->
                     <!-- Cria um link para a página anterior com os parâmetros de filtro na URL com base nos campos preenchidos -->
                     <!-- Se a página atual for igual a page.paginator.num_pages(última página) desabilite o botão "Próximo" -->
-                    <a class="page-link {% if page.number == page.paginator.num_pages %}disabled{% endif %}" {% if page.number != page.paginator.num_pages %}href="{% url 'editar_vendas' slug %}?page={{ page.next_page_number }}&nome_cliente={{ request.GET.nome_cliente }}&dia={{ request.GET.dia }}&nome_produto={{ request.GET.nome_produto }}&nome_vendedor={{ request.GET.nome_vendedor }}&acao={{ request.GET.acao }}"{% endif %}>Próximo &raquo;</a>
+                    <a class="page-link {% if page.number == page.paginator.num_pages %}disabled{% endif %}" {% if page.number != page.paginator.num_pages %}href="{% url 'editar_vendas' slug %}?page={{ page.next_page_number }}&nome_cliente={{ request.GET.nome_cliente }}&dia={{ request.GET.dia }}&nome_produto={{ request.GET.nome_produto }}&nome_funcionario={{ request.GET.nome_funcionario }}&acao={{ request.GET.acao }}"{% endif %}>Próximo &raquo;</a>
                 {% else %}
                     <!-- Verifica se há uma próxima página -->
                     <!-- Cria um link para a próxima página -->
@@ -99,7 +99,7 @@
 {% endif %}
 <br>
 {% for venda in page %}
-    {% if request.GET.nome_cliente or request.GET.dia or request.GET.nome_produto or request.GET.nome_vendedor or request.GET.acao %}
+    {% if request.GET.nome_cliente or request.GET.dia or request.GET.nome_produto or request.GET.nome_funcionario or request.GET.acao %}
         <div class="rectangle_editar_vendas">
             <div class="left-side">
                 <!-- Acessando a tabela VendasControle pela relação -->

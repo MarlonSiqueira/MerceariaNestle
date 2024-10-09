@@ -46,7 +46,7 @@
                 {% if cargo_user_logado == "A" or cargo_user_logado == "P" %}
                     <select class="form-control" name="novo_cargo">
                         <option selected disabled value="">Selecione</option>
-                        <option value="V">Vendedor</option>
+                        <option value="O">Organizador</option>
                         <option value="C">Caixa</option>
                         <option value="CL">Casal Lojinha</option>
                         <option value="CF">Casal Festa</option>
@@ -54,14 +54,14 @@
                     {% elif cargo_user_logado == "CF" %}
                         <select class="form-control" name="novo_cargo">
                             <option selected disabled value="">Selecione</option>
-                            <option value="V">Vendedor</option>
+                            <option value="O">Organizador</option>
                             <option value="C">Caixa</option>
                             <option value="CL">Casal Lojinha</option>
                         </select>
                     {% elif cargo_user_logado == "CL" %}
                     <select class="form-control" name="novo_cargo">
                         <option selected disabled value="">Selecione</option>
-                        <option value="V">Vendedor</option>
+                        <option value="O">Organizador</option>
                         <option value="C">Caixa</option>
                     </select>
                 {% endif %}

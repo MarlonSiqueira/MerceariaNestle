@@ -4,7 +4,7 @@
 {% block 'body' %}
     <div class="container">
         {% if user.is_authenticated %}
-            {% if user.cargo == "A" or user.cargo == "R" or user.cargo == "V" %}
+            {% if user.cargo == "A" or user.cargo == "R" or user.cargo == "O" %}
                 <form action="" method="POST">{% csrf_token %}
                     <br>
                     <label>CPF </label>

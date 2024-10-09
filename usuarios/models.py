@@ -6,7 +6,7 @@ from django.utils.crypto import get_random_string
 
 #Criado 4 Cargos, caso seja necessário criar mais basta apenas copiar o modelo abaixo e adicionar mais um dentro da mesma variável (choices_cargo) e alterar o signals.
 class Users(AbstractUser):
-    choices_cargo = (('V', 'Vendedor'),
+    choices_cargo = (('O', 'Organizador'),
                     ('R', 'Responsavel_Geral'),
                     ('A', 'Admin'),
                     ('T', 'Trocar_Senha'))

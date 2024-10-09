@@ -555,7 +555,7 @@ if (url_sem_slug == "cadastrar_familia"){
             "cancelButtonText": "Não, Cancelar",
             "confirmButtonText": "Sim, ativar",
             "reverseButtons": true,
-            "confirmButtonColor": "#dc3545",
+            "confirmButtonColor": "#28a745",
             "focusConfirm": true,
             "allowEscapeKey": false,
             "allowEnterKey": false,
@@ -570,11 +570,11 @@ if (url_sem_slug == "cadastrar_familia"){
 }
 
 
-//Funções tela de Cadastro de Vendedores
-if (url_sem_slug == "cadastrar_vendedor"){
+//Funções tela de Cadastro de Organizadores
+if (url_sem_slug == "cadastrar_organizador"){
     //////////////////////////////////////////////////////
-    //Modal Excluir Vendedor tela de Cadastro de Vendedores
-    function excluirVendedor(idvendedor){
+    //Modal Excluir Organizador tela de Cadastro de Organizadores
+    function excluirOrganizador(idorganizador){
         Swal.fire({
             "title": "Tem certeza ?",
             "text": "Essa ação não pode ser desfeita",
@@ -592,7 +592,7 @@ if (url_sem_slug == "cadastrar_vendedor"){
         })
         .then(function(result){
             if(result.isConfirmed) {
-                window.location.pathname = "excluir_vendedor/" + idvendedor + "/"
+                window.location.pathname = "excluir_organizador/" + idorganizador + "/"
             }
         })
     }

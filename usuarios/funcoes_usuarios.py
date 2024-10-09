@@ -45,9 +45,9 @@ def enviar_email(destinatario, cargo, nome_usuario_email, username):
 
 
 def Validacoes_Get_Cadastro_Usuario(request, cargo, slug, nome, sobrenome, email, usuariosnome, usuarios):
-    if cargo == "V":
-        cargo = "vendedores"
-        url_cargo = "cadastrar_vendedor"
+    if cargo == "O":
+        cargo = "organizadores"
+        url_cargo = "cadastrar_organizador"
     elif cargo == "R":
         cargo = "responsaveis"
         url_cargo = "cadastrar_responsavel"
@@ -78,8 +78,8 @@ def Validacoes_Get_Cadastro_Usuario(request, cargo, slug, nome, sobrenome, email
 
 
 def Validacoes_Post_Cadastro_Usuario_Campos_Preenchidos(request, slug, cargo, nome, sobrenome, email, tam_nome, tam_sobrenome, tam_email):
-    if cargo == "V":
-        url_cargo = "cadastrar_vendedor"
+    if cargo == "O":
+        url_cargo = "cadastrar_organizador"
     elif cargo == "R":
         url_cargo = "cadastrar_responsavel"
 
@@ -154,9 +154,9 @@ def Validacoes_Post_Cadastro_Usuario_Campos_Preenchidos(request, slug, cargo, no
 
 
 def Validacoes_Post_Cadastro_Usuario_Validacoes_Usuario(request, slug, cargo, id_comunidade, slug_comunidade, nome, sobrenome, email, username, SENHA_PADRAO, nome_comunidade, cidade_comunidade):
-    if cargo == "V":
-        url_cargo = "cadastrar_vendedor"
-        nome_cargo = "Vendedor"
+    if cargo == "O":
+        url_cargo = "cadastrar_organizador"
+        nome_cargo = "Organizador"
     elif cargo == "R":
         url_cargo = "cadastrar_responsavel"
         nome_cargo = "Responsavel Geral"

@@ -8,8 +8,8 @@ from rolepermissions.roles import assign_role, remove_role
 @receiver(post_save, sender=Users)
 def define_permissoes(sender, instance, created, **kwargs):
     if created:
-        if instance.cargo == "V":
-            assign_role(instance, 'vendedor') 
+        if instance.cargo == "O":
+            assign_role(instance, 'organizador') 
         elif instance.cargo == "A":
             assign_role(instance, 'admin')
         elif instance.cargo == "R":
@@ -28,8 +28,8 @@ def update_permissions(sender, instance, **kwargs):
 
         if instance.cargo != old_instance.cargo:
             # Remove o papel do cargo anterior
-            if old_instance.cargo == "V":
-                remove_role(instance, 'vendedor')
+            if old_instance.cargo == "O":
+                remove_role(instance, 'organizador')
             elif old_instance.cargo == "A":
                 remove_role(instance, 'admin')
             elif old_instance.cargo == "R":
@@ -38,8 +38,8 @@ def update_permissions(sender, instance, **kwargs):
                 remove_role(instance, 'trocar_senha')
 
             # Atribui o novo papel baseado no novo cargo
-            if instance.cargo == "V":
-                assign_role(instance, 'vendedor')
+            if instance.cargo == "O":
+                assign_role(instance, 'organizador')
             elif instance.cargo == "A":
                 assign_role(instance, 'admin')
             elif instance.cargo == "R":

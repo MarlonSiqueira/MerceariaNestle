@@ -20,10 +20,18 @@
 
             <br>
 
-            <label>Peso (KG):</label>
-            <input class="form-control" type="text" name="peso" id="peso" placeholder="Exemplo: 0.500 = (500g), 1.000 = (1kg)">
+            <label>Peso:</label>
+            <input class="form-control" type="text" name="peso" id="peso" placeholder="Exemplo: 0.500 = (500g/ml), 1.000 = (1kg/ml)">
 
             <br>
+            
+            <!-- <label>Selecione o tipo do produto:</label>
+            <select class="form-control" name="tipo_peso" id="tipo_peso">
+                <option value="KG">Kg</option>
+                <option value="ML">ml</option>
+            </select>
+
+            <br> -->
 
             <label>Preço de Compra:</label>
             <input class="form-control" type="text" name="preco_compra" id="preco_compra" placeholder="0">
@@ -52,7 +60,7 @@
                     &nbsp; &nbsp;<input type="submit" value="Filtrar" id="filtrar_add_produto" class="btn btn-success">
                 </div>
 
-                {% if user.cargo == "A" or user.cargo == "R" or user.cargo == "V"  %}
+                {% if user.cargo == "A" or user.cargo == "R" or user.cargo == "O"  %}
                 <div class="col-md">
                     <a class="btn btn-info" id="exportar_add_produto" href="{% url 'export_entrada_produtos' slug%}">Exportar Planilha</a>
                 </div>

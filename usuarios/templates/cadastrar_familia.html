@@ -4,7 +4,7 @@
 {% block 'body' %}
     <div class="container">
         {% if user.is_authenticated %}
-            {% if user.cargo == "A" or user.cargo == "R" or user.cargo == "V"%}
+            {% if user.cargo == "A" or user.cargo == "R" or user.cargo == "O"%}
                 <form action="" method="POST">{% csrf_token %}
                     <br>
                     <label>Nome Completo </label>
@@ -50,9 +50,9 @@
                     <tr>
                         <th scope="col">Nome Completo</th>
                         <th scope="col">CPF</th>
-                        {% if user.cargo == "A" or user.cargo == "R" %}
+                        {% if user.cargo == "A" or user.cargo == "R" or user.cargo == "O" %}
                             <th scope="col">Excluir</th>
-                            <th scope="col">Inativar</th>
+                            <th scope="col">Status</th>
                         {% endif %}
                     </tr>
                     </thead>
@@ -63,7 +63,7 @@
                                     <th>{{familia.nome_beneficiado}}</th>
                                     <th>{{familia.cpf}}</th>
                                     {% define familia.id as idfamilia %}
-                                    {% if user.cargo == "A" or user.cargo == "R" %}
+                                    {% if user.cargo == "A" or user.cargo == "R" or user.cargo == "O"%}
                                         <td><a onclick="excluirfamilia(`{{idfamilia}}`)" class="btn btn-danger">Excluir</a></td>
                                         {% if familia.ativo == "sim" %}
                                             <td><a onclick="inativarfamilia(`{{idfamilia}}`)" class="btn btn-primary">Inativar</a></td>

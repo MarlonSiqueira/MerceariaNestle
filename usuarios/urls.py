@@ -11,8 +11,8 @@ urlpatterns = [
     path('alterar_usuarios/', views.alterar_usuarios, name="alterar_usuarios"),#Alterar_usuarios
     path('comunidades/', views.comunidades, name="comunidades"),#Consultar comunidades
 
-    path('cadastrar_vendedor/<str:slug>', views.cadastrar_vendedor, name="cadastrar_vendedor"),#Cadastrar Vendedor
-    path('excluir_vendedor/<str:id>/', views.excluir_vendedor, name="excluir_vendedor"),#Excluir Vendedor
+    path('cadastrar_organizador/<str:slug>', views.cadastrar_organizador, name="cadastrar_organizador"),#Cadastrar Organizador
+    path('excluir_organizador/<str:id>/', views.excluir_organizador, name="excluir_organizador"),#Excluir Organizador
     
     path('cadastrar_familia/<str:slug>', views.cadastrar_familia, name="cadastrar_familia"),#Cadastrar Familia
     path('excluir_familia/<str:id>/', views.excluir_familia, name="excluir_familia"),#Excluir Familia

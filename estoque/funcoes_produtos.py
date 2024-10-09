@@ -412,7 +412,7 @@ def Get_Paginacao(request, nome_produto, dia, acao, slug, paginacao):
                 page_num = request.GET.get('page')#Pegando o 'page' que é a página que está atualmente
                 page = paginacao_paginator.get_page(page_num) #Passando os 10 logs para page
             if not paginacao:
-                messages.add_message(request, messages.ERROR, f'Não há registro de Logs do usuário {nome_produto}')
+                messages.add_message(request, messages.ERROR, f'Não há registro de Logs do produto {nome_produto}')
                 return redirect(reverse('export_entrada_produtos', kwargs={"slug":slug})), page
         if dia:
             paginacao = paginacao.filter(dia__contains=dia)#Verificando se existem Logs no dia escolhido

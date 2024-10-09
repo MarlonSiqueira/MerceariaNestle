@@ -37,13 +37,13 @@
                         <div class="role"><font color="blue"><b>Admin</b></font></div>
                     {% elif user.cargo == "R" %}
                         <div class="role"><font color="blue"><b>Responsável Geral</b></font></div>
-                    {% elif user.cargo == "V" %}
-                        <div class="role"><font color="blue"><b>Vendedor</b></font></div>
+                    {% elif user.cargo == "O" %}
+                        <div class="role"><font color="blue"><b>Organizador</b></font></div>
                     {% endif %}
                     <p class="username"><b>{{ user.username }}</b></p>
                 </div>
                 {% if url_atual != '/' %}
-                    {% if url_atual == '/cadastrar_comunidade/' or url_atual == '/cadastrar_responsavel/geral' or url_atual == '/alterar_usuarios/' or url_atual == '/comunidades/' or url_atual == '/listar_logs/' or url_atual == '/cadastrogeral_comunidade/' or url_atual == '/add_produto/' or url_atual == '/add_novonome_produto/' or url_atual == '/pre_vendas/' or url_atual == '/consultar_vendas_geral/' or url_atual == '/vendas_finalizadas/' or url_atual == '/editar_vendas/' or url_atual == '/cadastrar_vendedor/' or url_atual == '/cadastrar_familia/' or url_atual == '/produto/' or url_atual == '/vendas/' or url_atual == '/consultar_vendas/' or url_atual == '/visualizar_vendas/' or url_atual == '/change_password/' or url_atual == '/export_entrada_produtos/' %}
+                    {% if url_atual == '/cadastrar_comunidade/' or url_atual == '/cadastrar_responsavel/geral' or url_atual == '/alterar_usuarios/' or url_atual == '/comunidades/' or url_atual == '/listar_logs/' or url_atual == '/cadastrogeral_comunidade/' or url_atual == '/add_produto/' or url_atual == '/add_novonome_produto/' or url_atual == '/pre_vendas/' or url_atual == '/consultar_vendas_geral/' or url_atual == '/vendas_finalizadas/' or url_atual == '/editar_vendas/' or url_atual == '/cadastrar_organizador/' or url_atual == '/cadastrar_familia/' or url_atual == '/produto/' or url_atual == '/vendas/' or url_atual == '/consultar_vendas/' or url_atual == '/visualizar_vendas/' or url_atual == '/change_password/' or url_atual == '/export_entrada_produtos/' %}
                         <a href="{% url 'home' %}" class="menu-item"><i class="fas fa-home"></i><span> Home</span></a>
                     {% endif %}
 
@@ -74,7 +74,7 @@
                                     <i class="fas fa-user-plus"></i><span> Usuários</span>
                                 </button>
                                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                    <a class="dropdown-item menu-item" href="{% url 'cadastrar_vendedor' slug %}">Cadastrar Vendedor</a>
+                                    <a class="dropdown-item menu-item" href="{% url 'cadastrar_organizador' slug %}">Cadastrar Organizador</a>
                                 </div>
                             </div>
                         {% endif %}
@@ -88,7 +88,7 @@
                         </div>
                     {% endif %}
 
-                    {% if url_atual == '/cadastrogeral_comunidade/' or url_atual == '/add_produto/' or url_atual == '/add_novonome_produto/' or url_atual == '/pre_vendas/' or url_atual == '/consultar_vendas_geral/' or url_atual == '/vendas_finalizadas/' or url_atual == '/editar_vendas/' or url_atual == '/cadastrar_vendedor/' or url_atual == '/cadastrar_familia/' or url_atual == '/produto/' or url_atual == '/vendas/' or url_atual == '/consultar_vendas/' or url_atual == '/visualizar_vendas/' or url_atual == '/export_entrada_produtos/' %}
+                    {% if url_atual == '/cadastrogeral_comunidade/' or url_atual == '/add_produto/' or url_atual == '/add_novonome_produto/' or url_atual == '/pre_vendas/' or url_atual == '/consultar_vendas_geral/' or url_atual == '/vendas_finalizadas/' or url_atual == '/editar_vendas/' or url_atual == '/cadastrar_organizador/' or url_atual == '/cadastrar_familia/' or url_atual == '/produto/' or url_atual == '/vendas/' or url_atual == '/consultar_vendas/' or url_atual == '/visualizar_vendas/' or url_atual == '/export_entrada_produtos/' %}
                         <a href="{% url 'comunidades' %}" class="menu-item"><i class="fas fa-reply"></i><span> Comunidades</span></a>
                     {% endif %}
                     

@@ -30,9 +30,9 @@ load_dotenv() #lendo o arquivo .env pt2
 DEV_URL = os.environ.get('DEV_URL')
 SENHA_PADRAO = os.environ.get('SENHA_PADRAO')
 
-#Funções para a tela de cadastrar_vendedor
-@has_permission_decorator('cadastrar_vendedor')
-def cadastrar_vendedor(request, slug):
+#Funções para a tela de cadastrar_organizador
+@has_permission_decorator('cadastrar_organizador')
+def cadastrar_organizador(request, slug):
     opcao = "slug"
     resultado = Consultar_Uma_Comunidade(slug, opcao)
 
@@ -43,28 +43,28 @@ def cadastrar_vendedor(request, slug):
                 nome = request.GET.get('nome')
                 sobrenome = request.GET.get('sobrenome')
                 email = request.GET.get('email')
-                vendedoresnome = request.GET.get('vendedoresnome')
-                cargo = "V"
+                organizadoresnome = request.GET.get('organizadoresnome')
+                cargo = "O"
 
-                BuscaVendedores = Q(
-                    Q(alterou_senha="V") |
-                    Q(cargo="V")
+                BuscaOrganizadores = Q(
+                    Q(alterou_senha="O") |
+                    Q(cargo="O")
                 )
 
-                vendedores = Users.objects.filter(BuscaVendedores)
+                organizadores = Users.objects.filter(BuscaOrganizadores)
 
                 if resultado[0] != 0:
-                    vendedores = Validacoes_Get_Cadastro_Usuario(request, cargo, slug, nome, sobrenome, email, vendedoresnome, vendedores)
+                    organizadores = Validacoes_Get_Cadastro_Usuario(request, cargo, slug, nome, sobrenome, email, organizadoresnome, organizadores)
                     url_atual = Capturar_Url_Atual_Sem_O_Final(request)
                     context = {
                             'slug': slug,
                             'nome_e_cidade_comunidade': slug,
-                            'vendedores': vendedores,
+                            'organizadores': organizadores,
                             'id_comunidade': resultado[0],
                             'url_atual': url_atual,
                         }
 
-                    return render(request, 'cadastrar_vendedor.html', context)
+                    return render(request, 'cadastrar_organizador.html', context)
                 else:
                     messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
                     return redirect(reverse('home'))
@@ -76,7 +76,7 @@ def cadastrar_vendedor(request, slug):
             sobrenome = request.POST.get('sobrenome')
             email = request.POST.get('email')
             username = nome.casefold()+"."+sobrenome.casefold()
-            cargo = "V"
+            cargo = "O"
 
             tam_nome = len(nome)
             tam_sobrenome = len(sobrenome)
@@ -92,35 +92,35 @@ def cadastrar_vendedor(request, slug):
             if validacao_usuario:
                 return validacao_usuario
 
-            messages.add_message(request, messages.SUCCESS, 'Vendedor criado com sucesso')
-            return redirect(reverse('cadastrar_vendedor', kwargs={"slug": slug}))
+            messages.add_message(request, messages.SUCCESS, 'Organizador criado com sucesso')
+            return redirect(reverse('cadastrar_organizador', kwargs={"slug": slug}))
     else:
         return redirect(reverse('login'))
 
 
-@has_permission_decorator('excluir_vendedor')
-def excluir_vendedor(request, id):
+@has_permission_decorator('excluir_organizador')
+def excluir_organizador(request, id):
     opcao = "id"
-    vendedor = get_object_or_404(Users, id=id)
+    organizador = get_object_or_404(Users, id=id)
 
-    id_comunidade_vendedor = vendedor.nome_comunidade_id #Pegando o ID da comunidade do vendedor
-    resultado = Consultar_Uma_Comunidade(id_comunidade_vendedor, opcao)
+    id_comunidade_organizador = organizador.nome_comunidade_id #Pegando o ID da comunidade do organizador
+    resultado = Consultar_Uma_Comunidade(id_comunidade_organizador, opcao)
 
     id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
     if id_comunidade_comparar_usuario == id_comunidade_usuario:
         try :#Tente Excluir
             if resultado[1]:
-                if hasattr(vendedor, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
+                if hasattr(organizador, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
                         # se a flag _excluido já está setada, não chama o sinal
                     pass
                 else:#Caso não tenha sido excluído ele chama o registro.
-                    user_deleted(instance=vendedor, user=request.user)
-                vendedor.delete()
-                messages.add_message(request, messages.SUCCESS, 'Vendedor excluído com sucesso')
-                return redirect(reverse('cadastrar_vendedor', kwargs={"slug":resultado[1]}))
+                    user_deleted(instance=organizador, user=request.user)
+                organizador.delete()
+                messages.add_message(request, messages.SUCCESS, 'Organizador excluído com sucesso')
+                return redirect(reverse('cadastrar_organizador', kwargs={"slug":resultado[1]}))
         except ProtectedError:#Caso não consiga, entre aqui
-            messages.add_message(request, messages.ERROR, 'Esse Vendedor não pode ser excluído pois possui logs vinculados')
-            return redirect(reverse('cadastrar_vendedor', kwargs={"slug":resultado[1]}))
+            messages.add_message(request, messages.ERROR, 'Esse Organizador não pode ser excluído pois possui logs vinculados')
+            return redirect(reverse('cadastrar_organizador', kwargs={"slug":resultado[1]}))
     else:
         messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
         return redirect(reverse('home'))
@@ -215,7 +215,7 @@ def cadastrar_familia(request, slug):
     id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
     if id_comunidade_comparar_usuario == id_comunidade_usuario:
         if request.method == "GET":  
-            if request.user.cargo == "A" or request.user.cargo == "R" or request.user.cargo == "V":
+            if request.user.cargo == "A" or request.user.cargo == "R" or request.user.cargo == "O":
                 nome_completo = request.GET.get('nome_completo')
                 cpf = request.GET.get('cpf')
                 familiasnome = request.GET.get('familiasnome')

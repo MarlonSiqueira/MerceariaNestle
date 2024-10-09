@@ -211,8 +211,8 @@ def excluir_novonome_produto(request, slug):
         opcao = "id"
         produto = get_object_or_404(NomeProduto, slug=slug)
 
-        id_comunidade_vendedor = produto.nome_comunidade_id #Pegando o ID da comunidade do vendedor
-        resultado = Consultar_Uma_Comunidade(id_comunidade_vendedor, opcao)
+        id_comunidade_funcionario = produto.nome_comunidade_id #Pegando o ID da comunidade do funcionario
+        resultado = Consultar_Uma_Comunidade(id_comunidade_funcionario, opcao)
         if resultado[0] != 0:
             id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
             if id_comunidade_comparar_usuario == id_comunidade_usuario:
@@ -729,7 +729,7 @@ def consultar_vendas_geral(request, slug):
     if request.method == "GET":
         nome_cliente = request.GET.get('nome_cliente_filtro')
         nome = request.GET.get('nome_produto_filtro')
-        vendedor = request.GET.get('vendedor')
+        funcionario = request.GET.get('funcionario')
         get_dt_start = request.GET.get('dt_start')
         get_dt_end = request.GET.get('dt_end')
 
@@ -746,7 +746,7 @@ def consultar_vendas_geral(request, slug):
 
                     vendas = VendasControle.objects.filter(BuscaVendas)
 
-                    validacao, page = Get_Paginacao_Vendas_Controle(request, slug, nome_cliente, nome, get_dt_start, get_dt_end, vendedor, vendas)
+                    validacao, page = Get_Paginacao_Vendas_Controle(request, slug, nome_cliente, nome, get_dt_start, get_dt_end, funcionario, vendas)
                     if validacao:
                         return validacao
                         
@@ -812,7 +812,7 @@ def vendas_finalizadas(request, slug):
         nome = request.GET.get('nome_produto_filtro')
         preco_min = request.GET.get('preco_min')
         preco_max = request.GET.get('preco_max')
-        vendedor = request.GET.get('vendedor')
+        funcionario = request.GET.get('funcionario')
         get_dt_start = request.GET.get('dt_start')
         get_dt_end = request.GET.get('dt_end')
 
@@ -829,7 +829,7 @@ def vendas_finalizadas(request, slug):
 
                 vendas = Vendas.objects.filter(BuscaVendasFinalizadas)
 
-                validacao, page = Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, vendedor, vendas)
+                validacao, page = Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, funcionario, vendas)
                 if validacao:
                     return validacao
 
@@ -2873,30 +2873,30 @@ def export_csv(request):
 
     if venda:
         if request.user.cargo == "A" or request.user.cargo == "P" or request.user.cargo == "CF" or request.user.cargo == "CL":
-            ws.append(['ID_Venda','Nome_Cliente','Nome_Produto', 'Cor', 'Tamanho_Produto','Categoria','Quantidade','Preco_Compra','Preco_Venda_Unidade','Preco_Venda_Total_Com_Desconto','Preco_Venda_Total_Sem_Desconto','Desconto_Unidade','Desconto_Total','Desconto_Autorizado','Autorizado_Por','Lucro','Forma_Venda','Data_Venda','Vendedor','Ano_Festa', 'Venda_Finalizada']) # Colunas
+            ws.append(['ID_Venda','Nome_Cliente','Nome_Produto', 'Cor', 'Tamanho_Produto','Categoria','Quantidade','Preco_Compra','Preco_Venda_Unidade','Preco_Venda_Total_Com_Desconto','Preco_Venda_Total_Sem_Desconto','Desconto_Unidade','Desconto_Total','Desconto_Autorizado','Autorizado_Por','Lucro','Forma_Venda','Data_Venda','Vendido_Por','Ano_Festa', 'Venda_Finalizada']) # Colunas
         else:
-            ws.append(['Nome_Cliente','Nome_Produto','Cor', 'Tamanho_Produto','Categoria','Quantidade','Preco_Venda_Unidade','Preco_Venda_Total_Com_Desconto','Preco_Venda_Total_Sem_Desconto','Desconto_Unidade','Desconto_Total','Desconto_Autorizado','Autorizado_Por','Forma_Venda','Data_Venda','Vendedor','Ano_Festa', 'Venda_Finalizada']) # Colunas
+            ws.append(['Nome_Cliente','Nome_Produto','Cor', 'Tamanho_Produto','Categoria','Quantidade','Preco_Venda_Unidade','Preco_Venda_Total_Com_Desconto','Preco_Venda_Total_Sem_Desconto','Desconto_Unidade','Desconto_Total','Desconto_Autorizado','Autorizado_Por','Forma_Venda','Data_Venda','Vendido_Por','Ano_Festa', 'Venda_Finalizada']) # Colunas
 
         nome_cliente = request.GET.get('nome_cliente')
         nome_produto = request.GET.get('nome_produto')
         categoria = request.GET.get('categoria')
         preco_min = request.GET.get('preco_min')
         preco_max = request.GET.get('preco_max')
-        vendedor = request.GET.get('vendedor')
+        funcionario = request.GET.get('funcionario')
         dt_start = request.GET.get('dt_start')
         dt_end = request.GET.get('dt_end')
 
         nome_cliente_novo = unidecode.unidecode(f'{nome_cliente}')
 
-        if nome_cliente or nome_produto or categoria or preco_min or preco_max or vendedor or dt_start or dt_end:
+        if nome_cliente or nome_produto or categoria or preco_min or preco_max or funcionario or dt_start or dt_end:
             if nome_cliente:
                 venda = venda.filter(nome_cliente__icontains=nome_cliente_novo)#Filtrando para exportar pelo nome do cliente
             if nome_produto:
                 venda = venda.filter(label_vendas_get__icontains=nome_produto)#Filtrando para exportar pelo nome do produto
             if categoria:
                 venda = venda.filter(categoria_id=categoria)#Filtrando para exportar pela categoria
-            if vendedor:
-                venda = venda.filter(criado_por__icontains=vendedor)#Filtrando para exportar pelo vendedor
+            if funcionario:
+                venda = venda.filter(criado_por__icontains=funcionario)#Filtrando para exportar pelo funcionario
             if dt_start and dt_end:
                 venda = venda.filter(dia__range=[dt_start, dt_end])#Filtrando para exportar pelas datas
 
@@ -2966,30 +2966,30 @@ def export_csv_finalizadas(request):
 
     if venda:
         if request.user.cargo == "A" or request.user.cargo == "P" or request.user.cargo == "CF" or request.user.cargo == "CL":
-            ws.append(['ID_Venda','Nome_Cliente','Nome_Produto','Cor','Tamanho_Produto','Categoria','Quantidade','Preco_Compra','Preco_Venda_Unidade','Preco_Venda_Total_Com_Desconto','Preco_Venda_Total_Sem_Desconto','Desconto_Unidade','Desconto_Total','Desconto_Autorizado','Autorizado_Por','Lucro','Forma_Venda','Data_Venda','Vendedor','Ano_Festa', 'Venda_Finalizada']) # Colunas
+            ws.append(['ID_Venda','Nome_Cliente','Nome_Produto','Cor','Tamanho_Produto','Categoria','Quantidade','Preco_Compra','Preco_Venda_Unidade','Preco_Venda_Total_Com_Desconto','Preco_Venda_Total_Sem_Desconto','Desconto_Unidade','Desconto_Total','Desconto_Autorizado','Autorizado_Por','Lucro','Forma_Venda','Data_Venda','Vendido_Por','Ano_Festa', 'Venda_Finalizada']) # Colunas
         else:
-            ws.append(['Nome_Cliente','Nome_Produto','Cor','Tamanho_Produto','Categoria','Quantidade','Preco_Venda_Unidade','Preco_Venda_Total_Com_Desconto','Preco_Venda_Total_Sem_Desconto','Desconto_Unidade','Desconto_Total','Desconto_Autorizado','Autorizado_Por','Forma_Venda','Data_Venda','Vendedor','Ano_Festa', 'Venda_Finalizada']) # Colunas
+            ws.append(['Nome_Cliente','Nome_Produto','Cor','Tamanho_Produto','Categoria','Quantidade','Preco_Venda_Unidade','Preco_Venda_Total_Com_Desconto','Preco_Venda_Total_Sem_Desconto','Desconto_Unidade','Desconto_Total','Desconto_Autorizado','Autorizado_Por','Forma_Venda','Data_Venda','Vendido_Por','Ano_Festa', 'Venda_Finalizada']) # Colunas
 
         nome_cliente = request.GET.get('nome_cliente')
         nome_produto = request.GET.get('nome_produto')
         categoria = request.GET.get('categoria')
         preco_min = request.GET.get('preco_min')
         preco_max = request.GET.get('preco_max')
-        vendedor = request.GET.get('vendedor')
+        funcionario = request.GET.get('funcionario')
         dt_start = request.GET.get('dt_start')
         dt_end = request.GET.get('dt_end')
 
         nome_cliente_novo = unidecode.unidecode(f'{nome_cliente}')
 
-        if nome_cliente or nome_produto or categoria or preco_min or preco_max or vendedor or dt_start or dt_end:
+        if nome_cliente or nome_produto or categoria or preco_min or preco_max or funcionario or dt_start or dt_end:
             if nome_cliente:
                 venda = venda.filter(nome_cliente__icontains=nome_cliente_novo)#Filtrando para exportar pelo nome do cliente
             if nome_produto:
                 venda = venda.filter(label_vendas_get__icontains=nome_produto)#Filtrando para exportar pelo nome do produto
             if categoria:
                 venda = venda.filter(categoria_id=categoria)#Filtrando para exportar pela categoria
-            if vendedor:
-                venda = venda.filter(criado_por__icontains=vendedor)#Filtrando para exportar pelo vendedor
+            if funcionario:
+                venda = venda.filter(criado_por__icontains=funcionario)#Filtrando para exportar pelo funcionario
             if dt_start and dt_end:
                 venda = venda.filter(dia__range=[dt_start, dt_end])#Filtrando para exportar pelas datas
 
@@ -3057,7 +3057,7 @@ def export_csv_produto(request, slug):
     ws = wb.active
     
     if p_excel:
-        if request.user.cargo == "A" or request.user.cargo == "R" or request.user.cargo == "V":
+        if request.user.cargo == "A" or request.user.cargo == "R" or request.user.cargo == "O":
             ws.append(['Acao','Nome_Produto','Quantidade','Data Criação','Criado Por','Última Alteração','Alterado Por','Nome_E_Cidade_Comunidade']) # Colunas
         else:
             ws.append(['Acao','Nome_Produto','Quantidade','Data','Nome_E_Cidade_Comunidade']) # Colunas
@@ -3077,7 +3077,7 @@ def export_csv_produto(request, slug):
             pass
 
         for itens in p_excel:
-            if request.user.cargo == "A" or request.user.cargo == "R" or request.user.cargo == "V":
+            if request.user.cargo == "A" or request.user.cargo == "R" or request.user.cargo == "O":
                 row = [itens.acao, itens.nome_produto, itens.quantidade, itens.data, itens.nome_user, itens.ultima_alteracao, itens.alterado_por, itens.nome_e_cidade_comunidade]
             else:
                 row = [itens.acao, itens.nome_produto, itens.quantidade, itens.data, itens.nome_e_cidade_comunidade]
@@ -3314,7 +3314,7 @@ def editar_vendas(request, slug):
         nome_cliente = request.GET.get('nome_cliente')
         dia = request.GET.get('dia')
         nome_produto = request.GET.get('nome_produto')
-        nome_vendedor = request.GET.get('nome_vendedor')
+        nome_funcionario = request.GET.get('nome_funcionario')
         
         data = timezone.localtime(timezone.now())  # Pegando a data e hora atual
         ano_atual = data.strftime("%Y")  # Passando para string apenas o ano atual
@@ -3366,10 +3366,10 @@ def editar_vendas(request, slug):
             if not vendas:
                 messages.add_message(request, messages.ERROR, f'Não foram encontradas vendas para o produto {nome_produto} nesse ano')
                 return redirect(reverse('editar_vendas', kwargs={"slug":slug}))
-        if nome_vendedor:
-            vendas = vendas.filter(criado_por__icontains=nome_vendedor)
+        if funcionario:
+            vendas = vendas.filter(criado_por__icontains=funcionario)
             if not vendas:
-                messages.add_message(request, messages.ERROR, f'Não foram encontradas vendas realizadas pelo vendedor {nome_vendedor} nesse ano')
+                messages.add_message(request, messages.ERROR, f'Não foram encontradas vendas realizadas pelo funcionario: {funcionario} nesse ano')
                 return redirect(reverse('editar_vendas', kwargs={"slug":slug}))
 
         for venda in vendas: 
