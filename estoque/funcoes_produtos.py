@@ -219,7 +219,7 @@ def Gerando_Numero_Sequencial(tabela):
         return num_sequencial
 
 
-def Cadastro_Estoque(request, nome, label, quantidade, preco_compra, preco_venda, slugp, nome_comunidade, cod_produto, peso):
+def Cadastro_Estoque(request, nome, label, quantidade, preco_compra, preco_venda, slugp, nome_comunidade, cod_produto, peso, tipo_peso):
     produto = Produto(
                     nome_produto_id = nome,
                     label = label,
@@ -230,7 +230,8 @@ def Cadastro_Estoque(request, nome, label, quantidade, preco_compra, preco_venda
                     criado_por = request.user,
                     nome_comunidade_id=nome_comunidade,
                     cod_produto=cod_produto,
-                    peso=peso
+                    peso=peso,
+                    tipo_peso=tipo_peso
                     )
     produto.save()
 

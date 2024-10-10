@@ -54,16 +54,21 @@ def Gerar_Token():
     token = secrets.token_hex(32)
     return token
 
-def validar_cpf(request, cpf, slug):
+def validar_cpf(request, cpf, slug, tela):
+    if tela == "pre_vendas":
+        url = "pre_vendas"
+    elif tela == "cadastrar_familia":
+        url = "cadastrar_familia"
+
     cpf = cpf.replace('.', '').replace('-', '')  # Remove caracteres não numéricos
     with transaction.atomic():
         if len(cpf) != 11:
             messages.add_message(request, messages.ERROR, 'CPF deve ter 11 dígitos.')
-            return redirect(reverse('cadastrar_familia', kwargs={"slug":slug}))
+            return redirect(reverse(f'{url}', kwargs={"slug":slug}))
             
         if cpf.isdigit() and len(set(cpf)) == 1:
             messages.add_message(request, messages.ERROR, 'CPF inválido.')
-            return redirect(reverse('cadastrar_familia', kwargs={"slug":slug}))
+            return redirect(reverse(f'{url}', kwargs={"slug":slug}))
 
         # Valida os dois dígitos verificadores
         def calcular_digito(cpf, tamanho):
@@ -76,12 +81,12 @@ def validar_cpf(request, cpf, slug):
         # Valida o primeiro dígito verificador
         if calcular_digito(cpf, 9) != int(cpf[9]):
             messages.add_message(request, messages.ERROR, 'CPF inválido.')
-            return redirect(reverse('cadastrar_familia', kwargs={"slug":slug}))
+            return redirect(reverse(f'{url}', kwargs={"slug":slug}))
 
         # Valida o segundo dígito verificador
         if calcular_digito(cpf, 10) != int(cpf[10]):
             messages.add_message(request, messages.ERROR, 'CPF inválido.')
-            return redirect(reverse('cadastrar_familia', kwargs={"slug":slug}))
+            return redirect(reverse(f'{url}', kwargs={"slug":slug}))
 
     return None
 
@@ -146,7 +151,8 @@ def Validacoes_Post_Cadastro_Familia_Campos_Preenchidos(request, slug, nome_comp
                 messages.add_message(request, messages.ERROR, 'CPF não pode ser vazio')#Verificando se está vazio
                 return redirect(reverse('cadastrar_familia', kwargs={"slug":slug})) 
             else:
-                validacao = validar_cpf(request, cpf, slug)
+                tela = "cadastrar_familia"
+                validacao = validar_cpf(request, cpf, slug, tela)
                 if validacao:
                     return validacao
         else:

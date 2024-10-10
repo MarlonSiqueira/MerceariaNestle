@@ -18,21 +18,25 @@
                     <div class="produto-card" 
                         data-label="{{ produto.label }}" 
                         data-preco="{{ produto.preco_venda|floatformat:2 }}" 
-                        data-peso="{{ produto.peso|floatformat:3 }}" 
-                        data-quantidade="{{ produto.quantidade }}">
+                        data-peso="{{ produto.peso|floatformat:3 }}">
                         <!-- <img src=" {{ produto.img_url }} " alt="{{ produto.nome_produto }}" class="produto-imagem"> -->
                         <h5>{{ produto.label }}</h5>
-                        <p>Preço R$ {{ produto.preco_venda|floatformat:2 }} {% if produto.peso == 0.5 and produto.quantidade > 1 %} <b>x2</b>{% endif %}<br>
+                        <p>Preço R$ {{ produto.preco_venda|floatformat:2 }} <br>
                             Qtd Restante: {{ produto.quantidade }}<br>
-                            Peso: {{ produto.peso|floatformat:3 }} KG {% if produto.peso == 0.5 and produto.quantidade > 1 %} <b>x2</b>{% endif %}
+                            Peso: {{ produto.peso|floatformat:3 }} {{ produto.tipo_peso }}
                         </p>
+                        <div class="quantity-selector-venda">
+                            <button type="button" class="decrease">&#8249;</button>
+                            <input type="text" class="quantity" value="1" readonly>
+                            <button type="button" class="increase">&#8250;</button>
+                        </div>
                     </div>
                 {% endif %}
             {% endfor %}
         </div>
         <br>
         <label>Peso Total:</label>
-        <span id="peso_total">0.000 KG</span>
+        <span id="peso_total">0.000 KG/ML</span>
         <br>
         <label>Preço Total:</label>
         <span id="preco_total">R$ 0,00</span>
@@ -51,96 +55,6 @@
         <input type="submit" name="CadAulas" id="CadAulas" disabled value="Vender" class="btn btn-primary">
     </form>
 </div>
-
-<script>
-    let pesoTotal = 0;
-    let precoTotal = 0;
-    const maxPeso = 5.0;
-
-    document.querySelectorAll('.produto-card').forEach(function(card) {
-        card.addEventListener('click', function() {
-            const preco = parseFloat(card.getAttribute('data-preco').replace(',', '.')); // Troca a vírgula por ponto
-            const peso = parseFloat(card.getAttribute('data-peso').replace(',', '.')); // Troca a vírgula por ponto
-            const quantidade = parseFloat(card.getAttribute('data-quantidade'));
-
-            //console.log(`Produto: ${card.getAttribute('data-label')}, Preço: ${preco}, Peso: ${peso}`); // Debugging
-
-            // Se o produto já foi selecionado, remove da seleção
-            if (card.classList.contains('produto-selecionado')) {
-                card.classList.remove('produto-selecionado');
-
-                // Verifica se o peso é 0,500 kg e ajusta o peso a ser subtraído
-                let pesoSubtrair = peso; // Inicializa pesoSubtrair com o peso padrão
-                let precoSubtrair = preco; // Inicializa precoSubtrair com o preço padrão
-                if (peso === 0.5 & quantidade > 1) { // Verifica se o peso é 0,500 kg e se a quantidade é maior que 1
-                    pesoSubtrair *= 2; // Multiplica o peso por 2 para subtrair corretamente
-                    precoSubtrair *= 2; // Multiplica o preço por 2 para subtrair corretamente
-                }
-
-                pesoTotal -= pesoSubtrair; // Subtrai o peso
-                precoTotal -= precoSubtrair; // Subtrai o preço
-            } 
-            // Se o produto ainda não foi selecionado, adiciona
-            else {
-                // Verifica se o peso total com o novo produto não excede o máximo permitido
-                let pesoFinal = peso; // inicializa pesoFinal com o peso padrão
-                let precoFinal = preco; // inicializa precoFinal com o preço padrão
-                if (peso === 0.5 & quantidade > 1) { // Verifica se o peso é 0,500 kg
-                    pesoFinal *= 2; // Multiplica o peso por 2
-                    precoFinal *= 2; // Multiplica o preço por 2
-                }
-                // Verifica se o peso total com o novo produto não excede o máximo permitido
-                if (pesoTotal + pesoFinal <= maxPeso) {
-                    card.classList.add('produto-selecionado');
-                    pesoTotal += pesoFinal; // Adiciona o peso
-                    precoTotal += precoFinal; // Adiciona o preço
-                } else {
-                    alert("Você ultrapassaria o peso máximo de 5.0 KG.");
-                    return;
-                }
-            }
-
-            // Atualiza o display do peso e preço total
-            document.getElementById('peso_total').textContent = pesoTotal.toFixed(3) + ' KG';
-            document.getElementById('preco_total').textContent = 'R$ ' + precoTotal.toFixed(2);
-
-            // Atualiza os campos ocultos
-            document.getElementById('preco_total_input').value = precoTotal.toFixed(2);
-            document.getElementById('peso_total_input').value = pesoTotal.toFixed(2);
-
-            // Adiciona produtos selecionados ao campo oculto
-            const produtosSelecionados = [];
-            document.querySelectorAll('.produto-card.produto-selecionado').forEach(function(selectedCard) {
-                produtosSelecionados.push({
-                    label: selectedCard.getAttribute('data-label'),
-                    preco: selectedCard.getAttribute('data-preco'),
-                    peso: selectedCard.getAttribute('data-peso'),
-                    quantidade: selectedCard.getAttribute('data-quantidade'),
-                });
-            });
-
-            document.getElementById('produtos_selecionados_input').value = JSON.stringify(produtosSelecionados);
-
-            // Habilita ou desabilita o botão de vender
-            document.getElementById('CadAulas').disabled = pesoTotal <= 0;
-        });
-    });
-
-    // Filtragem de produtos
-    document.getElementById('filter_produtos').addEventListener('input', function() {
-        const filterValue = this.value.toLowerCase(); // Converte para minúsculas
-        const produtos = document.querySelectorAll('.produto-card');
-
-        produtos.forEach(function(produto) {
-            const label = produto.getAttribute('data-label').toLowerCase(); // Converte para minúsculas
-            if (label.includes(filterValue)) {
-                produto.style.display = ''; // Mostra o produto se corresponder ao filtro
-            } else {
-                produto.style.display = 'none'; // Esconde o produto se não corresponder
-            }
-        });
-    });
-</script>
 {% endblock %}
 
 

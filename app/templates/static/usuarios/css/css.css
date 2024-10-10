@@ -354,6 +354,7 @@ footer {
     background-color: rgba(211, 211, 211, 0.8); /* Cinza suave */
     transition: width 0.3s; /* Transição suave */
     overflow-x: hidden; /* Oculta o conteúdo que ultrapassa a largura */
+    /* box-shadow: 10px 0 0 rgba(105, 105, 105, 0.8); */
 }
 
 .sidebar:hover {
@@ -455,6 +456,30 @@ footer {
 
 
 /* Inicio Quadrado dos produtos/vendas */
+.quantity-selector-venda {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.quantity-selector-venda button {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    padding: 10px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.quantity-selector-venda input {
+    width: 40px;
+    text-align: center;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin: 0 10px;
+    font-size: 12px;
+    background-color: #fff;
+}
+
 .produtos-container {
     display: flex;
     flex-wrap: wrap;

@@ -275,12 +275,9 @@ def Capturar_Valores_Post_Tela_Vendas(produto):
     quantidade = int(quantidade)
     peso_item_total = peso
 
-    if peso <= 0.500 and quantidade > 1:
-        peso_item_total *= 2
-        preco *= 2
-        quantidade = 2
-    else:
-        quantidade = 1
+    if peso <= 1 and quantidade > 1:
+        peso_item_total *= quantidade
+        preco *= quantidade
 
     return nome_produto, preco, peso, peso_item_total, quantidade
 
@@ -299,7 +296,7 @@ def Criando_Vendas_Controle(request, nome_cliente, num_sequencial, id_comunidade
         valor_pago = 0,
         falta_editar = contador_vendas,
         falta_c_ou_e = contador_vendas,
-        forma_venda = forma_venda
+        forma_venda = forma_venda,
     )
     vendacontrole.save()
 
@@ -360,23 +357,10 @@ def Criando_Vendas(request, id_nome_produto, quantidade, peso, peso_total, forma
     venda.save()
 
 
-def Cadastro_Planilhas_Troca_E_Estorno_Vendas(request, id_user, nome_produto_str, quantidade, vendacontrole, slugp, slug_comunidade):
-    excel_venda_T_E = Excel_T_E(acao="Venda_Item",
-                                tipo = "Venda",
-                                id_user = id_user,
-                                criado_por=request.user,
-                                nome_produto = nome_produto_str,
-                                quantidade_antiga = quantidade,
-                                quantidade_nova = 0,
-                                id_venda = vendacontrole,
-                                slug = slugp,
-                                nome_e_cidade_comunidade = slug_comunidade)
-    excel_venda_T_E.save()
-
-
-def Atualiza_Venda_Controle(num_sequencial, preco_total_controle, nome_dos_produtos):
+def Atualiza_Venda_Controle(num_sequencial, preco_total_controle, nome_dos_produtos, peso_total_controle):
     vendacontrole = VendasControle.objects.get(id_venda=num_sequencial)        
     vendacontrole.preco_venda_total = preco_total_controle
     vendacontrole.novo_preco_venda_total = preco_total_controle
     vendacontrole.label_vendas_get = nome_dos_produtos
+    vendacontrole.peso_venda_total = peso_total_controle
     vendacontrole.save()

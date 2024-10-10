@@ -70,6 +70,7 @@ class Produto(models.Model):
     cod_produto = models.CharField(max_length=10, blank=True, null=True)
     cod_barras = models.CharField(max_length=50, blank=True, null=True)
     peso = models.DecimalField(max_digits=5, decimal_places=3, default=0)
+    tipo_peso = models.CharField(max_length=2, default=0)
 
     def equals(self, other):
         """Compara se dois objetos Produto são iguais"""
@@ -126,33 +127,7 @@ class P_Excel(models.Model):
             self.data = data_criacao_m
             data_criacao_g = datetime.strptime(data_criacao_g, '%d/%m/%Y').date()
             self.dia = data_criacao_g
-        super().save(*args, **kwargs)       
-
-
-class Excel_T_E(models.Model):
-    acao = models.CharField(max_length=20)
-    tipo = models.CharField(max_length=20)
-    id_user = models.IntegerField(blank=True, null=True)
-    criado_por = models.CharField(max_length=128, unique=False, null=True, editable=False)
-    data_criacao = models.CharField(max_length=20, null=True, editable=False)
-    nome_produto = models.CharField(max_length=128, unique=False)
-    id_venda = models.CharField(max_length=10)
-    quantidade_antiga = models.IntegerField(blank=True, null=True)
-    quantidade_nova = models.IntegerField(blank=True, null=True)
-    dia = models.CharField(max_length=10, null=True, editable=False)
-    nome_e_cidade_comunidade = models.CharField(max_length=128, default=0)
-    slug = models.SlugField(unique=True, blank=True, null=True)
-
-    def save(self, *args, **kwargs):
-        if not self.data_criacao:
-            data_modelo2 = timezone.localtime(timezone.now())
-            data_criacao_m = data_modelo2.strftime("%d/%m/%Y %H:%M:%S")
-            data_criacao_g = data_modelo2.strftime("%d/%m/%Y")
-            self.data_criacao = data_criacao_m
-            data_criacao_g = datetime.strptime(data_criacao_g, '%d/%m/%Y').date()
-            self.dia = data_criacao_g
-            
-        super().save(*args, **kwargs)   
+        super().save(*args, **kwargs)
 
 
 class LogsItens(models.Model):
@@ -195,6 +170,7 @@ class VendasControle(models.Model):
     nome_cliente = models.CharField(max_length=128, unique=False, null=True, editable=False)
     id_venda = models.CharField(max_length=10, primary_key=True)
     preco_venda_total = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True, editable=False)
+    peso_venda_total = models.DecimalField(max_digits=5, decimal_places=3, default=0)
     slug = models.SlugField(unique=True, blank=True, null=True)
     venda_finalizada = models.IntegerField(null=False, blank=False)
     nome_comunidade = models.ForeignKey(Comunidade, on_delete=models.PROTECT, null=True)
