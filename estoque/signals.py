@@ -5,6 +5,8 @@ from django.contrib.auth import get_user_model
 from usuarios.models import Users
 from django.utils import timezone
 from decimal import Decimal
+from .funcoes_comunidades import *
+
 
 User = get_user_model()
 ################################ PRODUTO ################################
@@ -330,9 +332,7 @@ def vendas_deleted(sender, instance, **kwargs):
     id_user = Users.objects.get(username=username)
     id_user = id_user.id
     
-    data_modelo_update = timezone.localtime(timezone.now())
-    data_modelo_update_1 = data_modelo_update.strftime("%d/%m/%Y %H:%M:%S") 
-    data_alteracao = data_modelo_update_1
+    data_alteracao = Capturar_Ano_E_Hora_Atual()
 
     existe_saida_venda = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Saída")
     if existe_saida_venda:
@@ -343,8 +343,6 @@ def vendas_deleted(sender, instance, **kwargs):
         existe_saida_venda.save()
     #Fim - Retirando quantidade da p_excel
 
-    if vendas_exclusao.cor_id:
-        campos_exclusao.append('cor')
     if vendas_exclusao.id_venda_id:
         campos_exclusao.append('id_venda')
     if vendas_exclusao.venda_finalizada:
@@ -363,8 +361,6 @@ def vendas_deleted(sender, instance, **kwargs):
         campos_exclusao.append('preco_venda')
     if vendas_exclusao.preco_venda_total:
         campos_exclusao.append('preco_venda_total')
-    if vendas_exclusao.desconto_total:
-        campos_exclusao.append('desconto_total')
     if vendas_exclusao.criado_por:
         campos_exclusao.append('criado_por')
 
@@ -407,13 +403,10 @@ def vendas_geral_deleted(sender, instance, **kwargs):
     vendas_exclusao.nome_cliente = str(vendas_exclusao.nome_cliente)
     vendas_exclusao.id_venda = str(vendas_exclusao.id_venda)
     vendas_exclusao.preco_venda_total = str(vendas_exclusao.preco_venda_total)
-    vendas_exclusao.desconto_total = str(vendas_exclusao.desconto_total)
-    vendas_exclusao.desconto_autorizado = str(vendas_exclusao.desconto_autorizado)
-    vendas_exclusao.autorizado_por = str(vendas_exclusao.autorizado_por)
     vendas_exclusao.venda_finalizada = str(vendas_exclusao.venda_finalizada)
     vendas_exclusao.valor_cancelado = str(vendas_exclusao.valor_cancelado)
     vendas_exclusao.valor_pago = str(vendas_exclusao.valor_pago)
-    vendas_exclusao.ano_festa_id = str(vendas_exclusao.ano_festa_id)
+    vendas_exclusao.nome_comunidade_id = str(vendas_exclusao.nome_comunidade_id)
 
     if vendas_exclusao.nome_cliente:
         campos_exclusao.append('nome_cliente')
@@ -421,18 +414,14 @@ def vendas_geral_deleted(sender, instance, **kwargs):
         campos_exclusao.append('id_venda')
     if vendas_exclusao.preco_venda_total:
         campos_exclusao.append('preco_venda_total') 
-    if vendas_exclusao.desconto_total:
-        campos_exclusao.append('desconto_total') 
-    if vendas_exclusao.autorizado_por:
-        campos_exclusao.append('autorizado_por') 
     if vendas_exclusao.venda_finalizada:
         campos_exclusao.append('venda_finalizada')
     if vendas_exclusao.valor_cancelado:
         campos_exclusao.append('valor_cancelado')
     if vendas_exclusao.valor_pago:
         campos_exclusao.append('valor_pago')
-    if vendas_exclusao.ano_festa_id:
-        campos_exclusao.append('ano_festa_id')
+    if vendas_exclusao.nome_comunidade_id:
+        campos_exclusao.append('nome_comunidade_id')
 
     if campos_exclusao:
         valores_exclusao = []

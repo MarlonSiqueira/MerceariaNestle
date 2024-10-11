@@ -1357,22 +1357,19 @@ def excluir_venda(request, slug):
         else:#Caso não tenha sido excluído ele chama o registro.
             vendas_deleted(sender=Vendas, instance=venda, user=request.user)
         if venda:
-            produto_estornar = Produto.objects.filter(label=produto_venda)
-            if produto_estornar:
-                excel_t_e = Excel_T_E.objects.get(slug=slug)
-                excel_t_e.delete()
-
+            produto_cancelar = Produto.objects.filter(label=produto_venda)
+            if produto_cancelar:
                 conferir_venda.novo_preco_venda_total -= preco_total #Retirando o preço do item removido, da tabela de venda controle
                 conferir_venda.valor_cancelado += preco_total #Somando o valor do item cancelado
                 conferir_venda.falta_editar -= 1
                 conferir_venda.save()
 
-                produto_estornar = Produto.objects.get(label=produto_venda)
-                id_produto = produto_estornar.id #Pegando ID do produto onde deve estornar a quantidade NÃO VENDIDA
-                quantidade_atual_produto = produto_estornar.quantidade #Pegando a quantidade atual do produto
+                produto_cancelar = Produto.objects.get(label=produto_venda)
+                id_produto = produto_cancelar.id #Pegando ID do produto onde deve estornar a quantidade NÃO VENDIDA
+                quantidade_atual_produto = produto_cancelar.quantidade #Pegando a quantidade atual do produto
 
-                produto_estornar.quantidade = quantidade_atual_produto + quantidade_estornar #devolvendo a quantidade NÃO VENDIDA ao produto
-                produto_estornar.save()
+                produto_cancelar.quantidade = quantidade_atual_produto + quantidade_estornar #devolvendo a quantidade NÃO VENDIDA ao produto
+                produto_cancelar.save()
 
                 venda.delete() #deletando a venda não realizada do banco.
 
@@ -1421,28 +1418,34 @@ def excluir_venda_geral(request, slug):
         vendas_geral = Vendas.objects.filter(id_venda=slug) #Pegando todas as vendas com o mesmo id_venda
         vendas_geralzao = vendas_geral.count() #Pegando a quantidade de linhas da Query acima
 
+        opcao = "id_venda"
+        resultado_venda_controle = Consultar_Venda_Controle(slug, opcao)
+        id_comunidade = resultado_venda_controle[2]
+
+        opcao = "id"
+        resultado_comunidade = Consultar_Uma_Comunidade(id_comunidade, opcao)
+        slug_da_comunidade = resultado_comunidade[1]
+        
         conferir_venda = VendasControle.objects.get(slug=slug) #pegando a compra com o mesmo id_venda
         quantidade_estornar = [] 
         produto_venda = [] 
-        anofesta = []
+        nome_comunidade_id = []
         preco_total = []
-        ano_festa = 0
         valor_total_cancelado = 0
-        for venda in vendas:#Loop For para colocar quantidade, nome do produto, anofesta e preco dentro de arrays.
+        for venda in vendas:#Loop For para colocar quantidade, nome do produto, nome_comunidade_id e preco dentro de arrays.
             quantidade_estornar.append(venda.quantidade)
             produto_venda.append(venda.label_vendas_get)
-            anofesta.append(venda.ano_festa)
+            nome_comunidade_id.append(venda.nome_comunidade_id)
             preco_total.append(venda.preco_venda_total)    
-            ano_festa = venda.ano_festa
             valor_total_cancelado += venda.preco_venda_total
-            slug_da_venda = venda.slug
             vendas_deleted(sender=Vendas, instance=venda, user=request.user)#Enviando cada venda deletada para o log em vendas_deleted no signals
             venda.delete() #Deletando cada venda
-            excel_t_e = Excel_T_E.objects.get(slug=slug_da_venda)
-            excel_t_e.delete()
         if vendas:
             for produto_label, quantidade, preco in zip(produto_venda, quantidade_estornar, preco_total):#Devolvendo o produto ao estoque após deletar.
-                produto_estornar = Produto.objects.get(label=produto_label)
+                BuscaProduto = Q(
+                    Q(label=produto_label) & Q(nome_comunidade_id=id_comunidade)     
+                ) 
+                produto_estornar = Produto.objects.get(BuscaProduto)
                 id_produto = produto_estornar.id
                 quantidade_a_estornar = produto_estornar.quantidade
                 produto_estornar.quantidade =  quantidade_a_estornar + quantidade
@@ -1457,11 +1460,12 @@ def excluir_venda_geral(request, slug):
                 conferir_venda.valor_cancelado += valor_total_cancelado
                 conferir_venda.novo_preco_venda_total -= valor_total_cancelado
                 conferir_venda.save()
+
             messages.add_message(request, messages.SUCCESS, 'Venda Cancelada com sucesso')
-            return redirect(reverse('vendas_finalizadas', kwargs={"slug":ano_festa}))
+            return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_da_comunidade}))
         else:
             messages.add_message(request, messages.ERROR, 'Houve um erro no cancelamento dessa venda, caso persista contate o administrador')
-            return redirect(reverse('vendas_finalizadas', kwargs={"slug":ano_festa}))
+            return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug_da_comunidade}))
 
 
 #Função para a tela de confirmar venda
