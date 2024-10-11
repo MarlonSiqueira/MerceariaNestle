@@ -13,7 +13,6 @@
                 <option selected disabled value="">Selecione</option>
                 <option value="username">Username</option>
                 <option value="e-mail">E-mail</option>
-                <option value="anofesta">Ano Festa</option>
                 <option value="cargo">Cargo</option>
                 <option value="acesso">Acesso</option>
             </select>
@@ -37,33 +36,19 @@
             <label>Novo Sobrenome:</label>
             <input type="text" placeholder="Digite o novo sobrenome" name="novo_sobrenome" id="novo_sobrenome" class="form-control">
             <br>
-            {% elif opcao == "anofesta" %}
-            <label>Novo Ano do Usuário:</label>
-            <input type="text" placeholder="Digite o ano atual para confirmar (validade 2 anos)" name="novo_ano" id="novo_ano" class="form-control">
-            <br>
             {% elif opcao == "cargo" %}
                 <label>Novo Cargo do Usuário:</label>
-                {% if cargo_user_logado == "A" or cargo_user_logado == "P" %}
+                {% if cargo_user_logado == "A" %}
                     <select class="form-control" name="novo_cargo">
                         <option selected disabled value="">Selecione</option>
+                        <option value="R">Responsável Geral</option>
                         <option value="O">Organizador</option>
-                        <option value="C">Caixa</option>
-                        <option value="CL">Casal Lojinha</option>
-                        <option value="CF">Casal Festa</option>
                     </select>
-                    {% elif cargo_user_logado == "CF" %}
+                    {% elif cargo_user_logado == "R" %}
                         <select class="form-control" name="novo_cargo">
                             <option selected disabled value="">Selecione</option>
                             <option value="O">Organizador</option>
-                            <option value="C">Caixa</option>
-                            <option value="CL">Casal Lojinha</option>
                         </select>
-                    {% elif cargo_user_logado == "CL" %}
-                    <select class="form-control" name="novo_cargo">
-                        <option selected disabled value="">Selecione</option>
-                        <option value="O">Organizador</option>
-                        <option value="C">Caixa</option>
-                    </select>
                 {% endif %}
                 <br>
             {% elif opcao == "acesso" %}
@@ -76,7 +61,6 @@
             <br>
             {% endif %}
             {% if username %}
-            <a class="btn btn-info" style="color: white;" href="{% url 'home' %}" class="btnbtn-primary">Voltar</a>
             <input type="submit" value="Enviar" class="btn btn-success">
             {% endif %}
         </form>
@@ -131,8 +115,6 @@
 
             $(this).val(sobrenome);
         });
-
-        $('#novo_ano').mask('0000')
     });
 
 </script>

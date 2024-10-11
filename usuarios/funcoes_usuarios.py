@@ -212,3 +212,271 @@ def Validacoes_Post_Cadastro_Usuario_Validacoes_Usuario(request, slug, cargo, id
         enviar_email(destinatario, cargo, nome_usuario_email, username)
     
     return None
+
+
+def Alterar_Permissao_De_Login_Usuario(request, username_encontrado, configurar_acesso, username, verificador, cargo_user_logado):
+    with transaction.atomic():
+        user_antigo = None
+        user_antigo = Users.objects.get(username=username_encontrado)#Verificando se o usuario preenchido existe
+        id_user_antigo = user_antigo.id
+        cargo = user_antigo.cargo
+        acesso_option = user_antigo.is_active #Função get_"nomedocampo"_display() retorna o que está em choices na models.
+        permissao = ''
+        campos_alteracao = []
+
+        if configurar_acesso == 'True':
+            permissao = 'Ativado'
+        elif configurar_acesso == 'False':
+            permissao = 'Desativado'
+
+        if configurar_acesso == str(acesso_option):
+            transaction.set_rollback(True)
+            messages.add_message(request, messages.ERROR, f'O usuário {username} já está com a permissão escolhida: {permissao}')
+            return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}'), id_user_antigo, campos_alteracao, user_antigo
+        elif cargo_user_logado != "A":
+            if cargo == "A" or cargo == "R":
+                transaction.set_rollback(True)
+                messages.add_message(request, messages.ERROR, 'Você não pode alterar a permissão de acesso desse usuário')
+                return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}'), id_user_antigo, campos_alteracao, user_antigo
+        if user_antigo:
+            user_antigo.is_active = str(user_antigo.is_active)
+
+            if user_antigo.is_active != configurar_acesso:
+                campos_alteracao.append('is_active')
+    
+    return None, id_user_antigo, campos_alteracao, user_antigo
+
+
+def Salvar_Alteracao_Permissao_De_Login_Usuario_E_Logs(request, username, configurar_acesso, data_alteracao, alterado_por, id_user_antigo, campos_alteracao, user_antigo):
+    with transaction.atomic():
+        user = Users.objects.get(username=username)
+        user.is_active = configurar_acesso
+        user.data_alteracao = data_alteracao
+        user.alterado_por = alterado_por
+        user.save()
+
+        user_novo = None
+        user_novo = Users.objects.get(id=id_user_antigo)
+        if campos_alteracao:
+            valores_antigos = []
+            valores_novos = []
+            for campo in campos_alteracao:
+                valor_antigo = getattr(user_antigo, campo)
+                valor_novo = getattr(user_novo, campo)
+                valores_antigos.append(f'{campo}: {valor_antigo}')
+                valores_novos.append(f'{campo}: {valor_novo}')
+        
+        id_user = Users.objects.get(username=request.user)
+        id_user = id_user.id
+        LogsItens.objects.create(
+            id_user = id_user,
+            nome_user=request.user,
+            nome_objeto=str(username),
+            acao='Alteração',
+            model = "Usuario",
+            campos_alteracao=', '.join(campos_alteracao),
+            valores_antigos=', '.join(valores_antigos),
+            valores_novos=', '.join(valores_novos)
+        )
+
+
+def Alterar_Cargo_Usuario(request, username_encontrado, novo_cargo, username, verificador, cargo_user_logado):
+    with transaction.atomic():
+        user_antigo = None
+        user_antigo = Users.objects.get(username=username_encontrado)#Verificando se o usuario preenchido existe
+        id_user_antigo = user_antigo.id
+        cargo = user_antigo.cargo
+        nome_cargo = user_antigo.get_cargo_display() #Função get_"nomedocampo"_display() retorna o que está em choices na models.
+        campos_alteracao = []
+
+        if novo_cargo == cargo:
+            transaction.set_rollback(True)
+            messages.add_message(request, messages.ERROR, f'O usuário {username} já é do cargo: {nome_cargo}')
+            return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}'), id_user_antigo, campos_alteracao, user_antigo
+        elif cargo_user_logado != "A":
+            if cargo == "A" or cargo == "R":
+                transaction.set_rollback(True)
+                messages.add_message(request, messages.ERROR, 'Você não pode alterar o Cargo desse usuário')
+                return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}'), id_user_antigo, campos_alteracao, user_antigo
+        if user_antigo:
+            user_antigo.cargo = str(user_antigo.cargo)
+
+            if user_antigo.cargo != novo_cargo:
+                campos_alteracao.append('cargo')
+
+    return None, id_user_antigo, campos_alteracao, user_antigo
+
+
+def Salvar_Alteracao_Cargo_Usuario_E_Logs(request, username, novo_cargo, data_alteracao, alterado_por, id_user_antigo, campos_alteracao, user_antigo):
+    with transaction.atomic():
+        user = Users.objects.get(username=username)
+        user.cargo = novo_cargo
+        user.data_alteracao = data_alteracao
+        user.alterado_por = alterado_por
+        user.save()
+
+        user_novo = None
+        user_novo = Users.objects.get(id=id_user_antigo)
+        if campos_alteracao:
+            valores_antigos = []
+            valores_novos = []
+            for campo in campos_alteracao:
+                valor_antigo = getattr(user_antigo, campo)
+                valor_novo = getattr(user_novo, campo)
+                valores_antigos.append(f'{campo}: {valor_antigo}')
+                valores_novos.append(f'{campo}: {valor_novo}')
+        
+        id_user = Users.objects.get(username=request.user)
+        id_user = id_user.id
+        LogsItens.objects.create(
+            id_user = id_user,
+            nome_user=request.user,
+            nome_objeto=str(username),
+            acao='Alteração',
+            model = "Usuario",
+            campos_alteracao=', '.join(campos_alteracao),
+            valores_antigos=', '.join(valores_antigos),
+            valores_novos=', '.join(valores_novos)
+        )
+
+
+def Alterar_Username_Usuario(request, username_encontrado, novo_nome, novo_sobrenome, username, verificador, cargo_user_logado):
+    with transaction.atomic():
+        user_antigo = None
+        user_antigo = Users.objects.get(username=username_encontrado)#Verificando se o usuario preenchido existe
+        id_user_antigo = user_antigo.id
+        cargo = user_antigo.cargo
+        username_atual = user_antigo.username
+        campos_alteracao = []
+
+        novo_username = novo_nome + "." + novo_sobrenome
+        verifica_usuario_existente = Users.objects.filter(username=novo_username)
+        if username_atual == novo_username:
+            transaction.set_rollback(True)
+            messages.add_message(request, messages.ERROR, 'O novo username do usuário não pode ser idêntico ao existente')
+            return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}'), id_user_antigo, campos_alteracao, user_antigo, novo_username
+        elif verifica_usuario_existente:
+            transaction.set_rollback(True)
+            messages.add_message(request, messages.ERROR, 'Esse usuário já existe, por favor tente outro')
+            return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}'), id_user_antigo, campos_alteracao, user_antigo, novo_username
+
+        if cargo_user_logado != "A":
+            if cargo == "A" or cargo == "R":
+                transaction.set_rollback(True)
+                messages.add_message(request, messages.ERROR, 'Você não pode alterar o username desse usuário')
+                return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}'), id_user_antigo, campos_alteracao, user_antigo, novo_username
+
+        if user_antigo:
+            user_antigo.username = str(user_antigo.username)
+            user_antigo.first_name = str(user_antigo.first_name)
+            user_antigo.last_name = str(user_antigo.last_name)
+
+            if user_antigo.username != novo_username:
+                campos_alteracao.append('username')
+            if user_antigo.first_name != novo_nome:
+                campos_alteracao.append('first_name') 
+            if user_antigo.last_name != novo_sobrenome:
+                campos_alteracao.append('last_name') 
+        
+    return None, id_user_antigo, campos_alteracao, user_antigo, novo_username
+
+
+def Salvar_Alteracao_Username_Usuario_E_Logs(request, username, novo_nome, novo_sobrenome, data_alteracao, alterado_por, id_user_antigo, campos_alteracao, user_antigo, novo_username):
+    with transaction.atomic():
+        user = Users.objects.get(username=username)
+        user.username = novo_username
+        user.first_name = novo_nome
+        user.last_name = novo_sobrenome
+        user.data_alteracao = data_alteracao
+        user.alterado_por = alterado_por
+        user.save()
+
+        user_novo = None
+        user_novo = Users.objects.get(id=id_user_antigo)
+        if campos_alteracao:
+            valores_antigos = []
+            valores_novos = []
+            for campo in campos_alteracao:
+                valor_antigo = getattr(user_antigo, campo)
+                valor_novo = getattr(user_novo, campo)
+                valores_antigos.append(f'{campo}: {valor_antigo}')
+                valores_novos.append(f'{campo}: {valor_novo}')
+        
+        id_user = Users.objects.get(username=request.user)
+        id_user = id_user.id
+        LogsItens.objects.create(
+            id_user = id_user,
+            nome_user=request.user,
+            nome_objeto=str(username),
+            acao='Alteração',
+            model = "Usuario",
+            campos_alteracao=', '.join(campos_alteracao),
+            valores_antigos=', '.join(valores_antigos),
+            valores_novos=', '.join(valores_novos)
+        )
+
+
+def Alterar_Email_Usuario(request, username_encontrado, novo_email, username, verificador, cargo_user_logado):
+    with transaction.atomic():
+        user_antigo = None
+        user_antigo = Users.objects.get(username=username_encontrado)#Verificando se o usuario preenchido existe
+        id_user_antigo = user_antigo.id
+        cargo = user_antigo.cargo
+        email = user_antigo.email
+        campos_alteracao = []
+
+        verifica_email_existente = Users.objects.filter(email=novo_email)
+        if cargo_user_logado != "A":
+            if cargo == "A" or cargo == "R":
+                transaction.set_rollback(True)
+                messages.add_message(request, messages.ERROR, 'Você não pode alterar o e-mail desse usuário')
+                return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}'), id_user_antigo, campos_alteracao, user_antigo
+        elif email == novo_email:
+            transaction.set_rollback(True)
+            messages.add_message(request, messages.ERROR, 'O novo e-mail do usuário não pode ser idêntico a um já existente')
+            return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}'), id_user_antigo, campos_alteracao, user_antigo
+        elif verifica_email_existente:
+            transaction.set_rollback(True)
+            messages.add_message(request, messages.ERROR, 'O novo e-mail do usuário não pode ser idêntico a um já existente')
+            return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}'), id_user_antigo, campos_alteracao, user_antigo
+        
+        if user_antigo:
+            user_antigo.email = str(user_antigo.email)
+
+            if user_antigo.email != novo_email:
+                campos_alteracao.append('email')
+
+    return None, id_user_antigo, campos_alteracao, user_antigo
+
+
+def Salvar_Alteracao_Email_Usuario_E_Logs(request, username, novo_email, data_alteracao, alterado_por, id_user_antigo, campos_alteracao, user_antigo):
+    with transaction.atomic():
+        user = Users.objects.get(username=username)
+        user.email = novo_email
+        user.data_alteracao = data_alteracao
+        user.alterado_por = alterado_por
+        user.save()
+
+        user_novo = None
+        user_novo = Users.objects.get(id=id_user_antigo)
+        if campos_alteracao:
+            valores_antigos = []
+            valores_novos = []
+            for campo in campos_alteracao:
+                valor_antigo = getattr(user_antigo, campo)
+                valor_novo = getattr(user_novo, campo)
+                valores_antigos.append(f'{campo}: {valor_antigo}')
+                valores_novos.append(f'{campo}: {valor_novo}')
+        
+        id_user = Users.objects.get(username=request.user)
+        id_user = id_user.id
+        LogsItens.objects.create(
+            id_user = id_user,
+            nome_user=request.user,
+            nome_objeto=str(username),
+            acao='Alteração',
+            model = "Usuario",
+            campos_alteracao=', '.join(campos_alteracao),
+            valores_antigos=', '.join(valores_antigos),
+            valores_novos=', '.join(valores_novos)
+        )

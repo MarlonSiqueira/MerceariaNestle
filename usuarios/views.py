@@ -682,7 +682,7 @@ def alterar_usuarios(request):
         username = request.GET.get('username')
         opcao = request.GET.get('opcao')
 
-        if opcao == "e-mail" or opcao == "anofesta" or opcao == "username" or opcao == "cargo" or opcao == "acesso" or not opcao:
+        if opcao == "e-mail" or opcao == "username" or opcao == "cargo" or opcao == "acesso" or not opcao:
             if username and not opcao:
                 messages.add_message(request, messages.ERROR, 'Não altere a URL manualmente')#Respondendo que a URL está sendo alterada
                 return redirect(reverse('alterar_usuarios'))
@@ -702,7 +702,14 @@ def alterar_usuarios(request):
                         messages.add_message(request, messages.ERROR, 'Você não pode alterar suas próprias informações')
                         return redirect(reverse('alterar_usuarios'))
                     if username == nome_user or not username:
-                        return render(request, 'alterar_usuarios.html', {'username': username, 'cargo_user_logado':cargo_user_logado, 'opcao': opcao})
+                        url_atual = Capturar_Url_Atual_Sem_O_Final(request)
+                        context = {
+                            'url_atual': url_atual,
+                            'username': username,
+                            'cargo_user_logado':cargo_user_logado,
+                            'opcao': opcao
+                        }
+                        return render(request, 'alterar_usuarios.html', context)
                 else:
                     messages.add_message(request, messages.ERROR, 'Não altere a URL manualmente')#Respondendo que a URL está sendo alterada
                     return redirect(reverse('alterar_usuarios'))
@@ -723,13 +730,10 @@ def alterar_usuarios(request):
         novo_email = request.POST.get('novo_email')
         novo_nome = request.POST.get('novo_nome')
         novo_sobrenome = request.POST.get('novo_sobrenome')
-        novo_ano = request.POST.get('novo_ano')
         novo_cargo = request.POST.get('novo_cargo')
         configurar_acesso = request.POST.get('configurar_acesso')
 
-        alteracao = timezone.localtime(timezone.now())
-        data_alteracao = alteracao.strftime("%d/%m/%Y %H:%M:%S") #Passando pra string
-        ano_atual = alteracao.strftime("%Y")  #Pegando o Ano atual
+        data_alteracao = Capturar_Ano_E_Hora_Atual()
         alterado_por = str(request.user)
 
         verificador = ""
@@ -741,8 +745,6 @@ def alterar_usuarios(request):
             verificador = "username"
         elif novo_sobrenome:
             verificador = "username"
-        elif novo_ano:
-            verificador = "anofesta"
         elif novo_cargo:
             verificador = "cargo"
         elif configurar_acesso:
@@ -772,293 +774,49 @@ def alterar_usuarios(request):
         username = username_encontrado
 
         if username_encontrado and novo_email:
-            user_antigo = None
-            user_antigo = Users.objects.get(username=username_encontrado)#Verificando se o usuario preenchido existe
-            id_user_antigo = user_antigo.id
-            cargo = user_antigo.cargo
-            email = user_antigo.email
 
-            if cargo_user_logado != "A":
-                if cargo == "A" or cargo == "P" or cargo == "CF" or cargo == "CL":
-                    messages.add_message(request, messages.ERROR, 'Você não pode alterar o e-mail desse usuário')#Respondendo que o cargo não pode sofrer alteração
-                    return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}')
-            elif email == novo_email:
-                messages.add_message(request, messages.ERROR, 'O novo e-mail do usuário não pode ser idêntico ao existente')#Respondendo que o e-mail é igual
-                return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}')
-            campos_alteracao = []
-            if user_antigo:
-                user_antigo.email = str(user_antigo.email)
+            validacao_alteracao, id_user_antigo, campos_alteracao, user_antigo = Alterar_Email_Usuario(request, username_encontrado, novo_email, username, verificador, cargo_user_logado)
 
-                if user_antigo.email != novo_email:
-                    campos_alteracao.append('email') 
+            if validacao_alteracao:
+                return validacao_alteracao
 
-            user = Users.objects.get(username=username)
-            user.email = novo_email
-            user.data_alteracao = data_alteracao
-            user.alterado_por = alterado_por
-            user.save()
-
-            user_novo = None
-            user_novo = Users.objects.get(id=id_user_antigo)
-            if campos_alteracao:
-                valores_antigos = []
-                valores_novos = []
-                for campo in campos_alteracao:
-                    valor_antigo = getattr(user_antigo, campo)
-                    valor_novo = getattr(user_novo, campo)
-                    valores_antigos.append(f'{campo}: {valor_antigo}')
-                    valores_novos.append(f'{campo}: {valor_novo}')
-            
-            id_user = Users.objects.get(username=request.user)
-            id_user = id_user.id
-            LogsItens.objects.create(
-                id_user = id_user,
-                nome_user=request.user,
-                nome_objeto=str(username),
-                acao='Alteração',
-                model = "Usuario",
-                campos_alteracao=', '.join(campos_alteracao),
-                valores_antigos=', '.join(valores_antigos),
-                valores_novos=', '.join(valores_novos)
-            )
-
+            Salvar_Alteracao_Email_Usuario_E_Logs(request, username, novo_email, data_alteracao, alterado_por, id_user_antigo, campos_alteracao, user_antigo)
+        
             messages.add_message(request, messages.SUCCESS, f'E-mail do usuário: {username} alterado com sucesso.')
             return redirect(reverse('home'))
 
         elif username_encontrado and novo_nome and novo_sobrenome:
-            user_antigo = None
-            user_antigo = Users.objects.get(username=username_encontrado)#Verificando se o usuario preenchido existe
-            id_user_antigo = user_antigo.id
-            cargo = user_antigo.cargo
-            username_atual = user_antigo.username
-            
-            novo_username = novo_nome + "." + novo_sobrenome
-            if cargo_user_logado != "A":
-                if cargo == "A" or cargo == "P" or cargo == "CF" or cargo == "CL":
-                    messages.add_message(request, messages.ERROR, 'Você não pode alterar o username desse usuário')#Respondendo que o cargo não pode sofrer alteração
-                    return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}')
-            elif username_atual == novo_username:
-                messages.add_message(request, messages.ERROR, 'O novo username do usuário não pode ser idêntico ao existente')#Respondendo que o username é igual
-                return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}')
-            campos_alteracao = []
-            if user_antigo:
-                user_antigo.username = str(user_antigo.username)
-                user_antigo.first_name = str(user_antigo.first_name)
-                user_antigo.last_name = str(user_antigo.last_name)
 
-                if user_antigo.username != novo_username:
-                    campos_alteracao.append('username')
-                if user_antigo.first_name != novo_nome:
-                    campos_alteracao.append('first_name') 
-                if user_antigo.last_name != novo_sobrenome:
-                    campos_alteracao.append('last_name') 
+            validacao_alteracao, id_user_antigo, campos_alteracao, user_antigo, novo_username = Alterar_Username_Usuario(request, username_encontrado, novo_nome, novo_sobrenome, username, verificador, cargo_user_logado)
 
-            user = Users.objects.get(username=username)
-            user.username = novo_username
-            user.first_name = novo_nome
-            user.last_name = novo_sobrenome
-            user.data_alteracao = data_alteracao
-            user.alterado_por = alterado_por
-            user.save()
+            if validacao_alteracao:
+                return validacao_alteracao
 
-            user_novo = None
-            user_novo = Users.objects.get(id=id_user_antigo)
-            if campos_alteracao:
-                valores_antigos = []
-                valores_novos = []
-                for campo in campos_alteracao:
-                    valor_antigo = getattr(user_antigo, campo)
-                    valor_novo = getattr(user_novo, campo)
-                    valores_antigos.append(f'{campo}: {valor_antigo}')
-                    valores_novos.append(f'{campo}: {valor_novo}')
-            
-            id_user = Users.objects.get(username=request.user)
-            id_user = id_user.id
-            LogsItens.objects.create(
-                id_user = id_user,
-                nome_user=request.user,
-                nome_objeto=str(username),
-                acao='Alteração',
-                model = "Usuario",
-                campos_alteracao=', '.join(campos_alteracao),
-                valores_antigos=', '.join(valores_antigos),
-                valores_novos=', '.join(valores_novos)
-            )
+            Salvar_Alteracao_Username_Usuario_E_Logs(request, username, novo_nome, novo_sobrenome, data_alteracao, alterado_por, id_user_antigo, campos_alteracao, user_antigo, novo_username)
 
-            messages.add_message(request, messages.SUCCESS, f'Username do usuário: {username} alterado com sucesso.')
+            messages.add_message(request, messages.SUCCESS, f'Username do usuário: {username} alterado com sucesso para: "{novo_username}"')
             return redirect(reverse('home'))
-        elif username_encontrado and novo_ano:
-            user_antigo = None
-            user_antigo = Users.objects.get(username=username_encontrado)#Verificando se o usuario preenchido existe
-            id_user_antigo = user_antigo.id
-            cargo = user_antigo.cargo
-            festa_usuario = user_antigo.festa_usuario
-            
-            # festa = Festa.objects.get(ano_festa=ano_atual)#Pegando o ano Atual
-            # id_ano_festa = festa.id
 
-            if novo_ano != ano_atual:
-                messages.add_message(request, messages.ERROR, 'Você não está digitando o ano atual')#Respondendo que o ano digitado não é o ano atual
-                return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}')
-            elif cargo_user_logado != "A":
-                if cargo == "A" or cargo == "P" or cargo == "CF" or cargo == "CL":
-                    messages.add_message(request, messages.ERROR, 'Você não pode alterar o Ano Festa desse usuário')#Respondendo que o cargo não pode sofrer alteração
-                    return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}')
-            elif festa_usuario == novo_ano:
-                messages.add_message(request, messages.ERROR, 'O novo Ano Festa do usuário não pode ser idêntico ao existente')#Respondendo que o Ano Festa é igual
-                return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}')
-            campos_alteracao = []
-            if user_antigo:
-                user_antigo.festa_usuario = str(user_antigo.festa_usuario)
-
-                if user_antigo.festa_usuario != novo_ano:
-                    campos_alteracao.append('festa_usuario')
-
-            user = Users.objects.get(username=username)
-            user.festa_usuario = ano_atual
-            # user.ano_festa_id = id_ano_festa
-            user.data_alteracao = data_alteracao
-            user.alterado_por = alterado_por
-            user.save()
-
-            user_novo = None
-            user_novo = Users.objects.get(id=id_user_antigo)
-            if campos_alteracao:
-                valores_antigos = []
-                valores_novos = []
-                for campo in campos_alteracao:
-                    valor_antigo = getattr(user_antigo, campo)
-                    valor_novo = getattr(user_novo, campo)
-                    valores_antigos.append(f'{campo}: {valor_antigo}')
-                    valores_novos.append(f'{campo}: {valor_novo}')
-            
-            id_user = Users.objects.get(username=request.user)
-            id_user = id_user.id
-            LogsItens.objects.create(
-                id_user = id_user,
-                nome_user=request.user,
-                nome_objeto=str(username),
-                acao='Alteração',
-                model = "Usuario",
-                campos_alteracao=', '.join(campos_alteracao),
-                valores_antigos=', '.join(valores_antigos),
-                valores_novos=', '.join(valores_novos)
-            )
-
-            messages.add_message(request, messages.SUCCESS, f'Ano Festa do usuário: {username} alterado com sucesso.')
-            return redirect(reverse('home'))
         elif username_encontrado and novo_cargo:
-            user_antigo = None
-            user_antigo = Users.objects.get(username=username_encontrado)#Verificando se o usuario preenchido existe
-            id_user_antigo = user_antigo.id
-            cargo = user_antigo.cargo
-            nome_cargo = user_antigo.get_cargo_display() #Função get_"nomedocampo"_display() retorna o que está em choices na models.
-            festa_usuario = user_antigo.festa_usuario
 
-            if novo_cargo == cargo:
-                messages.add_message(request, messages.ERROR, f'O usuário {username} já é do cargo {nome_cargo}')#Respondendo que o usuário já tem o cargo escolhido
-                return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}')
-            elif cargo_user_logado != "A":
-                if cargo == "A" or cargo == "P" or cargo == "CF" or cargo == "CL":
-                    messages.add_message(request, messages.ERROR, 'Você não pode alterar o Cargo desse usuário')#Respondendo que o cargo não pode sofrer alteração
-                    return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}')
-            campos_alteracao = []
-            if user_antigo:
-                user_antigo.cargo = str(user_antigo.cargo)
+            validacao_alteracao, id_user_antigo, campos_alteracao, user_antigo = Alterar_Cargo_Usuario(request, username_encontrado, novo_cargo, username, verificador, cargo_user_logado)
 
-                if user_antigo.cargo != novo_cargo:
-                    campos_alteracao.append('cargo')
+            if validacao_alteracao:
+                return validacao_alteracao
 
-            user = Users.objects.get(username=username)
-            user.cargo = novo_cargo
-            user.data_alteracao = data_alteracao
-            user.alterado_por = alterado_por
-            user.save()
-
-            user_novo = None
-            user_novo = Users.objects.get(id=id_user_antigo)
-            if campos_alteracao:
-                valores_antigos = []
-                valores_novos = []
-                for campo in campos_alteracao:
-                    valor_antigo = getattr(user_antigo, campo)
-                    valor_novo = getattr(user_novo, campo)
-                    valores_antigos.append(f'{campo}: {valor_antigo}')
-                    valores_novos.append(f'{campo}: {valor_novo}')
-            
-            id_user = Users.objects.get(username=request.user)
-            id_user = id_user.id
-            LogsItens.objects.create(
-                id_user = id_user,
-                nome_user=request.user,
-                nome_objeto=str(username),
-                acao='Alteração',
-                model = "Usuario",
-                campos_alteracao=', '.join(campos_alteracao),
-                valores_antigos=', '.join(valores_antigos),
-                valores_novos=', '.join(valores_novos)
-            )
+            Salvar_Alteracao_Cargo_Usuario_E_Logs(request, username, novo_cargo, data_alteracao, alterado_por, id_user_antigo, campos_alteracao, user_antigo)
 
             messages.add_message(request, messages.SUCCESS, f'Cargo do usuário: {username} alterado com sucesso.')
             return redirect(reverse('home'))
         
         elif username_encontrado and configurar_acesso:
-            user_antigo = None
-            user_antigo = Users.objects.get(username=username_encontrado)#Verificando se o usuario preenchido existe
-            id_user_antigo = user_antigo.id
-            cargo = user_antigo.cargo
-            acesso_option = user_antigo.is_active #Função get_"nomedocampo"_display() retorna o que está em choices na models.
-            festa_usuario = user_antigo.festa_usuario
-            permissao = ''
 
-            if configurar_acesso == 'True':
-                permissao = 'Ativado'
-            elif configurar_acesso == 'False':
-                permissao = 'Desativado'
+            validacao_alteracao, id_user_antigo, campos_alteracao, user_antigo = Alterar_Permissao_De_Login_Usuario(request, username_encontrado, configurar_acesso, username, verificador, cargo_user_logado)
 
-            if configurar_acesso == str(acesso_option):
-                messages.add_message(request, messages.ERROR, f'O usuário {username} já está com a permissão escolhida: {permissao}')#Respondendo que o usuário escolhido já está com essa permissão
-                return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}')
-            elif cargo_user_logado != "A":
-                if cargo == "A" or cargo == "P" or cargo == "CF" or cargo == "CL":
-                    messages.add_message(request, messages.ERROR, 'Você não pode alterar a permissão de acesso desse usuário')#Respondendo que o cargo não pode sofrer alteração
-                    return redirect(f'{reverse("alterar_usuarios")}?username={username}&opcao={verificador}')
-            campos_alteracao = []
-            if user_antigo:
-                user_antigo.is_active = str(user_antigo.is_active)
+            if validacao_alteracao:
+                return validacao_alteracao
 
-                if user_antigo.is_active != configurar_acesso:
-                    campos_alteracao.append('is_active')
-
-            user = Users.objects.get(username=username)
-            user.is_active = configurar_acesso
-            user.data_alteracao = data_alteracao
-            user.alterado_por = alterado_por
-            user.save()
-
-            user_novo = None
-            user_novo = Users.objects.get(id=id_user_antigo)
-            if campos_alteracao:
-                valores_antigos = []
-                valores_novos = []
-                for campo in campos_alteracao:
-                    valor_antigo = getattr(user_antigo, campo)
-                    valor_novo = getattr(user_novo, campo)
-                    valores_antigos.append(f'{campo}: {valor_antigo}')
-                    valores_novos.append(f'{campo}: {valor_novo}')
+            Salvar_Alteracao_Permissao_De_Login_Usuario_E_Logs(request, username, configurar_acesso, data_alteracao, alterado_por, id_user_antigo, campos_alteracao, user_antigo)
             
-            id_user = Users.objects.get(username=request.user)
-            id_user = id_user.id
-            LogsItens.objects.create(
-                id_user = id_user,
-                nome_user=request.user,
-                nome_objeto=str(username),
-                acao='Alteração',
-                model = "Usuario",
-                campos_alteracao=', '.join(campos_alteracao),
-                valores_antigos=', '.join(valores_antigos),
-                valores_novos=', '.join(valores_novos)
-            )
-
             messages.add_message(request, messages.SUCCESS, f'Permissão de acesso do usuário: {username} alterado com sucesso.')
             return redirect(reverse('home'))
