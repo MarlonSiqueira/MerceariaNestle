@@ -744,7 +744,7 @@ def consultar_vendas_geral(request, slug):
                     )
 
                     vendas = VendasControle.objects.filter(BuscaVendas)
-
+                    print(vendas)
                     validacao, page = Get_Paginacao_Vendas_Controle(request, slug, nome_cliente, nome, get_dt_start, get_dt_end, funcionario, vendas)
                     if validacao:
                         return validacao
@@ -770,35 +770,84 @@ def consultar_vendas_geral(request, slug):
 @has_permission_decorator('consultar_venda')
 def consultar_vendas(request, slug):
     if request.method == "GET":
-        BuscaVendas = Q(
-                Q(venda_finalizada=0) & Q(id_venda_id=slug)     
-        )
+        opcao = "id_venda_consultar_vendas"
+        vendas_pra_pegar_id = Consultar_Uma_Venda(slug, opcao)
+        if vendas_pra_pegar_id:
+            id_comunidade = vendas_pra_pegar_id[13]
 
-        vendas_pra_pegar_id = Vendas.objects.filter(venda_finalizada=0).first()
-        id_comunidade = vendas_pra_pegar_id.nome_comunidade_id
+            BuscaVendas = Q(
+                Q(venda_finalizada=0) & Q(id_venda_id=slug) & Q(nome_comunidade_id=id_comunidade)     
+            ) 
+            vendas = Vendas.objects.filter(BuscaVendas)
 
-        vendas = Vendas.objects.filter(id_venda_id=slug)
-        opcao = "id"
-        resultado = Consultar_Uma_Comunidade(id_comunidade, opcao)
+            opcao = "id"
+            resultado = Consultar_Uma_Comunidade(id_comunidade, opcao)
 
-        if resultado[0] != 0:
-            id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
-            if id_comunidade_comparar_usuario == id_comunidade_usuario:
-                id_comunidade = resultado[0]
-                slug_comunidade = resultado[1]
+            if resultado[0] != 0:
+                id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+                if id_comunidade_comparar_usuario == id_comunidade_usuario:
+                    id_comunidade = resultado[0]
+                    slug_comunidade = resultado[1]
 
-                url_atual = Capturar_Url_Atual_Sem_O_Final(request)
-                context = {
-                    'vendas': vendas,
-                    'slug': slug_comunidade,
-                    'url_atual': url_atual,
-                }
+                    url_atual = Capturar_Url_Atual_Sem_O_Final(request)
+                    context = {
+                        'vendas': vendas,
+                        'slug': slug_comunidade,
+                        'url_atual': url_atual,
+                    }
 
-                return render(request, 'consultar_vendas.html', context)
+                    return render(request, 'consultar_vendas.html', context)
+                else:
+                    messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+                    return redirect(reverse('home'))
             else:
-                messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+                messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
                 return redirect(reverse('home'))
         else:
+            messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+            return redirect(reverse('home')) 
+
+
+#Função para a tela de consultar venda
+@has_permission_decorator('consultar_venda')
+def consultar_vendas_finalizadas(request, slug):
+    if request.method == "GET":
+        opcao = "id_venda_consultar_vendas_finalizadas"
+        vendas_pra_pegar_id = Consultar_Uma_Venda(slug, opcao)
+        if vendas_pra_pegar_id:
+            id_comunidade = vendas_pra_pegar_id[13]
+
+            BuscaVendas = Q(
+                Q(venda_finalizada=1) & Q(id_venda_id=slug) & Q(nome_comunidade_id=id_comunidade)     
+            ) 
+            vendas = Vendas.objects.filter(BuscaVendas)
+
+            opcao = "id"
+            resultado = Consultar_Uma_Comunidade(id_comunidade, opcao)
+
+            if resultado[0] != 0:
+                id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+                if id_comunidade_comparar_usuario == id_comunidade_usuario:
+                    id_comunidade = resultado[0]
+                    slug_comunidade = resultado[1]
+
+                    url_atual = Capturar_Url_Atual_Sem_O_Final(request)
+                    context = {
+                        'vendas': vendas,
+                        'slug': slug_comunidade,
+                        'url_atual': url_atual,
+                    }
+
+                    return render(request, 'consultar_vendas_finalizadas.html', context)
+                else:
+                    messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+                    return redirect(reverse('home'))
+            else:
+                print("entrei aqui")
+                messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+                return redirect(reverse('home'))
+        else:
+            print("entrei aqui1")
             messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
             return redirect(reverse('home')) 
 
@@ -826,7 +875,7 @@ def vendas_finalizadas(request, slug):
                         Q(venda_finalizada=1) & Q(nome_comunidade_id=id_comunidade)     
                 )
 
-                vendas = Vendas.objects.filter(BuscaVendasFinalizadas)
+                vendas = VendasControle.objects.filter(BuscaVendasFinalizadas)
 
                 validacao, page = Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, funcionario, vendas)
                 if validacao:
@@ -867,8 +916,9 @@ def vendas_finalizadas(request, slug):
 @has_permission_decorator('consultar_venda')
 def visualizar_vendas (request, slug):
     if request.method == "GET":
-        venda = Vendas.objects.get(slug=slug)
+        venda = Vendas.objects.filter(slug=slug)
         if venda:
+            venda = Vendas.objects.get(slug=slug)
             venda_finalizada = venda.venda_finalizada
             slug_venda = venda.id_venda_id
             if venda_finalizada == 0:
@@ -940,93 +990,94 @@ def visualizar_vendas (request, slug):
                     return redirect(reverse('home'))
             else:
                 messages.add_message(request, messages.ERROR, 'Essa venda já foi finalizada')
-                return redirect(reverse('vendas', kwargs={"slug":slug_comunidade}))
+                return redirect(reverse('home'))
+        else:
+            messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+            return redirect(reverse('home'))
 
 
-#Função para a tela de visualizar vendas finalizadas
-@has_permission_decorator('finalizar_venda', 'cancelar_venda')
+#Função para a tela de visualizar vendas
+@has_permission_decorator('consultar_venda')
 def visualizar_vendas_finalizadas (request, slug):
     if request.method == "GET":
-        venda = Vendas.objects.get(slug=slug)
+        venda = Vendas.objects.filter(slug=slug)
         if venda:
-            ano_festa = venda.ano_festa
+            venda = Vendas.objects.get(slug=slug)
             venda_finalizada = venda.venda_finalizada
+            slug_venda = venda.id_venda_id
             if venda_finalizada == 1:
-                data_criacao = venda.data_criacao
-                categoria_venda = venda.categoria
-                quantidade_venda = venda.quantidade
-                vendido_por = venda.criado_por
-                forma_venda = venda.forma_venda
-                nome_cliente = venda.nome_cliente
-                autorizado_por = venda.autorizado_por
-                cor = venda.cor
+                # Inicio Declaração de Variaveis
+                id_comunidade = venda.nome_comunidade_id
+                opcao = "id"
+                resultado = Consultar_Uma_Comunidade(id_comunidade, opcao)
+                if resultado[0] != 0:
+                    id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
+                    if id_comunidade_comparar_usuario == id_comunidade_usuario:
+                        slug_comunidade = resultado[1]
 
-                preco_compra = venda.preco_compra#Pegando preco_compra
-                preco_venda = venda.preco_venda#Pegando preco_venda
-                preco_venda_total = venda.preco_venda_total#Pegando preco_venda total
+                        id_nome_produto = venda.nome_produto_id
 
-                desconto_total = venda.desconto_total#Pegando desconto total
-                desconto_total = desconto_total
-                desconto_total = "R$ " + str(desconto_total)
+                        BuscaProduto = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
+                            Q(nome_comunidade_id=id_comunidade) & Q(nome_produto_id=id_nome_produto) 
+                        )
 
-                desconto_autorizado = venda.desconto_autorizado#Pegando desconto autorizado
-                desconto_autorizado = desconto_autorizado
-                desconto_autorizado = "R$ " + str(desconto_autorizado)
+                        produto = Produto.objects.get(BuscaProduto)
+                        cod_produto = produto.cod_produto
 
-                lucro = venda.lucro#Pegando lucro
+                        data_criacao = venda.data_criacao
+                        quantidade_venda = venda.quantidade
+                        vendido_por = venda.criado_por
+                        forma_venda = venda.forma_venda
+                        nome_cliente = venda.nome_cliente
 
-                if preco_compra or preco_venda or lucro:
-                    preco_compra = "R$ " + str(preco_compra)
-                    preco_venda = "R$ " + str(preco_venda)
-                    lucro = "R$ " + str(lucro)
-                    preco_venda_total = "R$ " + str(preco_venda_total)
+                        preco_compra = venda.preco_compra#Pegando preco_compra
 
-                desconto = venda.desconto
-                desconto = desconto
-                desconto = "R$ " + str(desconto)
+                        preco_venda = venda.preco_venda#Pegando preco_venda
+                        preco_venda_total = venda.preco_venda_total#Pegando preco_venda total
+                        nome_produto = ""
+                        # Fim Declaração de Variaveis
 
-                nome_produto = ""
-                tamanho_produto = ""
+                        if preco_compra or preco_venda:
+                            preco_compra = "R$ " + str(preco_compra)
+                            preco_venda = "R$ " + str(preco_venda)
+                            preco_venda_total = "R$ " + str(preco_venda_total)
 
-                nomes = NomeProduto.objects.all()#Pegando todos os nomes de produtos
-                tamanhos = TamanhoProduto.objects.all()#Pegando todos os tamanhos de produtos
-                if nomes and tamanhos and venda.tamanho_produto_id:
-                    nomes = nomes.filter(id__contains=venda.nome_produto_id)#Verificando se existem nomes de produto com o nome escolhido
-                    tamanhos = tamanhos.filter(id__contains=venda.tamanho_produto_id)#Verificando se existem tamanhos com o nome escolhido  
-                    nomes = NomeProduto.objects.get(id=venda.nome_produto_id)
-                    tamanhos = TamanhoProduto.objects.get(id=venda.tamanho_produto_id)
-                    nome_produto = nomes.nome_produto
-                    tamanho_produto = tamanhos.tamanho_produto
-                if nomes and not venda.tamanho_produto_id:
-                    nomes = nomes.filter(id__contains=venda.nome_produto_id)#Verificando se existem nomes de produto com o nome escolhido
-                    nomes = NomeProduto.objects.get(id=venda.nome_produto_id)
-                    nome_produto = nomes.nome_produto
-                
-                context = {
-                    'ano_festa':ano_festa,
-                    'lucro':lucro,
-                    'vendido_por':vendido_por,
-                    'desconto':desconto,
-                    'preco_venda':preco_venda,
-                    'preco_compra':preco_compra,
-                    'quantidade_venda':quantidade_venda,
-                    'categoria_venda':categoria_venda,
-                    'data_criacao':data_criacao,
-                    'nome_produto':nome_produto,
-                    'cor':cor,
-                    'tamanho_produto':tamanho_produto,
-                    'forma_venda':forma_venda, 
-                    'nome_cliente':nome_cliente, 
-                    'venda_finalizada':venda_finalizada, 
-                    'preco_venda_total':preco_venda_total, 
-                    'desconto_total':desconto_total, 
-                    'desconto_autorizado':desconto_autorizado, 
-                    'autorizado_por':autorizado_por
-                }
-                return render(request, 'visualizar_vendas_finalizadas.html', context)
+                        nomes = NomeProduto.objects.all()#Pegando todos os nomes de produtos
+                        if nomes:
+                            nomes = nomes.filter(id__contains=venda.nome_produto_id)#Verificando se existem nomes de produto com o nome escolhido
+                            nomes = NomeProduto.objects.get(id=venda.nome_produto_id)
+                            nome_produto = nomes.nome_produto
+
+                        url_atual = Capturar_Url_Atual_Sem_O_Final(request)
+                        context = {
+                            'slug_venda': slug_venda,
+                            'slug': slug_comunidade,
+                            'vendido_por':vendido_por,
+                            'preco_venda':preco_venda,
+                            'preco_compra':preco_compra,
+                            'quantidade_venda':quantidade_venda,
+                            'data_criacao':data_criacao,
+                            'nome_produto':nome_produto,
+                            'forma_venda':forma_venda,
+                            'nome_cliente':nome_cliente,
+                            'venda_finalizada':venda_finalizada,
+                            'preco_venda_total':preco_venda_total,
+                            'cod_produto': cod_produto,
+                            'url_atual': url_atual,
+                        }
+                        return render(request, 'visualizar_vendas_finalizadas.html', context)
+                    else:
+                        messages.add_message(request, messages.ERROR, 'Não foram encontradas dados referente à comunidade escolhida')
+                        return redirect(reverse('home'))
+                else:
+                    messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+                    return redirect(reverse('home'))
             else:
-                messages.add_message(request, messages.ERROR, 'Essa venda não foi finalizada')
-                return redirect(reverse('vendas_finalizadas', kwargs={"slug":ano_festa}))
+                messages.add_message(request, messages.ERROR, 'Essa venda ainda está em andamento')
+                return redirect(reverse('home'))
+        else:
+            messages.add_message(request, messages.ERROR, 'Essa URL que você tentou acessar não foi encontrada')
+            return redirect(reverse('home'))
 
 
 #Função para a tela de conferir os itens da venda antes de finalizar

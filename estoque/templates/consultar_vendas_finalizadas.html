@@ -6,11 +6,11 @@
     <h2 class="text-center my-4">SELECIONE UM PRODUTO</h2>
     <div class="produtos-container">
         {% for venda in vendas %}
-            {% if venda.venda_finalizada == 0 %}
-            <div class="produto-card" data-slug="{{ venda.slug }}" data-url="{% url 'visualizar_vendas' venda.slug %}" onclick="window.location.href=this.dataset.url;">
+            {% if venda.venda_finalizada == 1 %}
+            <div class="produto-card" data-slug="{{ venda.slug }}" data-url="{% url 'visualizar_vendas_finalizadas' venda.slug %}" onclick="window.location.href=this.dataset.url;">
                     <h5 class="card-title">{{venda.label_vendas_get}}</h5>
                     <h5 class="card-title">Cliente: {{venda.nome_cliente}}</h5>
-                    <a href="{% url 'visualizar_vendas' venda.slug %}" class="btn btn-primary">Visualizar</a>
+                    <a href="{% url 'visualizar_vendas_finalizadas' venda.slug %}" class="btn btn-primary">Visualizar</a>
                 </div>
             {% endif %}
         {% endfor %}

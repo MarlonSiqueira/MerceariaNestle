@@ -133,14 +133,19 @@
                     <a class="btn btn-info" href="{% url 'export_csv_finalizadas' %}?nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&funcionario={{request.GET.funcionario}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">Exportar Planilha</a>&nbsp;
         </form>
             <br>
+            {% if not vendas %}
+            {% else %}
+                <h2 class="text-center my-4">VENDAS FINALIZADAS</h2>
+            {% endif %}
+                
             <div class="produtos-container">
                 {% for venda in page.object_list %}
                     {% if venda.venda_finalizada == 1 %}
-                        <div class="produto-card" data-slug="{{ venda.slug }}" data-url="{% url 'visualizar_vendas_finalizadas' venda.slug %}" onclick="window.location.href=this.dataset.url;">
+                        <div class="produto-card" data-slug="{{ venda.slug }}" data-url="{% url 'consultar_vendas_finalizadas' venda.slug %}" onclick="window.location.href=this.dataset.url;">
                             <h5>Cliente: {{ venda.nome_cliente }}</h5>
                             <p>
                                 Dia da venda: {{ venda.data_criacao }}<br><br>
-                                <a href="{% url 'visualizar_vendas_finalizadas' venda.slug %}" class="btn btn-primary">Visualizar</a>
+                                <a href="{% url 'consultar_vendas_finalizadas' venda.slug %}" class="btn btn-primary">Visualizar</a>
                             </p>
                         </div>
                     {% endif %}

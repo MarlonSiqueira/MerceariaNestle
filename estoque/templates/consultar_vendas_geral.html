@@ -78,6 +78,10 @@
 
     </form>
     <br>
+    {% if not vendas %}
+    {% else %}
+        <h2 class="text-center my-4">VENDAS EM ANDAMENTO</h2>
+    {% endif %}
     <div class="produtos-container">
         {% for venda in page.object_list %}
             {% if venda.venda_finalizada == 0 %}

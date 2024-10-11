@@ -67,6 +67,16 @@ def Consultar_Uma_Venda(valor, opcao):
         BuscaVendas = Q( #Fazendo o Filtro com Busca Q para a tabela Vendas
                 Q(slug=valorBusca)
         )
+    elif opcao == "id_venda_consultar_vendas":
+        valorBusca = valor
+        BuscaVendas = Q(
+                Q(venda_finalizada=0) & Q(id_venda_id=valorBusca)     
+        )
+    elif opcao == "id_venda_consultar_vendas_finalizadas":
+        valorBusca = valor
+        BuscaVendas = Q(
+                Q(venda_finalizada=1) & Q(id_venda_id=valorBusca)  
+        )
 
     if opcao != "filtro-id-venda":
         vendas = Vendas.objects.filter(BuscaVendas).values_list('id', 'produto_id', 'slug', 'forma_venda', 'venda_finalizada', 'nome_cliente', 'quantidade', 'preco_compra', 'preco_venda_total', 'houve_estorno', 'houve_troca', 'criado_por', 'id_venda_id', 'nome_comunidade_id', 'nome_produto_id') #procurando se existe comunidade com um dos filtros acima
