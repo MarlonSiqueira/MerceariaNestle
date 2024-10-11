@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load filtersvenda %}
 {% load define_action %}
 
 {% block 'body' %}
@@ -26,18 +25,8 @@
                 {% endif %}
                 <div class="input-row">
                     <label for="quantidade">Quantidade:</label> &nbsp;
-                    <input class="form-control quantity-input" type="text" value="{{conferir_venda.quantidade}}" name="quantidade" id="quantidade_{{forloop.counter}}" data-quantidade-padrao="{{conferir_venda.quantidade}}"  data-desconto-base="{{conferir_venda.desconto_total}}">
+                    <input class="form-control quantity-input" type="text" value="{{conferir_venda.quantidade}}" name="quantidade" id="quantidade_{{forloop.counter}}" data-quantidade-padrao="{{conferir_venda.quantidade}}" >
                 </div>
-                {% if conferir_venda.desconto_total > 0 and conferir_venda.autorizado_por != "0" %}
-                <br>
-                <p>Desconto: <span class="desconto-totalissimo" id="desconto_total_{{forloop.counter}}" data-desconto-total="{{conferir_venda.desconto_total}}">{{conferir_venda.desconto_total}}</span></p>
-                <input type="hidden" class="desconto-totalissimo-input" name="desconto-totalissimo" id="desconto_totalissimo_input{{forloop.counter}}" value="{{conferir_venda.desconto_total}}">
-                {% elif conferir_venda.desconto_total > 0 and conferir_venda.autorizado_por == "0" %}
-                <p>Desconto: <span class="desconto-total" id="desconto_total_{{forloop.counter}}">{{conferir_venda.desconto_total}}</span></p>
-                <input type="hidden" class="desconto-total-input" name="desconto-total[]" id="desconto_total_input{{forloop.counter}}" value="{{conferir_venda.desconto_total}}">
-                {% else %}
-                <input type="hidden" class="desconto-total-input" name="desconto-total[]" id="desconto_total_input{{forloop.counter}}" value="{{conferir_venda.desconto_total}}">
-                {% endif %}
                 <p>Preço a ser Cobrado: R$ <span class="preco-venda-total" id="preco_venda_total_{{forloop.counter}}">{{conferir_venda.preco_venda_total}}</span>
                     <input type="hidden" class="preco-venda-total-input" name="preco-venda-total" id="preco_venda_total_input_{{forloop.counter}}" value="{{conferir_venda.preco_venda_total}}">
                 </p>
@@ -69,124 +58,32 @@
                 var quantidadeInput = $(this);
                 var quantidadePadrao = parseFloat(quantidadeInput.data("quantidade-padrao"));
                 var quantidade = parseFloat(quantidadeInput.val().replace(",", "."));
-                var autorizado_por = 0; // Valor padrão é 0
-                var controleDesconto = 0;
                 
-                var autorizadoPorInput = quantidadeInput.closest(".conferir").find(".autorizado-por-input");
-                if (autorizadoPorInput.length > 0) {
-                    autorizado_por = autorizadoPorInput.data("autorizado");
+
+                // Obter o valor original do precoVendaTotal do atributo data
+                var precoVendaTotal = parseFloat(quantidadeInput.data("preco-venda-total-base"));
+
+                // Se o valor original não estiver definido, obter do texto
+                if (isNaN(precoVendaTotal)) {
+                precoVendaTotal = parseFloat(quantidadeInput.closest(".conferir").find(".preco-venda-total").text().replace("R$ ", "").replace(",", "."));
+                quantidadeInput.data("preco-venda-total-base", precoVendaTotal);
                 }
 
-                if (!isNaN(autorizado_por) && autorizado_por === 0) {
-                    // O valor é um número e é igual a zero
-                } else if (isNaN(autorizado_por)) {
-                    controleDesconto = 1;
-                } else {
-                    // O valor é um número, mas não é igual a zero
-                }
+                // Cálculos
+                var precoBase = quantidade > 0 ? (precoVendaTotal / quantidadePadrao) * quantidade : 0;
 
-                if (controleDesconto === 1) { // Caso tenha desconto_autorizado entre aqui
-                    var descontoElemento = quantidadeInput.closest(".conferir").find(".desconto-totalissimo");
-                    var desconto_reserva = descontoElemento.text().replace("R$ ", "").replace(",", ".");
-                    
-                    var descontoTotal = 0;
-                    var descontoTotalElement = quantidadeInput.closest(".conferir").find(".desconto-totalissimo");
-                    if (descontoTotalElement.length > 0) {
-                    descontoTotal = parseFloat(descontoTotalElement.text().replace("R$ ", "").replace(",", "."));
-                    }
+                // Atualizar preço na tela
+                var precoElement = quantidadeInput.closest(".conferir").find(".preco-venda-total");
+                precoElement.text(precoBase.toFixed(2));
 
-                    // Obter o valor original do precoVendaTotal do atributo data
-                    var precoVendaTotal = parseFloat(quantidadeInput.data("preco-venda-total-base"));
-
-                    // Se o valor original não estiver definido, obter do texto
-                    if (isNaN(precoVendaTotal)) {
-                    precoVendaTotal = parseFloat(quantidadeInput.closest(".conferir").find(".preco-venda-total").text().replace("R$ ", "").replace(",", "."));
-                    quantidadeInput.data("preco-venda-total-base", precoVendaTotal);
-                    }
-
-                    // Cálculos
-                    var precoBase = quantidade > 0 ? ((descontoTotal + precoVendaTotal) / quantidadePadrao) * quantidade - descontoTotal : 0;
-
-                    // Atualizar preço na tela
-                    var precoElement = quantidadeInput.closest(".conferir").find(".preco-venda-total");
-                    precoElement.text(precoBase.toFixed(2));
-
-                    // Atualizar valor para enviar ao backend via POST
-                    quantidadeInput.closest(".conferir").find(".preco-venda-total-input").val(precoBase.toFixed(2));
-                    
-                    // Atualizar o valor do campo de entrada oculto com o novo preço calculado
-                    var precoInput = quantidadeInput.closest(".conferir").find(".preco-venda-total-input");
-                    precoInput.val(precoBase.toFixed(2));
-
-                    if (quantidade <= 0 || isNaN(quantidade)) { // Se a quantidade for vazia ou igual a 0
-                        // Atualizar desconto na tela
-                        var descontoElement = quantidadeInput.closest(".conferir").find(".desconto-totalissimo");
-                        descontoElement.text("R$ 0.00");
-
-                        // Atualizar valor para enviar ao backend via POST
-                        quantidadeInput.closest(".conferir").find(".desconto-totalissimo-input").val("0.00");
-                    } else {
-                        // Atualizar desconto na tela
-                        var descontoElement = quantidadeInput.closest(".conferir").find(".desconto-totalissimo");
-                        descontoElement.text("R$ " + desconto_reserva);
-
-                        // Atualizar valor para enviar ao backend via POST
-                        quantidadeInput.closest(".conferir").find(".desconto-totalissimo-input").val(desconto_reserva);
-                    }
-                } else { // Caso não tenha desconto_autorizado entre aqui
-                    // Obter o valor original do desconto do atributo data
-                    var descontoBase = parseFloat(quantidadeInput.data("desconto-total"));
-
-                    // Se o valor original não estiver definido, obter do texto
-                    if (isNaN(descontoBase)) {
-                        descontoBase = parseFloat(quantidadeInput.closest(".conferir").find(".desconto-total").text().replace("R$ ", "").replace(",", "."));
-                        quantidadeInput.data("desconto-total", descontoBase);
-                    }
-
-                    // Obter o valor original do precoVendaTotal do atributo data
-                    var precoVendaTotalBase = parseFloat(quantidadeInput.data("preco-venda-total"));
-
-                    // Se o valor original não estiver definido, obter do texto
-                    if (isNaN(precoVendaTotalBase)) {
-                        precoVendaTotalBase = parseFloat(quantidadeInput.closest(".conferir").find(".preco-venda-total").text().replace("R$ ", "").replace(",", "."));
-                        quantidadeInput.data("preco-venda-total", precoVendaTotalBase);
-                    }
-
-                    // Verificar se o desconto base é igual a zero
-                    if (descontoBase === 0 || isNaN(descontoBase)) {
-                        descontoBase = 0
-                        var precoBase = quantidade > 0 ? (precoVendaTotalBase / quantidadePadrao) * quantidade : 0;
-                    } else {
-                        // Cálculos considerando o desconto
-                        var descontoAtual = quantidade > 0 ? (descontoBase / quantidadePadrao) * quantidade : 0;
-                        var precoBase = quantidade > 0 ? ((precoVendaTotalBase + descontoBase) / quantidadePadrao * quantidade - descontoAtual) : 0;
-                    }
-
-                    if (descontoBase === 0 || isNaN(descontoBase)) {
-                        // Atualizar preço na tela
-                        var precoElement = quantidadeInput.closest(".conferir").find(".preco-venda-total");
-                        precoElement.text(precoBase.toFixed(2));
-
-                        // Atualizar valor para enviar ao backend via POST
-                        quantidadeInput.closest(".conferir").find(".preco-venda-total-input").val(precoBase.toFixed(2));
-                    } else {
-                        // Atualizar preço na tela
-                        var precoElement = quantidadeInput.closest(".conferir").find(".preco-venda-total");
-                        precoElement.text(precoBase.toFixed(2));
-
-                        // Atualizar valor para enviar ao backend via POST
-                        quantidadeInput.closest(".conferir").find(".preco-venda-total-input").val(precoBase.toFixed(2));
-
-                        // Atualizar desconto na tela
-                        var descontoElement = quantidadeInput.closest(".conferir").find(".desconto-total");
-                        descontoElement.text(descontoAtual.toFixed(2));
-
-                        // Atualizar valor para enviar ao backend via POST
-                        quantidadeInput.closest(".conferir").find(".desconto-total-input").val(descontoAtual.toFixed(2));
-                    }
-                }
-            });
-        }
+                // Atualizar valor para enviar ao backend via POST
+                quantidadeInput.closest(".conferir").find(".preco-venda-total-input").val(precoBase.toFixed(2));
+                
+                // Atualizar o valor do campo de entrada oculto com o novo preço calculado
+                var precoInput = quantidadeInput.closest(".conferir").find(".preco-venda-total-input");
+                precoInput.val(precoBase.toFixed(2));
+            })
+        };
 
         // Executar a função quando o valor do input quantidade for alterado
         $(".quantity-input").on("input", function() {

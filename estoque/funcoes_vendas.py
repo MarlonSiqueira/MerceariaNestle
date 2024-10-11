@@ -374,3 +374,64 @@ def Atualiza_Venda_Controle(num_sequencial, preco_total_controle, nome_dos_produ
     vendacontrole.label_vendas_get = nome_dos_produtos
     vendacontrole.peso_venda_total = peso_total_controle
     vendacontrole.save()
+
+
+def Conferir_Alteracoes_E_Venda_Controle(request, slug, id_da_venda, forma_pagamento_nova, contador_qtd_alterada, contador_produtos, preco_total_controle, preco_original_venda):
+    with transaction.atomic():
+        vendacontrole1 = VendasControle.objects.get(id_venda=id_da_venda)        
+        vendacontrole1.preco_venda_total = preco_total_controle
+        vendacontrole1.novo_preco_venda_total = preco_total_controle
+        vendacontrole1.preco_original = preco_original_venda
+        if forma_pagamento_nova == "0" or forma_pagamento_nova == 0 or not forma_pagamento_nova:
+            if contador_qtd_alterada == contador_produtos:
+                messages.add_message(request, messages.ERROR, f'Não houve alteração em nada dos produtos')
+                return redirect(reverse('conferir_vendas_geral', kwargs={"slug":slug}))
+        if contador_qtd_alterada == contador_produtos and forma_pagamento_nova == vendacontrole1.forma_venda:
+            transaction.set_rollback(True)
+            messages.add_message(request, messages.ERROR, f'Não houve alteração em nada dos produtos')
+            return redirect(reverse('conferir_vendas_geral', kwargs={"slug":slug}))
+        vendacontrole1.forma_venda = forma_pagamento_nova
+        vendacontrole1.save()
+        
+    return None
+
+
+def Alterar_Quantidade_E_Preco_Da_Venda_E_Salvar_No_Banco(request, slug, id_da_venda_, quantidade, preco_venda_total, preco_original, forma_pagamento_nova, label_da_venda):
+    with transaction.atomic():
+        Busca = Q(
+                    Q(id_venda=slug) & Q(label_vendas_get=label_da_venda)
+                )
+        id_da_venda_ = Vendas.objects.get(Busca)
+
+        nova_quantidade = quantidade
+        quantidade_antes_de_trocar = id_da_venda_.quantidade
+        id_da_venda_.quantidade = quantidade
+        id_da_venda_.preco_venda_total=preco_venda_total
+        id_da_venda_.preco_original = preco_original #Somando os descontos ao preço do item, caso exista.
+        id_da_venda_.peso_total = quantidade * id_da_venda_.peso
+        
+        if forma_pagamento_nova != "Dinheiro" and forma_pagamento_nova != "Credito" and forma_pagamento_nova != "Debito" and forma_pagamento_nova != "Pix" and forma_pagamento_nova != "Crédito" and forma_pagamento_nova != "Débito":
+            if not forma_pagamento_nova:
+                forma_pagamento_nova = id_da_venda_.forma_venda
+            else:
+                transaction.set_rollback(True)
+                messages.add_message(request, messages.ERROR, 'Selecione uma das 4 formas de pagamento')
+                return redirect(reverse('conferir_vendas_geral', kwargs={"slug":slug})), nova_quantidade, quantidade_antes_de_trocar, forma_pagamento_nova
+        else:
+            if forma_pagamento_nova == "Credito":
+                forma_pagamento_nova = "Crédito"
+            elif forma_pagamento_nova == "Debito":
+                forma_pagamento_nova = "Débito"
+        id_da_venda_.forma_venda = forma_pagamento_nova
+        id_da_venda_.save()
+
+    return None, nova_quantidade, quantidade_antes_de_trocar, forma_pagamento_nova
+
+
+def Verificando_Digito_Final_Preco(preco):
+    preco_venda_str = str(preco)
+    verifica_venda = preco_venda_str[-2:] #pegando últimos 2 caracteres da string
+    if verifica_venda == ".0":
+        preco_venda_str = str(preco) + "0"
+
+    return preco_venda_str

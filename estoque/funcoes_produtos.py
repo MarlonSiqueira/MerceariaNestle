@@ -238,10 +238,15 @@ def Cadastro_Estoque(request, nome, label, quantidade, preco_compra, preco_venda
 
 def Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantidade, preco_compra, preco_venda, acao, slug_comunidade, peso, id_produto):
     with transaction.atomic():
-        if acao != "vender":
-            produto = Produto.objects.get(slug=slugp) #Pegando o produto recem-criado
-        else:
+        if acao == "vender":
             produto = Produto.objects.get(id=id_produto) #Pegando o produto
+        elif acao == "alterar":
+            quantidade_antes_de_trocar = quantidade[0]
+            nova_quantidade = quantidade[1]
+            data_alteracao = quantidade[2]
+            produto = Produto.objects.get(id=id_produto) #Pegando o produto recem-criado
+        else:
+            produto = Produto.objects.get(slug=slugp) #Pegando o produto recem-criado
 
         nome_produto_p_excel = str(produto.nome_produto)
         nome_comunidade_p_excel = slug_comunidade
@@ -249,10 +254,10 @@ def Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantid
         id_user, id_comunidade_usuario = Capturar_Id_E_Comunidade_Do_Usuario(request)
         data_atual = Capturar_Ano_E_Hora_Atual()
 
-        p_excel_filtro = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Entrada",)#Pegando o produto alterado
         if acao == "adicionar":
+            p_excel_filtro = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Entrada", nome_e_cidade_comunidade=nome_comunidade_p_excel)#Pegando o produto alterado
             if p_excel_filtro:
-                p_excel_filtro = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Entrada",) #Pegando o produto alterado
+                p_excel_filtro = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Entrada",nome_e_cidade_comunidade=nome_comunidade_p_excel) #Pegando o produto alterado
                 p_excel_filtro.quantidade += int(quantidade)
                 p_excel_filtro.ultima_alteracao = data_atual
                 p_excel_filtro.alterado_por = request.user.username
@@ -270,16 +275,16 @@ def Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantid
                 )
                 p_excel.save()
         elif acao == "excluir":
-            existe_entrada_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Entrada")
+            existe_entrada_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Entrada",nome_e_cidade_comunidade=nome_comunidade_p_excel)
             existe_entrada_venda.quantidade = 0
             existe_entrada_venda.ultima_alteracao = data_atual
             existe_entrada_venda.alterado_por = request.user.username
             existe_entrada_venda.save()
             produto.delete()
         elif acao == "vender":
-            existe_saida_venda = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Saída")
+            existe_saida_venda = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Saída",nome_e_cidade_comunidade=nome_comunidade_p_excel)
             if existe_saida_venda:
-                existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída")
+                existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída",nome_e_cidade_comunidade=nome_comunidade_p_excel)
                 existe_saida_venda.quantidade += quantidade
                 existe_saida_venda.ultima_alteracao = data_atual
                 existe_saida_venda.alterado_por = request.user.username
@@ -296,6 +301,28 @@ def Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantid
                                 peso = peso
                 )
                 p_excel.save()
+        elif acao == "alterar":
+            produto_p_excel_novo_produto = Produto.objects.get(id=id_produto) #Pegando o produto novo
+            nome_produto_p_excel_novo_produto = str(produto_p_excel_novo_produto.nome_produto)
+
+            id_user_novo_produto = Users.objects.get(username=request.user)
+            id_user_novo_produto = id_user_novo_produto.id
+            
+            existe_saida_venda_novo = P_Excel.objects.filter(nome_produto=nome_produto_p_excel_novo_produto, acao="Saída", nome_e_cidade_comunidade=nome_comunidade_p_excel)
+            if existe_saida_venda_novo:
+                existe_saida_venda_novo = P_Excel.objects.get(nome_produto=nome_produto_p_excel_novo_produto, acao="Saída", nome_e_cidade_comunidade=nome_comunidade_p_excel)
+                if quantidade_antes_de_trocar < nova_quantidade:
+                    quantidade_a_preencher = nova_quantidade - quantidade_antes_de_trocar
+                    existe_saida_venda_novo.quantidade += quantidade_a_preencher
+                    existe_saida_venda_novo.ultima_alteracao = data_alteracao
+                    existe_saida_venda_novo.alterado_por = request.user.username
+                    existe_saida_venda_novo.save()
+                elif quantidade_antes_de_trocar > nova_quantidade:
+                    quantidade_a_preencher = quantidade_antes_de_trocar - nova_quantidade
+                    existe_saida_venda_novo.quantidade -= quantidade_a_preencher
+                    existe_saida_venda_novo.ultima_alteracao = data_alteracao
+                    existe_saida_venda_novo.alterado_por = request.user.username
+                    existe_saida_venda_novo.save() 
 
 
 def Registrar_Log_Alteracao_Produto_E_Alterar_Produto(request, slug_comunidade, slug_produto, id_produto_antigo, abastecer_quantidade, preco_compra, cod_produto, cod_barras, peso, nome_produto_antigo1, data_alteracao, alterado_por):

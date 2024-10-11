@@ -229,7 +229,7 @@ if (url_sem_slug == "vendas"){
 }
 
 //Funções tela de conferir_vendas_geral
-if (url_sem_slug == "/conferir_vendas_geral/"){
+if (url_sem_slug == "conferir_vendas_geral"){
     //////////////////////////////////////////////////////
     //Modal Excluir Venda tela de Conferir Vendas Geral
     function excluirVenda(slugvenda){
