@@ -703,9 +703,7 @@ def vendas(request, slug):
                         acao = "vender"
                         Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slug_produto, quantidade, preco_compra_estoque_produto, preco_venda_estoque_produto, acao, slug_comunidade, peso, id_produto)
 
-                        if nome_dos_produtos:  # Verifica se a string já tem algum valor
-                            nome_dos_produtos += ","  # Adiciona uma vírgula
-                        nome_dos_produtos +=  nome_produto # Adiciona o novo produto
+                        nome_dos_produtos = Capturar_Nome_Dos_Produtos(nome_dos_produtos, nome_produto)
 
                     # Se passar pelas validações, pega o objeto VendasControle contendo o ID venda gerado lá em cima#
                     Atualiza_Venda_Controle(num_sequencial, preco_total_controle, nome_dos_produtos, peso_total_controle)
@@ -855,8 +853,6 @@ def vendas_finalizadas(request, slug):
     if request.method == "GET":
         nome_cliente = request.GET.get('nome_cliente_filtro')
         nome = request.GET.get('nome_produto_filtro')
-        preco_min = request.GET.get('preco_min')
-        preco_max = request.GET.get('preco_max')
         funcionario = request.GET.get('funcionario')
         get_dt_start = request.GET.get('dt_start')
         get_dt_end = request.GET.get('dt_end')
@@ -874,7 +870,7 @@ def vendas_finalizadas(request, slug):
 
                 vendas = VendasControle.objects.filter(BuscaVendasFinalizadas)
 
-                validacao, page = Get_Paginacao_Vendas(request, slug, nome_cliente, nome, preco_min, preco_max, get_dt_start, get_dt_end, funcionario, vendas)
+                validacao, page = Get_Paginacao_Vendas_Finalizadas(request, slug, nome_cliente, nome, get_dt_start, get_dt_end, funcionario, vendas)
                 if validacao:
                     return validacao
 
@@ -1133,7 +1129,18 @@ def conferir_vendas_geral (request, slug):
             # Processar os valores obtidos
             preco_total_controle = 0
             preco_original_venda = 0
-            
+            nome_dos_produtos = ""
+            valor_total = 0
+
+            for preco_total in precos_venda_total:
+                valor_total += float(preco_total)
+
+            valor_total_str = Verificando_Digito_Final_Preco(valor_total)
+
+            if valor_total > 5:
+                messages.add_message(request, messages.ERROR, f'O Preço total dos produtos não pode ultrapassar R$5,00, você tentou alterar para: R${valor_total_str}')
+                return redirect(reverse('conferir_vendas_geral', kwargs={"slug":slug}))
+
             combinacao = itertools.zip_longest(quantidades, precos_venda_total, label_vendas_get, fillvalue=0)
             for quantidade, preco, label in combinacao:
                 preco = float(preco.replace(',', '.'))
@@ -1247,10 +1254,13 @@ def excluir_venda(request, slug):
         opcao = "id_venda"
         resultado_venda_controle = Consultar_Venda_Controle(slugconferir_venda, opcao)
         id_comunidade = resultado_venda_controle[2]
+        label_vendas_get_controle = resultado_venda_controle[15]
 
         opcao = "id"
         resultado_comunidade = Consultar_Uma_Comunidade(id_comunidade, opcao)
         slug_da_comunidade = resultado_comunidade[1]
+
+        label_vendas_get = remover_palavra(label_vendas_get_controle, produto_venda)
 
         if hasattr(venda, '_excluido'):#Verifica se já foi excluído para não ocorrer repetição de registro no Banco.
             # se a flag _excluido já está setada, não chama o sinal
@@ -1266,6 +1276,7 @@ def excluir_venda(request, slug):
                 conferir_venda.novo_preco_venda_total -= preco_total #Retirando o preço do item removido, da tabela de venda controle
                 conferir_venda.valor_cancelado += preco_total #Somando o valor do item cancelado
                 conferir_venda.falta_editar -= 1
+                conferir_venda.label_vendas_get = label_vendas_get
                 conferir_venda.save()
 
                 produto_cancelar = Produto.objects.get(BuscaProduto)
@@ -1544,21 +1555,13 @@ def error_403(request, exception):
 
 # ======================== EXPORT CSV ========================
 @has_permission_decorator('exportar_csv_v')
-def export_csv(request):
-    data_modelo = timezone.localtime(timezone.now())
-    data_modelo_1 = data_modelo.strftime("%Y") 
-    data_modelo_1 = int(data_modelo_1)
-    anofesta = data_modelo_1
+def export_csv_vendas(request, slug):
+    opcao = "slug"
+    resultado_comunidade = Consultar_Uma_Comunidade(slug, opcao)
+    nome_comunidade_id = resultado_comunidade[0]
 
-    festa = Festa.objects.filter(slug=data_modelo_1)
-    if festa:
-        festa = Festa.objects.get(slug=data_modelo_1)
-        ano_festa = festa.id
-    else:
-        messages.add_message(request, messages.ERROR, 'Houve um problema ao consultar o ano da festa')
-        return redirect(reverse('vendas', kwargs={"slug":anofesta})) 
     Busca = Q(
-            Q(ano_festa=ano_festa) & Q(venda_finalizada=0)     
+            Q(nome_comunidade_id=nome_comunidade_id) & Q(venda_finalizada=0)     
     ) 
     venda = Vendas.objects.filter(Busca) #Buscando todas as vendas
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -1571,39 +1574,28 @@ def export_csv(request):
     ws = wb.active
 
     if venda:
-        if request.user.cargo == "A" or request.user.cargo == "P" or request.user.cargo == "CF" or request.user.cargo == "CL":
-            ws.append(['ID_Venda','Nome_Cliente','Nome_Produto', 'Cor', 'Tamanho_Produto','Categoria','Quantidade','Preco_Compra','Preco_Venda_Unidade','Preco_Venda_Total_Com_Desconto','Preco_Venda_Total_Sem_Desconto','Desconto_Unidade','Desconto_Total','Desconto_Autorizado','Autorizado_Por','Lucro','Forma_Venda','Data_Venda','Vendido_Por','Ano_Festa', 'Venda_Finalizada']) # Colunas
+        if request.user.cargo == "A" or request.user.cargo == "R" or request.user.cargo == "O":
+            ws.append(['ID_Venda','Nome_Cliente','Nome_Produto','Quantidade','Preco_Compra','Preco_Venda_Unidade','Preco_Venda_Total','Forma_Venda','Data_Venda','Vendido_Por','Nome_E_Cidade_Da_Comunidade', 'Venda_Finalizada']) # Colunas
         else:
-            ws.append(['Nome_Cliente','Nome_Produto','Cor', 'Tamanho_Produto','Categoria','Quantidade','Preco_Venda_Unidade','Preco_Venda_Total_Com_Desconto','Preco_Venda_Total_Sem_Desconto','Desconto_Unidade','Desconto_Total','Desconto_Autorizado','Autorizado_Por','Forma_Venda','Data_Venda','Vendido_Por','Ano_Festa', 'Venda_Finalizada']) # Colunas
+            ws.append(['Nome_Cliente','Nome_Produto','Quantidade','Preco_Venda_Unidade','Preco_Venda_Total','Forma_Venda','Data_Venda','Vendido_Por','Nome_E_Cidade_Da_Comunidade', 'Venda_Finalizada']) # Colunas
 
-        nome_cliente = request.GET.get('nome_cliente')
-        nome_produto = request.GET.get('nome_produto')
-        categoria = request.GET.get('categoria')
-        preco_min = request.GET.get('preco_min')
-        preco_max = request.GET.get('preco_max')
+        nome_cliente = request.GET.get('nome_cliente_filtro')
+        nome_produto = request.GET.get('nome_produto_filtro')
         funcionario = request.GET.get('funcionario')
         dt_start = request.GET.get('dt_start')
         dt_end = request.GET.get('dt_end')
 
         nome_cliente_novo = unidecode.unidecode(f'{nome_cliente}')
 
-        if nome_cliente or nome_produto or categoria or preco_min or preco_max or funcionario or dt_start or dt_end:
+        if nome_cliente or nome_produto or funcionario or dt_start or dt_end:
             if nome_cliente:
                 venda = venda.filter(nome_cliente__icontains=nome_cliente_novo)#Filtrando para exportar pelo nome do cliente
             if nome_produto:
                 venda = venda.filter(label_vendas_get__icontains=nome_produto)#Filtrando para exportar pelo nome do produto
-            if categoria:
-                venda = venda.filter(categoria_id=categoria)#Filtrando para exportar pela categoria
             if funcionario:
                 venda = venda.filter(criado_por__icontains=funcionario)#Filtrando para exportar pelo funcionario
             if dt_start and dt_end:
                 venda = venda.filter(dia__range=[dt_start, dt_end])#Filtrando para exportar pelas datas
-
-            if not preco_min:
-                preco_min = 0
-            if not preco_max:
-                preco_max = 9999999
-            venda = venda.filter(preco_venda__gte=preco_min).filter(preco_venda__lte=preco_max)#Filtrando para exportar pelo preço
         else:
             pass
         for itens in venda:
@@ -1612,10 +1604,10 @@ def export_csv(request):
             else:
                 itens.venda_finalizada = "N"
 
-            if request.user.cargo == "A" or request.user.cargo == "P" or request.user.cargo == "CF" or request.user.cargo == "CL":
-                row = [itens.id_venda_id, itens.nome_cliente, itens.nome_produto.nome_produto, itens.cor.titulo, itens.tamanho_produto.tamanho_produto if itens.tamanho_produto else '', itens.categoria.titulo, itens.quantidade, itens.preco_compra, itens.preco_venda, itens.preco_venda_total, itens.preco_original, itens.desconto, itens.desconto_total, itens.desconto_autorizado, itens.autorizado_por, itens.lucro, itens.forma_venda, itens.data_criacao, itens.criado_por, itens.ano_festa.ano_festa, itens.venda_finalizada] #Linhas, verifica se tem tamanho, caso não tenha envia vazio.
+            if request.user.cargo == "A" or request.user.cargo == "R" or request.user.cargo == "O":
+                row = [itens.id_venda_id, itens.nome_cliente, itens.nome_produto.nome_produto, itens.quantidade, itens.preco_compra, itens.preco_venda, itens.preco_venda_total, itens.forma_venda, itens.data_criacao, itens.criado_por, itens.nome_comunidade.slug, itens.venda_finalizada] #Linhas
             else:
-                row = [itens.nome_cliente, itens.nome_produto.nome_produto, itens.cor.titulo, itens.tamanho_produto.tamanho_produto if itens.tamanho_produto else '', itens.categoria.titulo, itens.quantidade, itens.preco_venda, itens.preco_venda_total, itens.preco_original, itens.desconto, itens.desconto_total, itens.desconto_autorizado, itens.autorizado_por, itens.forma_venda, itens.data_criacao, itens.criado_por, itens.ano_festa.ano_festa, itens.venda_finalizada] #Linhas, verifica se tem tamanho, caso não tenha envia vazio.
+                row = [itens.nome_cliente, itens.nome_produto.nome_produto, itens.quantidade, itens.preco_venda, itens.preco_venda_total, itens.forma_venda, itens.data_criacao, itens.criado_por, itens.nome_comunidade.slug, itens.venda_finalizada] #Linhas
             ws.append(row)
             
 
@@ -1631,29 +1623,20 @@ def export_csv(request):
 
         return response
     else:
-        messages.add_message(request, messages.ERROR, 'Nenhuma venda foi encontrada para ser exportada')
-        return redirect(reverse('vendas', kwargs={"slug":anofesta})) 
+        messages.add_message(request, messages.ERROR, 'Nenhuma venda em andamento foi encontrada para ser exportada')
+        return redirect(reverse('consultar_vendas_geral', kwargs={"slug":slug})) 
 
 
 @has_permission_decorator('exportar_csv_v_finalizada')
-def export_csv_finalizadas(request):
-    data_modelo = timezone.localtime(timezone.now())
-    data_modelo_1 = data_modelo.strftime("%Y") 
-    data_modelo_1 = int(data_modelo_1)
-    anofesta = data_modelo_1
+def export_csv_vendas_finalizadas(request, slug):
+    opcao = "slug"
+    resultado_comunidade = Consultar_Uma_Comunidade(slug, opcao)
+    nome_comunidade_id = resultado_comunidade[0]
 
-    festa = Festa.objects.filter(slug=data_modelo_1)
-    if festa:
-        festa = Festa.objects.get(slug=data_modelo_1)
-        ano_festa = festa.id
-    else:
-        messages.add_message(request, messages.ERROR, 'Houve um problema ao consultar o ano da festa')
-        return redirect(reverse('vendas_finalizadas', kwargs={"slug":anofesta})) 
     Busca = Q(
-            Q(ano_festa=ano_festa) & Q(venda_finalizada=1)
+            Q(nome_comunidade_id=nome_comunidade_id) & Q(venda_finalizada=1)     
     ) 
-
-    venda = Vendas.objects.filter(Busca).order_by('data_criacao') #Buscando todas as vendas
+    venda = Vendas.objects.filter(Busca) #Buscando todas as vendas
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename=Vendas_Finalizadas.xlsx'
 
@@ -1664,64 +1647,57 @@ def export_csv_finalizadas(request):
     ws = wb.active
 
     if venda:
-        if request.user.cargo == "A" or request.user.cargo == "P" or request.user.cargo == "CF" or request.user.cargo == "CL":
-            ws.append(['ID_Venda','Nome_Cliente','Nome_Produto','Cor','Tamanho_Produto','Categoria','Quantidade','Preco_Compra','Preco_Venda_Unidade','Preco_Venda_Total_Com_Desconto','Preco_Venda_Total_Sem_Desconto','Desconto_Unidade','Desconto_Total','Desconto_Autorizado','Autorizado_Por','Lucro','Forma_Venda','Data_Venda','Vendido_Por','Ano_Festa', 'Venda_Finalizada']) # Colunas
+        if request.user.cargo == "A" or request.user.cargo == "R" or request.user.cargo == "O":
+            ws.append(['ID_Venda','Nome_Cliente','Nome_Produto','Quantidade','Preco_Compra','Preco_Venda_Unidade','Preco_Venda_Total','Forma_Venda','Data_Venda','Vendido_Por','Nome_E_Cidade_Da_Comunidade', 'Venda_Finalizada']) # Colunas
         else:
-            ws.append(['Nome_Cliente','Nome_Produto','Cor','Tamanho_Produto','Categoria','Quantidade','Preco_Venda_Unidade','Preco_Venda_Total_Com_Desconto','Preco_Venda_Total_Sem_Desconto','Desconto_Unidade','Desconto_Total','Desconto_Autorizado','Autorizado_Por','Forma_Venda','Data_Venda','Vendido_Por','Ano_Festa', 'Venda_Finalizada']) # Colunas
+            ws.append(['Nome_Cliente','Nome_Produto','Quantidade','Preco_Venda_Unidade','Preco_Venda_Total','Forma_Venda','Data_Venda','Vendido_Por','Nome_E_Cidade_Da_Comunidade', 'Venda_Finalizada']) # Colunas
 
-        nome_cliente = request.GET.get('nome_cliente')
-        nome_produto = request.GET.get('nome_produto')
-        categoria = request.GET.get('categoria')
-        preco_min = request.GET.get('preco_min')
-        preco_max = request.GET.get('preco_max')
+        nome_cliente = request.GET.get('nome_cliente_filtro')
+        nome_produto = request.GET.get('nome_produto_filtro')
         funcionario = request.GET.get('funcionario')
         dt_start = request.GET.get('dt_start')
         dt_end = request.GET.get('dt_end')
 
         nome_cliente_novo = unidecode.unidecode(f'{nome_cliente}')
 
-        if nome_cliente or nome_produto or categoria or preco_min or preco_max or funcionario or dt_start or dt_end:
+        if nome_cliente or nome_produto or funcionario or dt_start or dt_end:
             if nome_cliente:
                 venda = venda.filter(nome_cliente__icontains=nome_cliente_novo)#Filtrando para exportar pelo nome do cliente
             if nome_produto:
                 venda = venda.filter(label_vendas_get__icontains=nome_produto)#Filtrando para exportar pelo nome do produto
-            if categoria:
-                venda = venda.filter(categoria_id=categoria)#Filtrando para exportar pela categoria
             if funcionario:
                 venda = venda.filter(criado_por__icontains=funcionario)#Filtrando para exportar pelo funcionario
             if dt_start and dt_end:
                 venda = venda.filter(dia__range=[dt_start, dt_end])#Filtrando para exportar pelas datas
-
-            if not preco_min:
-                preco_min = 0
-            if not preco_max:
-                preco_max = 9999999
-            venda = venda.filter(preco_venda__gte=preco_min).filter(preco_venda__lte=preco_max)#Filtrando para exportar pelo preço
         else:
             pass
-
         for itens in venda:
             if itens.venda_finalizada == 1:
                 itens.venda_finalizada = "S"
             else:
                 itens.venda_finalizada = "N"
 
-            if request.user.cargo == "A" or request.user.cargo == "P" or request.user.cargo == "CF" or request.user.cargo == "CL":
-                row = [itens.id_venda_id, itens.nome_cliente, itens.nome_produto.nome_produto, itens.cor.titulo, itens.tamanho_produto.tamanho_produto if itens.tamanho_produto else '', itens.categoria.titulo, itens.quantidade, itens.preco_compra, itens.preco_venda, itens.preco_venda_total, itens.preco_original, itens.desconto, itens.desconto_total, itens.desconto_autorizado, itens.autorizado_por, itens.lucro, itens.forma_venda, itens.data_criacao, itens.criado_por, itens.ano_festa.ano_festa, itens.venda_finalizada] #Linhas, verifica se tem tamanho, caso não tenha envia vazio.
+            if request.user.cargo == "A" or request.user.cargo == "R" or request.user.cargo == "O":
+                row = [itens.id_venda_id, itens.nome_cliente, itens.nome_produto.nome_produto, itens.quantidade, itens.preco_compra, itens.preco_venda, itens.preco_venda_total, itens.forma_venda, itens.data_criacao, itens.criado_por, itens.nome_comunidade.slug, itens.venda_finalizada] #Linhas
             else:
-                row = [itens.nome_cliente, itens.nome_produto.nome_produto, itens.cor.titulo, itens.tamanho_produto.tamanho_produto if itens.tamanho_produto else '', itens.categoria.titulo, itens.quantidade, itens.preco_venda, itens.preco_venda_total, itens.preco_original, itens.desconto, itens.desconto_total, itens.desconto_autorizado, itens.autorizado_por, itens.forma_venda, itens.data_criacao, itens.criado_por, itens.ano_festa.ano_festa, itens.venda_finalizada] #Linhas, verifica se tem tamanho, caso não tenha envia vazio.
+                row = [itens.nome_cliente, itens.nome_produto.nome_produto, itens.quantidade, itens.preco_venda, itens.preco_venda_total, itens.forma_venda, itens.data_criacao, itens.criado_por, itens.nome_comunidade.slug, itens.venda_finalizada] #Linhas
             ws.append(row)
             
+
+        #Inicio formatação da planilha
+
         # Aplicando filtro em todas as colunas na primeira linha
         ws.auto_filter.ref = ws.dimensions
         
+        #Fim formatação da planilha
+
         # Salva o arquivo   
         wb.save(response)
 
         return response
     else:
         messages.add_message(request, messages.ERROR, 'Nenhuma venda finalizada foi encontrada para ser exportada')
-        return redirect(reverse('vendas_finalizadas', kwargs={"slug":anofesta})) 
+        return redirect(reverse('vendas_finalizadas', kwargs={"slug":slug})) 
 
 
 #Função para exportar produtos

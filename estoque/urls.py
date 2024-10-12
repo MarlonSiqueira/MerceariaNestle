@@ -34,7 +34,7 @@ urlpatterns = [
 
     path('export_entrada_produtos/<slug:slug>', views.export_entrada_produtos, name="export_entrada_produtos"),#Acessar Logs Export Entrada Produtos
 
-    path('export-csv/', views.export_csv, name='export-csv'),#Exportar CSV Vendas
-    path('export_csv_finalizadas/', views.export_csv_finalizadas, name='export_csv_finalizadas'),#Exportar CSV Vendas Finalizadas
+    path('export_csv_vendas/<slug:slug>', views.export_csv_vendas, name='export_csv_vendas'),#Exportar CSV Vendas
+    path('export_csv_vendas_finalizadas/<slug:slug>', views.export_csv_vendas_finalizadas, name='export_csv_vendas_finalizadas'),#Exportar CSV Vendas Finalizadas
     path('export_csv_produto/<slug:slug>', views.export_csv_produto, name='export_csv_produto'),#Exportar CSV Produtos
 ]

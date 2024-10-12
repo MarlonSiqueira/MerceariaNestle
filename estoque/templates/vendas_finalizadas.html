@@ -55,21 +55,21 @@
             {% if page.has_other_pages %}
                 <div class="btn-group" role="group" aria-label="Item Pagination">
                     {% if page.has_previous %} <!-- Se existe alguma página antes, mostre Anterior-->
-                        {% if request.GET.nome_cliente or request.GET.nome_produto%}
-                            <a class="btn btn-info" href="{% url 'vendas_finalizadas' slug %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&funcionario={{request.GET.funcionario}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
+                        {% if request.GET.nome_cliente_filtro or request.GET.nome_produto_filtro or request.GET.funcionario or request.GET.dt_start or request.GET.dt_end %}
+                            <a class="btn btn-info" href="{% url 'vendas_finalizadas' slug %}?page={{page.previous_page_number}}&nome_cliente_filtro={{request.GET.nome_cliente_filtro}}&nome_produto_filtro={{request.GET.nome_produto_filtro}}&funcionario={{request.GET.funcionario}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
                         {% else%}
-                            <a class="btn btn-info" href="{% url 'vendas_finalizadas' slug %}?page={{page.previous_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&funcionario={{request.GET.funcionario}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
+                            <a class="btn btn-info" href="{% url 'vendas_finalizadas' slug %}?page={{page.previous_page_number}}&nome_cliente_filtro={{request.GET.nome_cliente_filtro}}&nome_produto_filtro={{request.GET.nome_produto_filtro}}&funcionario={{request.GET.funcionario}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&laquo</a>
                         {% endif %}
                     {% endif %}
 
                     {% for page_num in page.paginator.page_range %}
-                        {% if request.GET.nome_cliente or request.GET.nome_produto%}
+                        {% if request.GET.nome_cliente_filtro or request.GET.nome_produto_filtro or request.GET.funcionario or request.GET.dt_start or request.GET.dt_end %}
                             {% if page.number == page_num %}
                                 <button class="btn btn-outline-primary active">
                                     <span>{{ page_num }} (Atual)</span>
                                 </button>
                             {% else %}
-                                <a href="{% url 'vendas_finalizadas' slug %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&funcionario={{request.GET.funcionario}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
+                                <a href="{% url 'vendas_finalizadas' slug %}?page={{ page_num }}&nome_cliente_filtro={{request.GET.nome_cliente_filtro}}&nome_produto_filtro={{request.GET.nome_produto_filtro}}&funcionario={{request.GET.funcionario}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
                                     {{ page_num }}</a>
                             {% endif %}
                         {% else %}
@@ -78,17 +78,17 @@
                                     <span>{{ page_num }} (Atual)</span>
                                 </button>
                             {% else %}
-                                <a href="{% url 'vendas_finalizadas' slug %}?page={{ page_num }}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&funcionario={{request.GET.funcionario}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
+                                <a href="{% url 'vendas_finalizadas' slug %}?page={{ page_num }}&nome_cliente_filtro={{request.GET.nome_cliente_filtro}}&nome_produto_filtro={{request.GET.nome_produto_filtro}}&funcionario={{request.GET.funcionario}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}" class="btn btn-outline-primary">
                                     {{ page_num }}</a>
                             {% endif %}
                         {% endif %}
                     {% endfor %}
                     
                         {% if page.has_next %}<!-- Se existe alguma página depois, mostre Próximo-->
-                            {% if request.GET.nome_cliente or request.GET.nome_produto%}
-                                <a class="btn btn-info" href="{% url 'vendas_finalizadas' slug %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&funcionario={{request.GET.funcionario}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
+                            {% if request.GET.nome_cliente_filtro or request.GET.nome_produto_filtro or request.GET.funcionario or request.GET.dt_start or request.GET.dt_end %}
+                                <a class="btn btn-info" href="{% url 'vendas_finalizadas' slug %}?page={{page.next_page_number}}&nome_cliente_filtro={{request.GET.nome_cliente_filtro}}&nome_produto_filtro={{request.GET.nome_produto_filtro}}&funcionario={{request.GET.funcionario}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
                             {% else %}
-                                <a class="btn btn-info" href="{% url 'vendas_finalizadas' slug %}?page={{page.next_page_number}}&nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&funcionario={{request.GET.funcionario}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
+                                <a class="btn btn-info" href="{% url 'vendas_finalizadas' slug %}?page={{page.next_page_number}}&nome_cliente_filtro={{request.GET.nome_cliente_filtro}}&nome_produto_filtro={{request.GET.nome_produto_filtro}}&funcionario={{request.GET.funcionario}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">&raquo</a>
                             {% endif %}          
                         {% endif %}
                 </div>
@@ -97,19 +97,13 @@
             <br>
             <div class="row">
                 <div class="col-md">
-                    <input class="form-control" type="text" name="nome_cliente_filtro" value="{{request.GET.nome_cliente}}" placeholder="Nome do Cliente">
+                    <label>Nome do Cliente</label>
+                    <input class="form-control" type="text" name="nome_cliente_filtro" value="{{request.GET.nome_cliente_filtro}}" placeholder="Nome do Cliente">
                 </div>
 
                 <div class="col-md">
-                    <input class="form-control" type="text" name="nome_produto_filtro" value="{{request.GET.nome_produto}}" placeholder="Nome do Produto">
-                </div>
-
-                <div class="col-md">
-                    <input class="form-control" type="text" name="preco_min" id="preco_min" value="{{request.GET.preco_min}}" placeholder="Preço Mínimo">
-                </div>
-                
-                <div class="col-md">
-                    <input class="form-control" type="text" name="preco_max" id="preco_max" value="{{request.GET.preco_max}}" placeholder="Preço Máximo">
+                    <label>Nome do Produto</label>
+                    <input class="form-control" type="text" name="nome_produto_filtro" value="{{request.GET.nome_produto_filtro}}" placeholder="Nome do Produto">
                 </div>
 
             </div>
@@ -130,7 +124,7 @@
             </div>
             <br>
                 <input type="submit" value="Filtrar" class="btn btn-success">&nbsp;
-                    <a class="btn btn-info" href="{% url 'export_csv_finalizadas' %}?nome_cliente={{request.GET.nome_cliente}}&nome_produto={{request.GET.nome_produto}}&preco_min={{request.GET.preco_min}}&preco_max={{request.GET.preco_max}}&funcionario={{request.GET.funcionario}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">Exportar Planilha</a>&nbsp;
+                    <a class="btn btn-info" href="{% url 'export_csv_vendas_finalizadas' slug %}?nome_cliente_filtro={{request.GET.nome_cliente_filtro}}&nome_produto_filtro={{request.GET.nome_produto_filtro}}&funcionario={{request.GET.funcionario}}&dt_start={{request.GET.dt_start}}&dt_end={{request.GET.dt_end}}">Exportar Planilha</a>&nbsp;
         </form>
             <br>
             {% if not vendas %}

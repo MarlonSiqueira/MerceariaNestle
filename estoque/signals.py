@@ -328,15 +328,20 @@ def vendas_deleted(sender, instance, **kwargs):
     #Inicio - Retirando quantidade da p_excel
     produto = Produto.objects.get(id=id_produto) #Pegando o produto
     nome_produto_p_excel = str(produto.nome_produto)
+    nome_comunidade_id = produto.nome_comunidade_id
+
+    opcao = "id"
+    resultado_comunidade = Consultar_Uma_Comunidade(nome_comunidade_id, opcao)
+    slug_comunidade = resultado_comunidade[1]
 
     id_user = Users.objects.get(username=username)
     id_user = id_user.id
     
     data_alteracao = Capturar_Ano_E_Hora_Atual()
 
-    existe_saida_venda = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Saída")
+    existe_saida_venda = P_Excel.objects.filter(nome_produto=nome_produto_p_excel, acao="Saída", nome_e_cidade_comunidade=slug_comunidade)
     if existe_saida_venda:
-        existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída")
+        existe_saida_venda = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Saída", nome_e_cidade_comunidade=slug_comunidade)
         existe_saida_venda.quantidade -= int(vendas_exclusao.quantidade)
         existe_saida_venda.ultima_alteracao = data_alteracao
         existe_saida_venda.alterado_por = username
