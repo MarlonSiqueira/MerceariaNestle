@@ -24,6 +24,8 @@ class Organizador(AbstractUserRole):
         'inativar_familia': True,
         'ativar_familia': True,
         'excluir_familia': True,
+        'exportar_csv_vendas': True,
+        'exportar_csv_vendas_finalizada': True,
     }
 
 class ResponsavelGeral(AbstractUserRole):
@@ -49,6 +51,8 @@ class ResponsavelGeral(AbstractUserRole):
         'inativar_familia': True,
         'ativar_familia': True,
         'excluir_familia': True,
+        'exportar_csv_vendas': True,
+        'exportar_csv_vendas_finalizada': True,
     }
 
 class Admin(AbstractUserRole):
@@ -76,4 +80,6 @@ class Admin(AbstractUserRole):
         'inativar_familia': True,
         'ativar_familia': True,
         'excluir_familia': True,
+        'exportar_csv_vendas': True,
+        'exportar_csv_vendas_finalizada': True,
     }   

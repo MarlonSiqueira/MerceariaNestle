@@ -120,7 +120,11 @@ def add_produto(request, slug):
                 preco_compra = preco_compra.replace(',', '.') # Substitui a vírgula pelo ponto
                 preco_venda = 1
                 if peso != 0 and peso != "" and peso != None:
-                    preco_venda *= float(peso)
+                    peso_float = float(peso)
+                    if peso_float > 1:
+                        messages.add_message(request, messages.ERROR, f'Produto {nome} não pode ter mais de 1.0KG/ML')
+                        return redirect(reverse('add_produto', kwargs={"slug":slug}))
+                    preco_venda *= peso_float
                 nome_produto_original = nome
                 acao = "adicionar"
                 tabela = "produto"
@@ -1554,7 +1558,7 @@ def error_403(request, exception):
 
 
 # ======================== EXPORT CSV ========================
-@has_permission_decorator('exportar_csv_v')
+@has_permission_decorator('exportar_csv_vendas')
 def export_csv_vendas(request, slug):
     opcao = "slug"
     resultado_comunidade = Consultar_Uma_Comunidade(slug, opcao)
@@ -1627,7 +1631,7 @@ def export_csv_vendas(request, slug):
         return redirect(reverse('consultar_vendas_geral', kwargs={"slug":slug})) 
 
 
-@has_permission_decorator('exportar_csv_v_finalizada')
+@has_permission_decorator('exportar_csv_vendas_finalizada')
 def export_csv_vendas_finalizadas(request, slug):
     opcao = "slug"
     resultado_comunidade = Consultar_Uma_Comunidade(slug, opcao)
