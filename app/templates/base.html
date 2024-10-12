@@ -43,7 +43,7 @@
                     <p class="username"><b>{{ user.username }}</b></p>
                 </div>
                 {% if url_atual != '/' %}
-                    {% if url_atual == '/cadastrar_comunidade/' or url_atual == '/cadastrar_responsavel/geral' or url_atual == '/alterar_usuarios/' or url_atual == '/comunidades/' or url_atual == '/listar_logs/' or url_atual == '/cadastrogeral_comunidade/' or url_atual == '/add_produto/' or url_atual == '/add_novonome_produto/' or url_atual == '/pre_vendas/' or url_atual == '/consultar_vendas_geral/' or url_atual == '/vendas_finalizadas/' or url_atual == '/cadastrar_organizador/' or url_atual == '/cadastrar_familia/' or url_atual == '/produto/' or url_atual == '/vendas/' or url_atual == '/consultar_vendas/' or url_atual == '/visualizar_vendas/' or url_atual == '/change_password/' or url_atual == '/export_entrada_produtos/' %}
+                    {% if url_atual == '/cadastrar_comunidade/' or url_atual == '/cadastrar_responsavel/geral' or url_atual == '/alterar_usuarios/' or url_atual == '/comunidades/' or url_atual == '/listar_logs/' or url_atual == '/cadastrogeral_comunidade/' or url_atual == '/add_produto/' or url_atual == '/add_novonome_produto/' or url_atual == '/pre_vendas/' or url_atual == '/consultar_vendas_geral/' or url_atual == '/vendas_finalizadas/' or url_atual == '/cadastrar_organizador/' or url_atual == '/cadastrar_familia/' or url_atual == '/produto/' or url_atual == '/vendas/' or url_atual == '/consultar_vendas/' or url_atual == '/visualizar_vendas/' or url_atual == '/change_password/' or url_atual == '/export_entrada_produtos/' or url_atual == '/visualizar_vendas_finalizadas/' or url_atual == '/consultar_vendas_finalizadas/' or url_atual == '/conferir_vendas_geral/' %}
                         <a href="{% url 'home' %}" class="menu-item"><i class="fas fa-home"></i><span> Home</span></a>
                     {% endif %}
 
@@ -87,7 +87,7 @@
                         </div>
                     {% endif %}
 
-                    {% if url_atual == '/cadastrogeral_comunidade/' or url_atual == '/add_produto/' or url_atual == '/add_novonome_produto/' or url_atual == '/pre_vendas/' or url_atual == '/consultar_vendas_geral/' or url_atual == '/vendas_finalizadas/' or url_atual == '/cadastrar_organizador/' or url_atual == '/cadastrar_familia/' or url_atual == '/produto/' or url_atual == '/vendas/' or url_atual == '/consultar_vendas/' or url_atual == '/visualizar_vendas/' or url_atual == '/export_entrada_produtos/' %}
+                    {% if url_atual == '/cadastrogeral_comunidade/' or url_atual == '/add_produto/' or url_atual == '/add_novonome_produto/' or url_atual == '/pre_vendas/' or url_atual == '/consultar_vendas_geral/' or url_atual == '/vendas_finalizadas/' or url_atual == '/cadastrar_organizador/' or url_atual == '/cadastrar_familia/' or url_atual == '/produto/' or url_atual == '/vendas/' or url_atual == '/consultar_vendas/' or url_atual == '/visualizar_vendas/' or url_atual == '/export_entrada_produtos/' or url_atual == '/visualizar_vendas_finalizadas/' or url_atual == '/consultar_vendas_finalizadas/' or url_atual == '/conferir_vendas_geral/' %}
                         <a href="{% url 'comunidades' %}" class="menu-item"><i class="fas fa-reply"></i><span> Comunidades</span></a>
                     {% endif %}
                     
