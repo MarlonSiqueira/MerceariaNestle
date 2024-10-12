@@ -33,11 +33,11 @@ def Bloqueio_Acesso_Demais_Comunidades(request, id_comunidade_comparar_usuario):
 
 
 def enviar_email(destinatario, cargo, nome_usuario_email, username):
-    nome_usuario_email = nome_usuario_email.upper()
+    nome_usuario_email = nome_usuario_email.capitalize()
     html_content = render_to_string('emails/cadastro_confirmado.html', {'nome_usuario_email': nome_usuario_email, 'cargo':cargo, 'username':username})#Corpo do Email
     text_content = strip_tags(html_content)#Tirando todas as tags HTML
     subject = (f"Bem-Vindo à Equipe!") #Titulo do Email
-    from_email = "APP Lojinha IPSEP" #Alterar nome que aparece
+    from_email = "APP Mercearia Comunitaria" #Alterar nome que aparece
     recipient_list = ('', destinatario) #Enviado para email do usuario
     email = EmailMultiAlternatives(subject, text_content, from_email, recipient_list)#Juntando todos os dados
     email.attach_alternative(html_content, 'text/html')#Dizendo que é um HTML

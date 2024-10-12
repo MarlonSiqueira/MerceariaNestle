@@ -500,9 +500,11 @@ def password_reset_request(request):
                 reset_url = f'{base_url}/reset/{token}/'#concatena url + reset + token
                 user.save()# salva o token no user parte2.
 
-                subject = f'Solicitação de Alteração de Senha para: {user.first_name}' #Titulo do Email
-                message = f'Olá, {user.first_name}. Foi solicitado uma alteração de senha para você, caso não tenha realizado essa ação, desconsidere o e-mail e avise à administração.\n Caso tenha sido você mesmo:\n Por favor clique no link abaixo para alterar sua senha:\n\n{reset_url}' #Corpo do Email
-                from_email = "APP Lojinha IPSEP" #Alterar nome que aparece
+                nome_usuario_trocar_senha = user.first_name.capitalize()
+
+                subject = f'Solicitação de Alteração de Senha para: {nome_usuario_trocar_senha}' #Titulo do Email
+                message = f'Olá, {nome_usuario_trocar_senha}. Foi solicitado uma alteração de senha para você, caso não tenha realizado essa ação, desconsidere o e-mail e avise à administração.\n Caso tenha sido você mesmo:\n Por favor clique no link abaixo para alterar sua senha:\n\n{reset_url}' #Corpo do Email
+                from_email = "APP Mercearia Comunitaria" #Alterar nome que aparece
                 recipient_list = [user.email] #Enviado para email do usuario
                 send_mail(subject, message, from_email, recipient_list) #Enviando o Email com as VAR's acima
                 messages.success(request, 'E-mail para Alteração da Senha enviado')
