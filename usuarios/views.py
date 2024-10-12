@@ -428,6 +428,8 @@ def comunidades(request):
 def cadastrogeral_comunidade(request, slug):
     opcao = "slug"
     resultado = Consultar_Uma_Comunidade(slug, opcao)
+    nome_comunidade = resultado[4]
+    cidade_comunidade = resultado[5]
 
     id_comunidade_comparar_usuario, id_comunidade_usuario = Bloqueio_Acesso_Demais_Comunidades(request, resultado[0])
     if id_comunidade_comparar_usuario == id_comunidade_usuario:
@@ -437,6 +439,8 @@ def cadastrogeral_comunidade(request, slug):
                     context = {
                         'slug': slug,
                         'url_atual': url_atual,
+                        'nome_comunidade': nome_comunidade,
+                        'cidade_comunidade': cidade_comunidade,
                     }
                     return render(request, 'cadastrogeral_comunidade.html', context)
             else:

@@ -2,72 +2,8 @@
 
 {% block 'body' %}
 <div class="container">
-    <form action="" method="POST" enctype="multipart/form-data"> {% csrf_token %}
-            {% if user.is_authenticated %}
-                {% if user.cargo == "A" or user.cargo == "R" %}
-                    <div class="row d-flex justify-content-left align-items-left h-100">
-                            <div class="col-12 col-md-8 col-lg-6 col-xl-5">
-                                <div class="mb-md-5 mt-md-4 pb-5">
-                                    <div class="nav-item dropright">
-                                        <a class="btn dropdown-toggle" href="#" style="color: white; background-color: blue;" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Estoque</a>
-                                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                        <a class="dropdown-item" href="{% url 'add_produto' slug %}">Abastecer/Visualizar</a>
-                                        <a class="dropdown-item" href="{% url 'add_novonome_produto' slug %}">Cadastrar Novo Produto</a>
-                                    </div>
-                                    </div>
-                                    <br>
-                                    <div class="nav-item dropright">
-                                        <a class="btn dropdown-toggle" href="#" style="color: white; background-color: blue;" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Vendas</a>
-                                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                            <a class="dropdown-item" href="{% url 'pre_vendas' slug %}">Realizar Vendas</a>
-                                            <a class="dropdown-item" href="{% url 'consultar_vendas_geral' slug %}">Consultar Vendas Não Finalizadas</a>
-                                            <a class="dropdown-item" href="{% url 'vendas_finalizadas' slug %}">Finalizar Venda</a>
-                                        </div>
-                                    </div>
-                                    <br>
-                                    <div class="nav-item dropright">
-                                        <a class="btn dropdown-toggle" href="#" style="color: white; background-color: blue;" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Cadastrar Funcionários</a>
-                                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                        <a class="dropdown-item" href="{% url 'cadastrar_organizador' slug %}">Cadastrar Organizador</a>
-                                    </div>
-                                    </div>
-                                    <br>
-                                    <div class="nav-item dropright">
-                                        <a class="btn dropdown-toggle" href="#" style="color: white; background-color: blue;" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Famílias</a>
-                                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                        <a class="dropdown-item" href="{% url 'cadastrar_familia' slug %}">Cadastrar Famílias</a>
-                                    </div>
-                                    </div>
-                                </div>
-                            </div>
-                    </div>
-                {% else %}
-                    <div class="row d-flex justify-content-left align-items-left h-100">
-                        <div class="col-12 col-md-8 col-lg-6 col-xl-5">
-                            <div class="mb-md-5 mt-md-4 pb-5">
-                                <div class="nav-item dropright">
-                                    <a class="btn dropdown-toggle" href="#" style="color: white; background-color: blue;" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Estoque</a>
-                                <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                    <a class="dropdown-item" href="{% url 'add_produto' slug %}">Abastecer/Visualizar</a>
-                                    <a class="dropdown-item" href="/add_novonome_produto">Cadastrar Novo Produto</a>
-                                </div>
-                                </div>
-                                <br>
-                                <div class="nav-item dropright">
-                                    <a class="btn dropdown-toggle" href="#" style="color: white; background-color: blue;" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Vendas</a>
-                                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                        <a class="dropdown-item" href="{% url 'pre_vendas' slug %}">Realizar Vendas</a>
-                                        <a class="dropdown-item" href="{% url 'consultar_vendas_geral' slug %}">Consultar Vendas Não Finalizadas</a>
-                                        <a class="dropdown-item" href="{% url 'vendas_finalizadas' slug %}">Finalizar Venda</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% endif %} 
-            {% endif %}
-                    </div>                   
-    </form>
+    <h1 class="text-center my-4">Bem-Vindo a {{nome_comunidade}}</h1>
+    <h5 class="text-center my-4">Utilize o menu lateral para navegar pela comunidade</h5>
 </div>
 
 {% endblock %}
