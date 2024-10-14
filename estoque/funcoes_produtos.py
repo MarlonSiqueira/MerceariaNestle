@@ -325,7 +325,7 @@ def Cadastro_Planilhas_Estoque_E_Atualizacoes_De_Valores(request, slugp, quantid
                     existe_saida_venda_novo.save() 
 
 
-def Registrar_Log_Alteracao_Produto_E_Alterar_Produto(request, slug_comunidade, slug_produto, id_produto_antigo, abastecer_quantidade, preco_compra, cod_produto, cod_barras, peso, nome_produto_antigo1, data_alteracao, alterado_por):
+def Registrar_Log_Alteracao_Produto_E_Alterar_Produto(request, slug_comunidade, slug_produto, id_produto_antigo, abastecer_quantidade, preco_compra, tipo_peso, nome_produto_antigo1, data_alteracao, alterado_por):
     with transaction.atomic():
         contador_alteracao = 0
         contador_alteracao_qtd = 0
@@ -335,15 +335,12 @@ def Registrar_Log_Alteracao_Produto_E_Alterar_Produto(request, slug_comunidade, 
         if produto_anterior:
             produto_anterior.quantidade = str(produto_anterior.quantidade)
             produto_anterior.preco_compra = str(produto_anterior.preco_compra)
-            produto_anterior.cod_produto = str(produto_anterior.cod_produto)
-            produto_anterior.cod_barras = str(produto_anterior.cod_barras)
+            produto_anterior.tipo_peso = str(produto_anterior.tipo_peso)
             produto_anterior.peso = str(produto_anterior.peso)
 
             nova_quantidade =  int(abastecer_quantidade) + int(produto_anterior.quantidade)
             preco_compra_str = str(preco_compra)
-            cod_produto_str = str(cod_produto)
-            cod_barras_str = str(cod_barras)
-            peso_str = str(peso)
+            tipo_peso_str = str(tipo_peso)
 
             verifica_compra = preco_compra_str[-2:] #pegando últimos 2 caracteres da string
 
@@ -357,14 +354,8 @@ def Registrar_Log_Alteracao_Produto_E_Alterar_Produto(request, slug_comunidade, 
             if produto_anterior.preco_compra != preco_compra_str:
                 campos_alteracao.append('preco_compra')
                 contador_alteracao += 1
-            if produto_anterior.cod_produto != cod_produto_str:
-                campos_alteracao.append('cod_produto')
-                contador_alteracao += 1
-            if produto_anterior.cod_barras != cod_barras_str:
-                campos_alteracao.append('cod_barras')
-                contador_alteracao += 1
-            if produto_anterior.peso != peso_str:
-                campos_alteracao.append('peso')
+            if produto_anterior.tipo_peso != tipo_peso_str:
+                campos_alteracao.append('tipo_peso')
                 contador_alteracao += 1
 
 
@@ -379,6 +370,7 @@ def Registrar_Log_Alteracao_Produto_E_Alterar_Produto(request, slug_comunidade, 
                 produto_alterado = Produto.objects.get(id=id_produto_antigo)
                 produto_alterado.quantidade = nova_quantidade
                 produto_alterado.preco_compra = preco_compra
+                produto_alterado.tipo_peso = tipo_peso
                 produto_alterado.alterado_por = alterado_por
                 produto_alterado.data_alteracao = data_alteracao
                 produto_alterado.save()
@@ -412,7 +404,7 @@ def Registrar_Log_Alteracao_Produto_E_Alterar_Produto(request, slug_comunidade, 
         nome_produto_p_excel = str(produto.nome_produto)
 
         if contador_alteracao_qtd > 0:
-            p_excel = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Entrada") #Pegando o produto alterado
+            p_excel = P_Excel.objects.get(nome_produto=nome_produto_p_excel, acao="Entrada", nome_e_cidade_comunidade=slug_comunidade) #Pegando o produto alterado
             p_excel.quantidade += int(abastecer_quantidade)
             p_excel.ultima_alteracao = data_alteracao
             p_excel.alterado_por = request.user.username

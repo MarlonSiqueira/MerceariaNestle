@@ -26,6 +26,20 @@
         $('#id_quantidade').mask('000')
         $('#id_preco_compra').mask('000,00', {reverse: true})
         $('#abastecer_quantidade').mask('000')
+        $('#id_peso').mask('0.000')
+
+        $('#id_tipo_peso').mask('AA')
+        // Máscara para aceitar apenas letras maiúsculas
+        $('#id_tipo_peso').on('input', function() {
+            // Transforma o valor em maiúsculas
+            let value = $(this).val().toUpperCase();
+
+            // Remove caracteres que não são letras
+            value = value.replace(/[^A-Z]/g, '');
+
+            // Atualiza o valor do campo
+            $(this).val(value);
+        });
     });
 
 </script>

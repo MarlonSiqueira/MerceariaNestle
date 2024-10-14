@@ -298,9 +298,8 @@ def produto (request, slug):
     elif request.method == "POST":
         abastecer_quantidade = request.POST.get('abastecer_quantidade')
         preco_compra = request.POST.get('preco_compra')
-        cod_produto = request.POST.get('cod_produto')
-        cod_barras = request.POST.get('cod_barras')
-        peso = request.POST.get('peso')
+        tipo_peso = request.POST.get('tipo_peso')
+
         opcao = "id"
 
         if abastecer_quantidade == None or not abastecer_quantidade:
@@ -321,6 +320,7 @@ def produto (request, slug):
 
                 produto = get_object_or_404(Produto, slug=slug) #pegando o slug do produto
                 quantidade_atual = produto.quantidade
+                tipo_peso_atual = produto.tipo_peso
 
                 alterado_por_ = auth.get_user(request)
                 alterado_por = alterado_por_.username
@@ -330,12 +330,16 @@ def produto (request, slug):
                 preco_compra = preco_compra.replace(',', '.') # Substitui a vírgula pelo ponto
                 preco_compra = float(preco_compra)#transformando em float
 
-                if abastecer_quantidade or preco_compra or cod_produto or cod_barras or peso:
+                if abastecer_quantidade or preco_compra or tipo_peso:
                     if preco_compra == 0 or not preco_compra:
                         messages.add_message(request, messages.ERROR, 'Preço de Compra não pode ser vazio')
-                        return redirect(reverse('produto', kwargs={"slug":resultado[1]}))
+                        return redirect(reverse('produto', kwargs={"slug":slug}))
 
-                    validacao = Registrar_Log_Alteracao_Produto_E_Alterar_Produto(request, resultado[1], slug, id_produto_antigo,abastecer_quantidade, preco_compra, cod_produto, cod_barras, peso, nome_produto_antigo1, data_alteracao, alterado_por)
+                    if tipo_peso != "KG" and tipo_peso != "ML":
+                        messages.add_message(request, messages.ERROR, 'Tipo Peso só pode ser "KG" ou "ML"')
+                        return redirect(reverse('produto', kwargs={"slug":slug}))
+                    
+                    validacao = Registrar_Log_Alteracao_Produto_E_Alterar_Produto(request, resultado[1], slug, id_produto_antigo,abastecer_quantidade, preco_compra, tipo_peso, nome_produto_antigo1, data_alteracao, alterado_por)
                     
                     if validacao:
                         transaction.set_rollback(True)
